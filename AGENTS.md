@@ -11,7 +11,9 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 # AGENTS.md
 
 Project: AI Resume Analyzer Workspace (see docs/PRD.md; it is the source of truth).
-Current phase: FRONTEND ONLY. Do not build backend or call real AI APIs until told.
+Current phase: frontend and backend proceed in parallel in separate folders
+(`/frontend` and `/backend`). Frontend work still uses MSW mocks only; never
+call the real backend or any real AI API yet.
 
 Monorepo: frontend code (Next.js app, configs, tests) lives in `/frontend` — run all
 npm scripts from there (`cd frontend`). Backend code will live in `/backend`

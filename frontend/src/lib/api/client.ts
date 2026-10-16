@@ -6,6 +6,7 @@ import type {
   WorkspaceChangeLogEntry,
   WorkspaceItem,
 } from "@/lib/schemas";
+import type { Consent } from "@/lib/privacy/consent";
 
 /**
  * Typed API client (PRD §8.3). Every network call goes through here so the
@@ -71,4 +72,12 @@ export const api = {
   // --- Privacy (B6 contract) ---
   exportData: () => request<unknown>("/privacy/export"),
   deleteAccount: () => request<void>("/privacy/account", { method: "DELETE" }),
+
+  // --- AI-processing consent (PRD EX-3; F2 mock) ---
+  getConsent: () => request<{ consent: Consent | null }>("/privacy/consent"),
+  recordConsent: (input: { aiProcessing: boolean }) =>
+    request<{ consent: Consent }>("/privacy/consent", {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
 };

@@ -124,3 +124,35 @@ already has the identical block); added `frontend/AGENTS.md` to root
 Consequence: `next dev` may still recreate the file on disk as ignored clutter;
 the canonical, tracked copy remains the root `AGENTS.md`. This precise path
 entry does not affect the tracked root file.
+
+## ADR-008 — 2026-10-16 — F2 auth shell: client guard, MSW fixes, Radix gotchas
+Context: F2 needs route protection, mock auth + consent, and Radix primitives
+without touching the landing bundle. Three surprises surfaced.
+Decision:
+1. Client-side `AuthGuard`, no `proxy.ts`. The mock session lives in
+   localStorage, which the server proxy cannot read; installed Next 16 docs
+   (`frontend/node_modules/next/dist/docs/01-app/.../proxy.md`: middleware
+   renamed to `proxy`, "not intended for slow data fetching... should not be
+   used as a full session management solution") confirm proxy is for
+   optimistic checks only. Supabase cookie sessions (B0) will enable a real
+   proxy check later without changing the guard's contract.
+2. MSW was scaffolded but never initialized: `public/mockServiceWorker.js`
+   was missing (`npx msw init` never ran), so every mock call 404'd. Fix:
+   committed the worker script; added `src/mocks/start.ts` which reloads once
+   when the page isn't worker-controlled yet (a fresh registration never
+   controls its own page — first-visit API calls would otherwise bypass MSW).
+   `public/mockServiceWorker.js` is now eslint-ignored (generated file).
+3. `AuthProvider` stabilizes the client via `useState` initializer. A
+   `createMockAuthClient()` default parameter allocated a new object per
+   render, re-firing the session effect into an unthrottled getSession loop
+   (hundreds of requests in seconds; DOM churn broke palette clicks in E2E).
+4. cmdk always renders `data-disabled="true"|"false"`, so Tailwind's
+   presence-matched `data-[disabled]:pointer-events-none` disabled EVERY
+   palette option (real user-facing bug, caught by E2E hit-testing).
+   `CommandItem` now gates on `aria-[disabled=true]` instead. Other
+   primitives use Radix, which omits `data-disabled` when false — unaffected.
+5. Mobile bottom-bar labels are truncated ("Job targets" → "Job") with the
+   full name kept in `aria-label`, so the accessible name stays meaningful.
+Consequence: auth/consent E2E is deterministic (seeded by real signup flow);
+`npm run e2e` needs generous timeouts (30s nav assertions, 120s tests) under
+dev compiles + 350ms mock latency. Landing bundle unchanged (196.8KB gzip).

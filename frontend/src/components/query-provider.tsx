@@ -25,13 +25,7 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Start the MSW mock API in development only (PRD §8.3).
-    if (process.env.NODE_ENV === "development" && typeof window !== "undefined") {
-      import("@/mocks/browser")
-        .then(({ worker }) => worker.start())
-        .catch(() => {
-          // Mock worker is optional; the app renders without it.
-        });
-    }
+    void import("@/mocks/start").then(({ startMocks }) => startMocks());
   }, []);
 
   return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;

@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-/** F0 smoke: landing, design system, and app-shell routes render. */
+/** F0 smoke: landing, design system render; F2: app routes require auth. */
 test("landing renders the headline", async ({ page }) => {
   await page.goto("/");
   await expect(
@@ -17,8 +17,8 @@ test("design system renders tokens and components", async ({ page }) => {
   await expect(page.getByText("Evidence states")).toBeVisible();
 });
 
-test("workspace route renders inside the app shell", async ({ page }) => {
+test("workspace route requires sign in", async ({ page }) => {
   await page.goto("/workspace");
-  await expect(page.getByRole("complementary", { name: "Primary navigation" })).toBeVisible();
-  await expect(page.getByText("Coming in F3")).toBeVisible();
+  await expect(page).toHaveURL(/\/signin\?next=/);
+  await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
 });
