@@ -40,3 +40,10 @@ Workflow:
 - Run lint, typecheck, tests and build before declaring done; report results honestly.
 - No secrets in code or prompts; use frontend/.env.local (git-ignored).
 - Record non-obvious decisions in docs/DECISIONS.md.
+
+## GitHub rules
+- Use the `gh` CLI for GitHub operations (creating pull requests, listing branches and PRs, commenting) instead of the GitHub MCP.
+- You may create branches, push commits to feature branches, open pull requests, and comment on them.
+- NEVER merge a pull request, push to master, force-push, delete branches, or change repository settings, rulesets, secrets or webhooks. I merge PRs myself.
+- Always open PRs against master with a clear title, a summary of what changed, the commands you ran and their results, and anything you could not verify.
+- Never print or store tokens, and never write secrets into files.
