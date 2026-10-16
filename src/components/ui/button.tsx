@@ -6,10 +6,10 @@ export type ButtonSize = "sm" | "md" | "lg";
 
 const variantClasses: Record<ButtonVariant, string> = {
   primary:
-    "bg-accent-violet text-white hover:brightness-110 focus-visible:outline-accent-cyan",
+    "bg-action text-white hover:brightness-110 focus-visible:outline-accent-cyan",
   secondary:
     "glass text-text hover:bg-white/[0.09]",
-  ghost: "text-muted hover:text-text hover:bg-white/[0.06]",
+  ghost: "text-text hover:bg-white/[0.06]",
   danger: "text-evidence-missing border border-evidence-missing/30 hover:bg-evidence-missing/10",
 };
 

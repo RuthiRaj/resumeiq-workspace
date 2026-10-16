@@ -19,6 +19,6 @@ test("design system renders tokens and components", async ({ page }) => {
 
 test("workspace route renders inside the app shell", async ({ page }) => {
   await page.goto("/workspace");
-  await expect(page.getByRole("navigation", { name: "Primary navigation" })).toBeVisible();
+  await expect(page.getByRole("complementary", { name: "Primary navigation" })).toBeVisible();
   await expect(page.getByText("Coming in F3")).toBeVisible();
 });

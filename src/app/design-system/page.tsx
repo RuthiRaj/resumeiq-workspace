@@ -27,6 +27,7 @@ const SWATCHES: { name: string; token: string; value: string }[] = [
   { name: "text", token: "bg-text", value: "#E8EAF0" },
   { name: "muted", token: "bg-muted", value: "#8A90A2" },
   { name: "accent-violet", token: "bg-accent-violet", value: "#7C5CFF" },
+  { name: "action (AA-safe violet)", token: "bg-action", value: "#5F48D8" },
   { name: "accent-cyan", token: "bg-accent-cyan", value: "#22D3EE" },
   { name: "evidence-verified", token: "bg-evidence-verified", value: "#34D399" },
   { name: "evidence-attested", token: "bg-evidence-attested", value: "#60A5FA" },
