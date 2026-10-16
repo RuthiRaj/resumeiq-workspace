@@ -1,0 +1,10 @@
+# Local Python / tooling ignores (repo root .gitignore already covers .env*).
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage*
