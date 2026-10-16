@@ -157,6 +157,7 @@ Think film-title-sequence polish inside a serious productivity tool: a deep near
 | text | #E8EAF0 |
 | muted | #8A90A2 |
 | accent-violet | #7C5CFF |
+| action (filled-button violet, see note) | #5F48D8 |
 | accent-cyan | #22D3EE |
 | evidence-verified | #34D399 |
 | evidence-attested | #60A5FA |
@@ -164,6 +165,8 @@ Think film-title-sequence polish inside a serious productivity tool: a deep near
 | evidence-missing | #FB7185 |
 
 Fonts: Geist Sans (UI), Geist Mono (scores, data), Instrument Serif (hero and display headlines). Radius 12–20px. Glass: `backdrop-blur-xl` + 6% white fill + 1px hairline border. Glow: violet/cyan radial gradients at 10–20% opacity behind key content. Subtle film-grain overlay (static noise PNG/SVG, 3–4% opacity).
+
+Note (ADR-004): white text on `accent-violet` measures 4.35:1 and fails WCAG AA, so filled buttons use the derived `action` token (#5F48D8, 6.2:1). The `accent-violet` token itself is unchanged for glows, gradients and scores.
 
 ### 7.3 Motion principles
 - Library: Motion (`motion/react`). Smooth scroll: Lenis on marketing pages only.
@@ -366,4 +369,4 @@ See `AGENTS.md` at the repo root (it is kept in sync with this section).
 F0 is implemented when this document was saved. See section 9 for acceptance criteria.
 
 ### 13.3 Prompts for later milestones
-For each next milestone, paste: "Implement Milestone F<n> from docs/PRD.md section 9. Meet its acceptance criteria, follow AGENTS.md, proceed on your own without asking to confirm routine steps, work on a branch and never merge to main, then report results." Review and accept each milestone before starting the next. Parallel agents are safe only on non-overlapping features and each in its own git worktree.
+For each next milestone, paste: "Implement Milestone F<n> from docs/PRD.md section 9. Meet its acceptance criteria, follow AGENTS.md, proceed on your own without asking to confirm routine steps, work on a branch and never merge to master (the default branch is `master`), then report results." Review and accept each milestone before starting the next. Parallel agents are safe only on non-overlapping features and each in its own git worktree.

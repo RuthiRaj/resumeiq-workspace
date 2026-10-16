@@ -31,7 +31,8 @@ Workflow:
 - Work one milestone (F0..F7) at a time. Meet its acceptance criteria before stopping.
 - Proceed on your own for routine steps; do not ask me to confirm file edits, installs,
   or test runs. Ask only when a decision changes the PRD.
-- Use a feature branch or git worktree per milestone and open a PR. NEVER merge or push to main.
+- Use a feature branch or git worktree per milestone and open a PR. NEVER merge to
+  master (the default branch is `master`; there is no `main`).
 - Run lint, typecheck, tests and build before declaring done; report results honestly.
 - No secrets in code or prompts; use .env.local (git-ignored).
 - Record non-obvious decisions in docs/DECISIONS.md.

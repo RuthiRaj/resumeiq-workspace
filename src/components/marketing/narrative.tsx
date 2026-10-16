@@ -1,7 +1,7 @@
 "use client";
 
-import type { ReactNode } from "react";
-import { motion, useReducedMotion } from "motion/react";
+import { useState, type ReactNode } from "react";
+import { m, useReducedMotion } from "motion/react";
 import { Download } from "lucide-react";
 import { GlassCard } from "@/components/domain/glass-card";
 import { EvidenceBadge } from "@/components/domain/evidence-badge";
@@ -9,7 +9,6 @@ import { EvidenceChip } from "@/components/domain/evidence-chip";
 import { ScoreRing } from "@/components/domain/score-ring";
 import { FactorBar } from "@/components/domain/factor-bar";
 import { Button } from "@/components/ui/button";
-import { toast } from "@/features/ui/toast-store";
 import type { EvidenceState } from "@/lib/schemas";
 
 /**
@@ -36,7 +35,7 @@ function Scene({
     <div className="mkt-tall">
       <div className="mkt-sticky">
         <div className="mx-auto grid w-full max-w-6xl grid-cols-1 items-center gap-8 px-6 lg:grid-cols-2 lg:gap-14">
-          <motion.div
+          <m.div
             initial={{ opacity: 0, y: reduceMotion ? 0 : 32 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-20%" }}
@@ -52,8 +51,8 @@ function Scene({
             <p className="mt-3 max-w-md text-sm leading-relaxed text-muted sm:text-base">
               {copy}
             </p>
-          </motion.div>
-          <motion.div
+          </m.div>
+          <m.div
             initial={{ opacity: 0, y: reduceMotion ? 0 : 48 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-20%" }}
@@ -65,7 +64,7 @@ function Scene({
             className={`min-w-0 ${flip ? "lg:order-1" : ""}`}
           >
             {card}
-          </motion.div>
+          </m.div>
         </div>
       </div>
     </div>
@@ -206,6 +205,9 @@ function AtsCard() {
 }
 
 function ExportCard() {
+  // Local confirmation (no global toast store): marketing routes do not
+  // mount the Toaster, so feedback stays inside this card.
+  const [noted, setNoted] = useState(false);
   return (
     <GlassCard className="p-5 sm:p-6">
       <div className="rounded-sm border border-white/[0.08] bg-bg/60 p-4">
@@ -222,17 +224,17 @@ function ExportCard() {
         variant="secondary"
         size="sm"
         className="mt-4"
-        onClick={() =>
-          toast({
-            title: "Preview only",
-            description: "PDF export lands with the Resume Studio in F5.",
-            tone: "info",
-          })
-        }
+        aria-describedby={noted ? "export-note" : undefined}
+        onClick={() => setNoted(true)}
       >
         <Download className="size-4" aria-hidden="true" />
         Export PDF
       </Button>
+      {noted && (
+        <p id="export-note" role="status" className="mt-3 text-xs text-muted">
+          Preview only — full PDF export lands with the Resume Studio in F5.
+        </p>
+      )}
     </GlassCard>
   );
 }

@@ -68,3 +68,32 @@ Findings:
 Consequence: F1 meets every acceptance item except desktop perf 90+ in this
 lab. Recommend accepting F1 on architecture + a11y, and scheduling real-device
 measurement plus below-fold hydration splits for the F7 polish pass.
+
+## ADR-005 — 2026-10-16 — Landing JS budget: 215KB gzip on "/"
+Context: "/" initial JS measured 680.9KB raw / 209.0KB gzip. Attribution of the
+initial graph: react-dom + Next runtime (~123KB gzip, untouchable floor),
+motion full + lucide + page code (~50KB gzip), react-query + zustand + Toaster
+(~17KB gzip via root Providers), lenis (~8KB gzip, eager import).
+Decision:
+1. Providers split: root layout is now a pure server component; QueryProvider +
+   Toaster mount only under (app)/. Marketing ships no react-query, no zustand,
+   no dev MSW starter (the narrative export-preview uses local inline feedback).
+2. Motion ships via LazyMotion (`m` components + domAnimation) from the
+   marketing layout; no AnimatePresence/springs/scroll features in the bundle.
+3. Hero copy, trust, footer and FAQ copy are server components; only the hero
+   backdrop, scroll button, narrative scenes and FAQ accordion are client
+   islands. SSR output (headings, copy, SEO) is byte-identical in shape.
+4. Lenis loads via dynamic import after idle/first interaction; anchors fall
+   back to native smooth scroll until it activates.
+5. Verified absent from "/" initial JS: msw, fixtures, zod, three/R3F,
+   react-query, zustand. next/font already optimal (display=swap, latin subset,
+   single weights) — no change.
+6. Result: 631.7KB raw / 196.6KB gzip. Budget set at 215KB gzip
+   (best 196.6 × 1.1 = 216.3, rounded down), enforced by
+   `scripts/check-landing-budget.mjs` (`npm run budget`, runs in CI after build).
+   150KB is not reachable without removing animations/icons/content (framework
+   floor alone is ~123KB gzip); below-fold dynamic splitting was considered and
+   rejected for F1 (SSR/hydration timing risk on the sticky narrative for ~12KB
+   gzip — revisit in F7 with real-device data).
+Consequence: any regression (re-added query/motion-full/eager-lenis/3D in the
+initial graph) fails CI until the budget is deliberately raised.

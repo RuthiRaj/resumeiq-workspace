@@ -1,11 +1,13 @@
 import Link from "next/link";
+import { LazyMotion, domAnimation } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { SmoothScroll } from "@/components/marketing/smooth-scroll";
 import "./marketing.css";
 
 /**
  * Marketing layout (F1): minimal header + footer, Lenis smooth scroll.
- * No app sidebar here — the authenticated shell lives in (app)/layout.
+ * Motion runs through LazyMotion/domAnimation so the landing never ships the
+ * full animation feature set. No app sidebar here.
  */
 export default function MarketingLayout({
   children,
@@ -13,7 +15,7 @@ export default function MarketingLayout({
   children: React.ReactNode;
 }) {
   return (
-    <>
+    <LazyMotion features={domAnimation} strict>
       <SmoothScroll />
       <header
         data-app-chrome
@@ -78,6 +80,6 @@ export default function MarketingLayout({
           </nav>
         </div>
       </footer>
-    </>
+    </LazyMotion>
   );
 }

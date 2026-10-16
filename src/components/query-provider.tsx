@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Toaster } from "@/components/toaster";
 
 let client: QueryClient | null = null;
 function getQueryClient(): QueryClient {
@@ -16,8 +15,12 @@ function getQueryClient(): QueryClient {
   return client;
 }
 
-/** Root providers: TanStack Query + toasts + dev MSW worker. */
-export function Providers({ children }: { children: React.ReactNode }) {
+/**
+ * App-only data provider (F2+ routes under (app)/). NOT mounted on marketing
+ * routes, so the landing page never ships @tanstack/react-query or the dev
+ * MSW starter. Toasts are mounted separately (see Toaster, used by AppShell).
+ */
+export function QueryProvider({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(getQueryClient);
 
   useEffect(() => {
@@ -31,10 +34,5 @@ export function Providers({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  return (
-    <QueryClientProvider client={queryClient}>
-      {children}
-      <Toaster />
-    </QueryClientProvider>
-  );
+  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
 }

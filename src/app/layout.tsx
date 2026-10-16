@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
 import "./globals.css";
-import { Providers } from "@/components/providers";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -25,6 +24,12 @@ export const metadata: Metadata = {
     "Maintain your career information once, keep your standard resume synchronized, and generate tailored, evidence-based resumes for every application.",
 };
 
+/**
+ * Root layout is a pure server component: fonts, grain, nothing else.
+ * Client providers live per route group — (app)/ mounts QueryProvider +
+ * Toaster, so marketing routes ship neither @tanstack/react-query, zustand
+ * toasts, nor the dev MSW starter.
+ */
 export default function RootLayout({
   children,
 }: {
@@ -38,7 +43,7 @@ export default function RootLayout({
       <body className="min-h-full">
         {/* Cinematic film grain overlay (static, ~3.5% opacity, PRD §7.2). */}
         <div className="grain-overlay" aria-hidden="true" />
-        <Providers>{children}</Providers>
+        {children}
       </body>
     </html>
   );
