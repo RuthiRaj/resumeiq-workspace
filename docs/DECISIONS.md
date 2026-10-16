@@ -109,3 +109,18 @@ preserved); `/backend` is a README placeholder until B0; `docs/`, `.github/`,
 configs, which needed none. Root `.gitignore` covers both packages.
 Consequence: backend work later starts in `/backend` without touching frontend
 history or CI.
+
+## ADR-007 — 2026-10-16 — `frontend/AGENTS.md` is a generated duplicate, never commit it
+Context: Running `next dev` from `frontend/` (the normal workflow) made Next.js
+write `frontend/AGENTS.md` containing only the managed `nextjs-agent-rules`
+block — byte-identical to the block already at the top of the root `AGENTS.md`,
+which additionally holds all project rules. Source:
+`frontend/node_modules/next/dist/server/lib/generate-agent-files.js`
+(`writeAgentFiles` targets the dev server's project dir; see `syncAgentRulesForDev`
+in `dist/server/lib/app-info-log.js`).
+Decision: Deleted the untracked `frontend/AGENTS.md` (nothing to merge — root
+already has the identical block); added `frontend/AGENTS.md` to root
+`.gitignore` so a future `next dev` regeneration can never be committed by mistake.
+Consequence: `next dev` may still recreate the file on disk as ignored clutter;
+the canonical, tracked copy remains the root `AGENTS.md`. This precise path
+entry does not affect the tracked root file.

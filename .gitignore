@@ -43,3 +43,8 @@ yarn-error.log*
 
 # lighthouse lab artifacts
 lh-*.json
+
+# next dev writes AGENTS.md into its project dir (frontend/) whenever it detects
+# an AI agent; the canonical copy is the root AGENTS.md (see ADR-007), so never
+# commit the generated duplicate.
+frontend/AGENTS.md
