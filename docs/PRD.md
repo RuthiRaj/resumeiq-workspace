@@ -218,24 +218,28 @@ AppShell (sidebar + topbar + command palette), GlassCard, SectionCard, EvidenceB
 ### 8.1 Stack (all free/open-source)
 Next.js App Router, React, TypeScript strict, Tailwind CSS, shadcn/ui (Radix), Motion, React Three Fiber + drei (landing only), Lenis (landing only), TanStack Query, React Hook Form + Zod, Zustand (UI state only), dnd-kit (reorder), Lucide icons, MSW (mock API), Vitest + Testing Library, Playwright (E2E), ESLint + Prettier. Use the latest stable versions at install time and commit the lockfile.
 
-### 8.2 Folder structure
+### 8.2 Folder structure (monorepo: frontend code lives in `/frontend`)
 ```
-src/
-  app/                 # routes (App Router)
-    (marketing)/       # landing
-    (app)/             # authenticated app shell
-  components/
-    ui/                # shadcn primitives
-    domain/            # EvidenceBadge, ScoreRing, ResumeCanvas, ...
-    three/             # R3F scenes (landing only, lazy)
-  features/
-    workspace/ resume/ targets/ history/ privacy/
-  lib/
-    api/               # typed client (swap mock -> real later)
-    schemas/           # Zod schemas = source of truth for types
-    utils/
-  mocks/               # MSW handlers + fixtures
-  styles/              # tokens.css, globals.css
+frontend/              # ALL Next.js code and config
+  src/
+    app/               # routes (App Router)
+      (marketing)/     # landing
+      (app)/           # authenticated app shell
+    components/
+      ui/              # shadcn primitives
+      domain/          # EvidenceBadge, ScoreRing, ResumeCanvas, ...
+      three/           # R3F scenes (landing only, lazy)
+    features/
+      workspace/ resume/ targets/ history/ privacy/
+    lib/
+      api/             # typed client (swap mock -> real later)
+      schemas/         # Zod schemas = source of truth for types
+      utils/
+    mocks/             # MSW handlers + fixtures
+    styles/            # tokens.css, globals.css
+  public/ tests/ scripts/  # static assets, Playwright specs, budget check
+  package.json README.md   # run all npm scripts from /frontend
+backend/               # FastAPI placeholder (see section 10)
 docs/                  # PRD.md, DECISIONS.md
 AGENTS.md
 ```
@@ -294,7 +298,7 @@ Provide 2 sample workspaces (a fresher with thin experience; a mid-level develop
 
 | ID | Deliverable | Accepted when |
 |---|---|---|
-| F0 | Repo scaffold, tokens, theme, fonts, shadcn setup, AppShell skeleton, `AGENTS.md`, CI (lint, typecheck, build, test) | `npm run dev/build/lint/typecheck/test` all pass; token page renders every token and component |
+| F0 | Repo scaffold, tokens, theme, fonts, shadcn setup, AppShell skeleton, `AGENTS.md`, CI (lint, typecheck, build, test) | `npm run dev/build/lint/typecheck/test` (run inside `/frontend`) all pass; token page renders every token and component |
 | F1 | Cinematic landing page: R3F hero with fallback, scroll narrative, trust section, FAQ | Lighthouse perf 90+ (desktop) with reduced-motion fallback working; 3D code-split |
 | F2 | Auth screens, onboarding, AppShell navigation, command palette, toasts | All routes reachable; keyboard navigation works; mock auth persists across reload |
 | F3 | Workspace dashboard and all section editors, evidence states, attachments UI, drag reorder | CRUD works on mock API; typing never loses focus; empty/error states exist |

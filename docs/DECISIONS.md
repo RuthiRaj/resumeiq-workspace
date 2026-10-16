@@ -97,3 +97,15 @@ Decision:
    gzip — revisit in F7 with real-device data).
 Consequence: any regression (re-added query/motion-full/eager-lenis/3D in the
 initial graph) fails CI until the budget is deliberately raised.
+
+## ADR-006 — 2026-10-16 — Monorepo: `/frontend`, `/backend`, root docs
+Context: The repo grew a backend plan (PRD §10) but all code lived at the root.
+Decision: `/frontend` holds ALL Next.js code/config (moved with `git mv`, history
+preserved); `/backend` is a README placeholder until B0; `docs/`, `.github/`,
+`AGENTS.md` stay at root with updated paths (PRD §8.2 tree now shows the
+`frontend/` prefix; CI runs every job with `working-directory: frontend` and
+`cache-dependency-path: frontend/package-lock.json`). Root layout is provider-free
+(see ADR-005), so the move required no app-code changes — only relative-path
+configs, which needed none. Root `.gitignore` covers both packages.
+Consequence: backend work later starts in `/backend` without touching frontend
+history or CI.

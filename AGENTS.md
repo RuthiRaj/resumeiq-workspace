@@ -13,6 +13,10 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 Project: AI Resume Analyzer Workspace (see docs/PRD.md; it is the source of truth).
 Current phase: FRONTEND ONLY. Do not build backend or call real AI APIs until told.
 
+Monorepo: frontend code (Next.js app, configs, tests) lives in `/frontend` — run all
+npm scripts from there (`cd frontend`). Backend code will live in `/backend`
+(currently a FastAPI placeholder, see docs/PRD.md section 10).
+
 Stack: Next.js App Router + React + TypeScript strict, Tailwind, shadcn/ui, Motion,
 React Three Fiber (landing only), TanStack Query, Zod, MSW mocks, Vitest, Playwright.
 
@@ -22,7 +26,7 @@ Hard product rules:
 - No billing, pricing, credits or paywall UI.
 - Scores are never hiring probabilities or ATS guarantees; always show methodology.
 
-UI rules: dark cinematic theme using tokens in src/styles/tokens.css; honor
+UI rules: dark cinematic theme using tokens in frontend/src/styles/tokens.css; honor
 prefers-reduced-motion; 3D only on "/", lazy-loaded; every action gives visible
 feedback; every screen has loading, empty, error and stale states; no dead buttons;
 inputs must not lose focus while typing.
@@ -34,5 +38,5 @@ Workflow:
 - Use a feature branch or git worktree per milestone and open a PR. NEVER merge to
   master (the default branch is `master`; there is no `main`).
 - Run lint, typecheck, tests and build before declaring done; report results honestly.
-- No secrets in code or prompts; use .env.local (git-ignored).
+- No secrets in code or prompts; use frontend/.env.local (git-ignored).
 - Record non-obvious decisions in docs/DECISIONS.md.
