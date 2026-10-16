@@ -1,0 +1,66 @@
+@import "tailwindcss";
+@import "../styles/tokens.css";
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background: var(--riq-bg);
+  color: var(--riq-text);
+  font-family: var(--riq-font-sans);
+  min-height: 100vh;
+}
+
+/* Visible keyboard focus everywhere (WCAG 2.2 AA target, PRD §7.7). */
+:focus-visible {
+  outline: 2px solid var(--riq-accent-cyan);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+::selection {
+  background: rgba(124, 92, 255, 0.45);
+  color: #fff;
+}
+
+/* Honor reduced motion globally (PRD §7.3): fade-only, no parallax/3D. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Subtle dark scrollbar for the cinematic shell. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.16) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Clean print/PDF output: no app chrome, no grain, structured sections (PRD §7.7). */
+@media print {
+  .grain-overlay,
+  [data-app-chrome] {
+    display: none !important;
+  }
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+}

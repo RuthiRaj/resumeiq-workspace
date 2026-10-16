@@ -1,0 +1,96 @@
+/* ResumeIQ design tokens (PRD §7.2). Single source of truth for color,
+   type, radius, and signature effects. Wired into Tailwind v4 via @theme. */
+
+:root {
+  /* Canvas */
+  --riq-bg: #07080c;
+  --riq-surface: #0f1117;
+  --riq-elevated: #161924;
+  --riq-border: rgba(255, 255, 255, 0.08);
+
+  /* Type */
+  --riq-text: #e8eaf0;
+  --riq-muted: #8a90a2;
+
+  /* Accents */
+  --riq-accent-violet: #7c5cff;
+  --riq-accent-cyan: #22d3ee;
+  /* Filled-action violet: darkened from accent-violet so white text meets AA
+     (accent-violet itself stays the brand/glow token, PRD §7.2). */
+  --riq-action: #5f48d8;
+
+  /* Evidence states (PRD §4) */
+  --riq-evidence-verified: #34d399;
+  --riq-evidence-attested: #60a5fa;
+  --riq-evidence-related: #fbbf24;
+  --riq-evidence-missing: #fb7185;
+
+  /* Radius */
+  --riq-radius-sm: 12px;
+  --riq-radius-md: 16px;
+  --riq-radius-lg: 20px;
+
+  /* Typefaces (values bound to next/font variables in layout.tsx) */
+  --riq-font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --riq-font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --riq-font-display: var(--font-instrument-serif), Georgia, serif;
+}
+
+@theme inline {
+  --color-bg: var(--riq-bg);
+  --color-surface: var(--riq-surface);
+  --color-elevated: var(--riq-elevated);
+  --color-text: var(--riq-text);
+  --color-muted: var(--riq-muted);
+  --color-accent-violet: var(--riq-accent-violet);
+  --color-accent-cyan: var(--riq-accent-cyan);
+  --color-action: var(--riq-action);
+  --color-evidence-verified: var(--riq-evidence-verified);
+  --color-evidence-attested: var(--riq-evidence-attested);
+  --color-evidence-related: var(--riq-evidence-related);
+  --color-evidence-missing: var(--riq-evidence-missing);
+
+  --font-sans: var(--riq-font-sans);
+  --font-mono: var(--riq-font-mono);
+  --font-display: var(--riq-font-display);
+
+  --radius-sm: var(--riq-radius-sm);
+  --radius-md: var(--riq-radius-md);
+  --radius-lg: var(--riq-radius-lg);
+}
+
+@layer utilities {
+  /* Frosted glass panel: 6% white fill + hairline border + heavy blur. */
+  .glass {
+    background: rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  /* Volumetric accent glows (10–20% opacity radial washes). */
+  .glow-violet {
+    background: radial-gradient(
+      closest-side,
+      rgba(124, 92, 255, 0.18),
+      transparent
+    );
+  }
+  .glow-cyan {
+    background: radial-gradient(
+      closest-side,
+      rgba(34, 211, 238, 0.14),
+      transparent
+    );
+  }
+
+  /* Cinematic film grain: static noise at ~3–4% opacity. Pure CSS/SVG. */
+  .grain-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    pointer-events: none;
+    opacity: 0.035;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+}

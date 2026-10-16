@@ -1,0 +1,52 @@
+/* Marketing-route styles: sticky narrative scenes.
+   Lenis (smooth wheel) composes with CSS sticky without extra work. */
+
+.mkt-tall {
+  min-height: 170vh;
+}
+
+.mkt-sticky {
+  position: sticky;
+  top: 0;
+  min-height: 100svh;
+  display: flex;
+  align-items: center;
+  padding-top: 4rem;
+  padding-bottom: 4rem;
+}
+
+/* Reduced motion: no pinning, no parallax — a calm stacked layout with
+   fades only (handled in components via useReducedMotion). */
+@media (prefers-reduced-motion: reduce) {
+  .mkt-tall {
+    min-height: auto;
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+  }
+  .mkt-sticky {
+    position: static;
+    min-height: auto;
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+  }
+}
+
+/* Graceful crossfade when the hero upgrades poster -> 3D after load. */
+@keyframes hero-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.hero-scene-enter {
+  animation: hero-fade-in 1.2s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-scene-enter {
+    animation-duration: 0.2s;
+  }
+}
