@@ -11,11 +11,17 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 # AGENTS.md
 
 Project: AI Resume Analyzer Workspace (see docs/PRD.md; it is the source of truth).
-Current phase: FRONTEND ONLY. Do not build backend or call real AI APIs until told.
+Current phase: frontend and backend proceed in parallel in separate folders
+(`/frontend` and `/backend`). Frontend work still uses MSW mocks only; never
+call the real backend or any real AI API yet from frontend code. Backend code
+lives in `/backend` (FastAPI, see docs/PRD.md section 10). The OpenAPI file at
+`docs/api/openapi.json` (exported from the backend) is the contract between
+them: frontend Zod schemas and MSW handlers must match it.
 
 Monorepo: frontend code (Next.js app, configs, tests) lives in `/frontend` — run all
-npm scripts from there (`cd frontend`). Backend code will live in `/backend`
-(currently a FastAPI placeholder, see docs/PRD.md section 10).
+npm scripts from there (`cd frontend`). Backend code lives in `/backend`
+(FastAPI scaffold since milestone B0, see docs/PRD.md section 10) — run all
+Python commands from there (`cd backend`, managed with `uv`).
 
 Stack: Next.js App Router + React + TypeScript strict, Tailwind, shadcn/ui, Motion,
 React Three Fiber (landing only), TanStack Query, Zod, MSW mocks, Vitest, Playwright.

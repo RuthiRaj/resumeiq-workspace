@@ -124,3 +124,71 @@ already has the identical block); added `frontend/AGENTS.md` to root
 Consequence: `next dev` may still recreate the file on disk as ignored clutter;
 the canonical, tracked copy remains the root `AGENTS.md`. This precise path
 entry does not affect the tracked root file.
+
+## ADR-008 — 2026-10-16 — B0 backend scaffold choices
+Context: Milestone B0 needs a minimal FastAPI backend proving auth + contract
+before any domain logic (B1+). Constraints: Python 3.12+, `uv` preferred,
+Pydantic v2, OpenAPI as the frontend/backend contract, Render free hosting.
+Decision:
+1. `uv` manages deps with a committed `uv.lock` (`requires-python >=3.12`);
+   Dockerfile installs with `uv sync --frozen` on `python:3.12-slim` as a
+   non-root user. Plain `venv + pip install -e ".[dev]"` documented as fallback.
+2. Auth via `PyJWT` + `PyJWKClient` (no extra Supabase server SDK needed for
+   verification). Type check is `mypy` (over pyright: config lives in
+   `pyproject.toml`, matches the pre-commit story); lint/format is Ruff.
+3. Security defaults: strict CORS allowlist from config (no wildcard, no
+   credentials), security headers middleware, streaming 1 MiB request-size
+   cap (413), fixed-window per-IP rate limiter. The limiter is an explicit
+   single-process in-memory placeholder — it must become a shared store
+   (Redis) if the backend ever runs more than one replica.
+4. Logging is JSON to stdout with method/path/status/duration/request-id
+   ONLY — bodies, headers, IPs and tokens are never logged (PRD §11).
+5. `app/ai/gateway.py` is an empty placeholder with a no-AI-calls guarantee;
+   the real gateway lands in B3. `GET /health` is unauthenticated;
+   everything under `/api/v1` requires a verified Supabase JWT.
+6. `docs/api/openapi.json` is the contract: exported by
+   `backend/scripts/export_openapi.py`, enforced by `tests/test_openapi.py`.
+Consequence: B1+ mounts domain routers under `app/api/v1/router.py` and
+replaces the rate limiter before horizontal scaling; frontend Zod/MSW must
+track the exported OpenAPI file.
+
+## ADR-009 — 2026-10-16 — Supabase JWT verification (JWKS primary, HS256 fallback)
+Context: `/api/v1/me` must accept a valid Supabase JWT. Supabase now has two
+signing systems (legacy HS256 shared secret vs asymmetric signing keys).
+Decision (verified against live Supabase docs fetched 2026-10-16,
+`/docs/guides/auth/jwts` and `/docs/guides/auth/signing-keys`):
+1. Primary path: asymmetric keys verified against the project JWKS at
+   `GET {SUPABASE_URL}/auth/v1/.well-known/jwks.json` (match JWT `kid`/`alg`;
+   key cache kept short — the endpoint itself is edge-cached 10 min).
+2. Legacy path: local HS256 verification ONLY when `SUPABASE_JWT_SECRET` is
+   set, as a migration fallback. The docs recommend the Auth-server
+   `GET /auth/v1/user` check or migrating to asymmetric keys instead, and warn
+   local HS256 verification risks long-lived impersonation if the secret
+   leaks — so the fallback is opt-in and documented as temporary.
+3. Claim checks: `exp` enforced (30s leeway), `aud` must equal
+   `SUPABASE_JWT_AUDIENCE` (Supabase default `authenticated`), `iss` checked
+   when configured (defaults to `{SUPABASE_URL}/auth/v1`), `sub` required.
+   Failures map to distinct 401 codes (`token_expired`, `invalid_audience`,
+   `malformed_token`, …); no JWKS and no secret is a 500 `auth_not_configured`.
+Consequence: setting `SUPABASE_URL` alone is enough on new projects; legacy
+projects add the secret until they migrate, then unset it.
+
+## ADR-010 — 2026-10-16 — B0 database schema and RLS model
+Context: PRD §6 needs 16 entities with per-user privacy, evidence states, and
+standard-vs-tailored resume rules, but B1 (not B0) builds the APIs.
+Decision: single forward-only migration `backend/db/migrations/0001_initial.sql`
+(no down migration for B0) with:
+1. `user_id REFERENCES auth.users ON DELETE CASCADE` on every table; RLS
+   enabled on every table with `auth.uid() = user_id` policies.
+2. Append-only history (`change_log`, `audit_events`, `workspace_versions`,
+   `analysis_reports`, `resume_versions`): SELECT + INSERT policies only.
+3. Soft delete (`deleted_at`) everywhere user-facing; one live standard resume
+   per user via partial unique index; tailored rows snapshot `target_id` +
+   `workspace_version` with a `stale` flag.
+4. `skill_relations.relation` constrained to `related` (adjacent tech is never
+   equivalent, PRD §4.3); `CHECK` enums for evidence/section/status fields.
+Consequence: B1 APIs inherit privacy from RLS; they must still enforce the
+app-level rules (verified-items-need-links, sync/stale transitions) since the
+DB cannot express them. Migration reviewed but NOT executed — no local
+Postgres here; must be applied to a linked Supabase project before B1
+(see `backend/db/README.md`).
