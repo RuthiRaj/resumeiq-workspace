@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Generated MSW service worker (committed so the dev mock API works).
+    "public/mockServiceWorker.js",
   ]),
 ]);
 

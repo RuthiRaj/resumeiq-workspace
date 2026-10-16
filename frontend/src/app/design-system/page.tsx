@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { OverlaysDemo, TabsDemo } from "./overlays-demo";
 import type { EvidenceState } from "@/lib/schemas";
 
 const SWATCHES: { name: string; token: string; value: string }[] = [
@@ -127,6 +128,19 @@ export default function DesignSystemPage() {
             <Badge variant="outline">outline</Badge>
           </div>
         </div>
+      </Section>
+
+      <Section title="Overlays: dialog · sheet · menu · popover · tooltip">
+        <OverlaysDemo />
+        <p className="text-xs text-muted">
+          Command palette (⌘K) lives in the app shell — open it from any
+          authenticated page. All overlays are Radix primitives with focus
+          trapping and keyboard support.
+        </p>
+      </Section>
+
+      <Section title="Tabs">
+        <TabsDemo />
       </Section>
 
       <Section title="Evidence states">
