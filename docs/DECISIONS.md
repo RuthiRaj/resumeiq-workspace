@@ -346,12 +346,136 @@ never bumps the workspace version. `item-editor-sheet.test.tsx` locks in both th
 setValue path and the invalid-then-corrected recovery; reverting to the `type`
 filter fails 3 of its 4 cases.
 
+## ADR-016 — 2026-10-17 — Workspace data access: Data API + caller JWT + RPC
+
+Context: B1 needs every query scoped to the authenticated user *and* enforced by
+Row Level Security, plus "increment the version and append the change_log row in
+the same transaction". The backend has no database driver and no database
+password — only `httpx`.
+
+Decision (checked against the current Supabase docs, "Securing your API"): talk
+to Postgres through the **Data API (PostgREST)** and pass the **caller's JWT** on
+every request (`Authorization: Bearer <user jwt>`, `apikey: <publishable key>`).
+PostgREST sets `request.jwt.claims` and role `authenticated`, so every statement
+runs as `auth.uid()` and RLS applies in the database — this is Supabase's
+"pass the user JWT to Postgres" idiom, and it needs no database password. The
+`service_role` key (which bypasses RLS) is never used by the backend.
+
+Mutations run through `SECURITY INVOKER` SQL functions (migration
+`0002_workspace_api.sql`). Because the function runs as the caller, RLS stays
+effective; because it runs inside the single PostgREST request transaction, the
+per-user version bump, the `change_log` append and the item change commit
+atomically. EXECUTE is granted to `authenticated` explicitly (Supabase is moving
+to opt-in default privileges).
+
+Consequence: one extra migration surface (7 functions) and a repository that
+speaks PostgREST, but no DB password, no connection pooling to manage, and RLS is
+enforced by Postgres as the primary control — the app-level `user_id` filters are
+defence in depth. Unit tests use an in-memory repository; the Data API path is
+covered by `httpx.MockTransport` tests and by opt-in integration tests
+(`RUN_SUPABASE_INTEGRATION=1`), which are skipped otherwise.
+
+## ADR-017 — 2026-10-17 — Workspace wire ↔ DB mapping (mismatches + resolutions)
+
+Context: B1 must expose exactly the shapes the F3 frontend already uses
+(`frontend/src/lib/schemas`, `frontend/src/mocks/handlers.ts`) on top of the B0
+schema (`0001_initial.sql`). The two do not line up perfectly.
+
+Decisions (the wire/frontend is the contract; `/frontend` is not edited):
+
+1. `order` (wire) ↔ `position` (DB). Kept as-is, mapped in the repository. The
+   DB column name is the odd one out; a future migration could rename it, but
+   nothing depends on the DB name.
+2. **Dates.** The wire sends **month precision** (`startDate`/`endDate`, e.g.
+   `2022-09`) because the editor uses `<input type="month">`; the DB columns are
+   `date` (day precision). Resolution: pad to the first of the month on write and
+   truncate back to `YYYY-MM` on read, which round-trips client values exactly
+   (the altered value is invisible to the UI). Proposed long-term: either the DB
+   stores these as `text`, or the frontend adopts full dates — if the frontend
+   ever needs day precision the current mapping must change.
+3. `attachments` (wire, `{id,name,url}`) have no column; they map to the
+   `evidence_links` rows (`url`→`url`, `name`→`label`, `id`→`id`). The wire's
+   `links: string[]` maps to `workspace_items.links`.
+4. **`change_log` label + seq.** The wire changelog entry carries `label`
+   (captured at write time so the log stays readable after a soft delete) and a
+   monotonic `seq`; the B0 table had neither. Resolution (migration 0002): add
+   `change_log.label text` and `change_log.seq integer` (NOT NULL, unique per
+   user). This also closes the ADR-013 openapi gap.
+5. **`restore`.** The DB `action` enum has `restore`; the wire `op` enum does not
+   (`add|edit|delete|reorder`). The DB stores the faithful `restore` and the
+   repository maps it to the wire `edit` (the log row still has the right label).
+   Proposed: add `restore` to the wire enum in a later frontend milestone so the
+   distinction is not lost; not done here because `/frontend` is frozen.
+
+   **Update 2026-10-17 (reconcile with ADR-019).** The frontend wire enum now
+   carries `restore` (ADR-019), so the collapse is gone: the repository maps DB
+   `action` to wire `op` **1:1** (`restore` → `restore`, see `workspace.py`
+   `_ACTION_TO_OP`) and the in-memory double logs `restore` too. The original
+   "map to `edit`" resolution above is superseded. `docs/api/openapi.json` was
+   re-exported: `ChangeLogEntryResponse.op` is now
+   `add|edit|delete|reorder|restore`.
+6. **Reorder validation.** The mock silently ignores ids that are not in the
+   section; the backend rejects the request (422) unless every id is an active
+   item of that section. Stricter on purpose — a silent no-op would still bump
+   the version and write misleading log rows.
+7. **`verified` needs support.** Enforced in three places: the wire form (client),
+   the Pydantic create/patch models, and the SQL functions (defence in depth), so
+   an item can never end up `verified` without a document or link (PRD §4.2).
+
+## ADR-018 — 2026-10-17 — B1 hardening: RPC privileges and the version↔log invariant
+
+Context: after B1 was written, a read-only review of the live project
+(security/performance advisors + `pg_proc`/`pg_policies` inspection) found issues
+that are not data leaks but should not ship:
+
+* all seven `api_workspace_*` functions were executable by `anon`, because
+  `CREATE FUNCTION` grants `EXECUTE` to `PUBLIC` by default and migration 0002
+  only *added* a grant to `authenticated`;
+* `api_workspace_next_seq` / `api_workspace_next_version` trusted a
+  **caller-supplied user id** (`p_user`) and were exposed as Data API RPCs. RLS
+  meant a caller could not read or write another user's rows, but calling
+  `next_version(<own id>)` inserted a `workspace_versions` row **with no
+  `change_log` row**, breaking the "every mutation bumps the version *and* logs
+  it" invariant;
+* `set_updated_at()` had a mutable `search_path`; every RLS policy called
+  `auth.uid()` per row (advisor 0003); four foreign keys were unindexed.
+
+Decision — migration `0003_hardening.sql` (forward-only):
+
+1. **Inline the two helpers into the five mutation functions and `DROP` them.**
+   Of the three options offered, this is the safest:
+   * "revoke from `authenticated` too" does **not** work: the mutation functions
+     are `SECURITY INVOKER`, so the caller (`authenticated`) must itself hold
+     `EXECUTE` on any helper it calls — revoking breaks the functions;
+   * "assert `p_user = auth.uid()`" leaves an RPC that can still bump a version
+     without a log row;
+   * inlining removes the standalone surface entirely, so the only code that
+     inserts a version also writes its `change_log` row in the same transaction.
+2. **A deferred constraint trigger** (`workspace_versions_require_changelog`)
+   re-checks at commit that every inserted `workspace_versions` row has a
+   `change_log` row with the same `(user_id, workspace_version)`. Dropping the
+   helper is not sufficient on its own: RLS lets a user `INSERT` their own
+   `workspace_versions` rows directly through the Data API. The deferred check
+   (it must be deferred, because the functions insert the version row before the
+   log row) makes the invariant true for every writer.
+3. `REVOKE EXECUTE … FROM PUBLIC, anon` on the five RPCs (and on
+   `set_updated_at`), keeping `GRANT … TO authenticated`; pin
+   `set_updated_at`'s `search_path`; rewrite the 54 policies to
+   `(select auth.uid())`; add the four covering indexes.
+
+Consequence: the workspace RPCs are usable only by `authenticated`; a workspace
+version can no longer exist without its change-log entry, even via a direct
+table write; the advisors' security/performance warnings are addressed. New
+integration tests assert the anon role cannot call any `api_workspace_*` function
+and that an authenticated user cannot insert a version row without a matching
+change-log entry.
+
 ## ADR-019 — 2026-10-17 — F3 workspace audit: contract alignment + one real defect
 
 Context: end-to-end audit of the workspace feature (F3 frontend against the B1
 OpenAPI `docs/api/openapi.json` on `feat/b1-workspace-api`). Three wire
-mismatches were fixable on the frontend now (ADR numbers 016–018 are reserved on
-the B1 branch, which is not yet merged):
+mismatches were fixable on the frontend now (ADR numbers 016–018 were reserved
+for the B1 branch, which has since merged here, so the numbering lines up):
 
 1. **Nullable fields.** `WorkspaceItemResponse` models `organization`,
    `startDate`, `endDate`, `location`, `deletedAt` and the changelog `label` as
@@ -379,13 +503,16 @@ React key). Confirmed by an E2E assertion (`attachment-item` resolved to 2). Fix
 progress is tracked in a ref and `finish()` runs from the interval callback, never
 from an updater, and `finish()` is idempotent.
 
-Still backend-side (documented, not fixable on this branch):
-- The B1 mapper should emit `op: "restore"` (today `edit`). The frontend accepts
-  both, so this is forward-compatible; reconcile when B1 merges.
+Reconciled when B1 merged (this branch): the B1 mapper now emits `op: "restore"`
+instead of `edit` (ADR-017 §5 update, migration 0003) and a PATCH on a
+soft-deleted item returns 404; the frontend already accepted both.
+
+Still backend-side (documented, no frontend change needed):
 - `WorkspaceItemUpdate` accepts `section`/`order`, which the frontend never
-  sends (`deletedAt` is correctly absent). No change needed before B7.
-- The mock lets an edit touch a soft-deleted item; B1 answers 404. The UI never
-  does this, so parity is deferred to B7.
+  sends (`deletedAt` is correctly absent).
+- The frontend mock lets an edit touch a soft-deleted item where B1 answers 404;
+  the UI never does this, so mock/B1 parity is deferred to B7, when the mock is
+  removed.
 
 Accepted, not a defect: `GET /api/v1/auth/session` answers **401** when nobody
 is signed in, and the browser logs every 401 in the console. That is the designed

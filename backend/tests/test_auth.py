@@ -73,7 +73,7 @@ def test_me_wrong_signature(client: TestClient) -> None:
 
 
 def test_me_unconfigured_auth_returns_500() -> None:
-    client = TestClient(create_app(Settings(environment="test")))
+    client = TestClient(create_app(Settings(_env_file=None, environment="test")))
     response = client.get("/api/v1/me", headers={"Authorization": "Bearer anything"})
     assert response.status_code == 500
     assert response.json()["detail"]["code"] == "auth_not_configured"

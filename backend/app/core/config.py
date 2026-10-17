@@ -27,6 +27,14 @@ class Settings(BaseSettings):
     supabase_jwt_audience: str = "authenticated"
     supabase_jwt_issuer: str = ""
 
+    # Supabase Data API (PostgREST): the publishable/anon key is the `apikey`
+    # header; user data is reached with the *caller's* JWT so RLS applies. The
+    # service_role key is never used (ADR-016).
+    supabase_publishable_key: str = ""
+
+    # Opt-in gate for tests that hit a real Supabase project (skipped when unset).
+    run_supabase_integration: bool = False
+
     max_request_bytes: int = 1_048_576
     rate_limit_per_minute: int = 60
 
@@ -59,6 +67,18 @@ class Settings(BaseSettings):
     def auth_configured(self) -> bool:
         """True when at least one verification path (JWKS or legacy secret) exists."""
         return bool(self.jwks_url or self.supabase_jwt_secret)
+
+    @property
+    def rest_url(self) -> str:
+        """Data API base URL (``{SUPABASE_URL}/rest/v1``), or ``""`` if unset."""
+        if self.supabase_url:
+            return self.supabase_url.rstrip("/") + "/rest/v1"
+        return ""
+
+    @property
+    def data_api_configured(self) -> bool:
+        """True when the workspace Data API can be reached (URL + publishable key)."""
+        return bool(self.rest_url and self.supabase_publishable_key)
 
 
 @lru_cache(maxsize=1)
