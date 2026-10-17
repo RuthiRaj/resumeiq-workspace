@@ -1,36 +1,28 @@
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { TargetForm } from "@/features/targets/target-form";
 
 /**
- * F2 placeholder: target-intake form lands in F4. The command palette and
- * quick-create menu point here, so this page explains what's next instead
- * of 404ing.
+ * `/targets/new` (PRD §6.4 JD-1). The intake form and the consent gate; the
+ * analysis itself starts on `/targets/[id]`.
  */
+export const instant = false;
+
 export default function NewTargetPage() {
   return (
-    <div className="flex max-w-xl flex-col items-start gap-4 py-10">
-      <p className="font-mono text-xs uppercase tracking-[0.25em] text-accent-cyan">
-        Coming in F4
-      </p>
-      <h1 className="font-display text-4xl tracking-tight">New job target</h1>
-      <p className="text-sm leading-relaxed text-muted">
-        Paste a job description and we&apos;ll extract must-have skills,
-        nice-to-haves, seniority and keywords — then match each requirement
-        against your workspace evidence. The intake form and analysis theatre
-        land in F4.
-      </p>
-      <div className="glass flex w-full flex-col gap-2 rounded-md p-4">
-        <p className="text-sm font-medium">What you can do today</p>
-        <p className="text-sm text-muted">
-          Save the job description text somewhere handy. In F4 you&apos;ll
-          paste the role, company and description here.
+    <div className="flex flex-col gap-6 py-6">
+      <header className="flex flex-col gap-2">
+        <p className="font-mono text-xs uppercase tracking-[0.25em] text-accent-cyan">
+          New job target
         </p>
-      </div>
-      <Link href="/targets">
-        <Button variant="secondary" size="sm">
-          Back to job targets
-        </Button>
-      </Link>
+        <h1 className="font-display text-3xl tracking-tight sm:text-4xl">
+          What are you applying for?
+        </h1>
+        <p className="max-w-prose text-sm leading-relaxed text-muted">
+          Paste the posting as it was written. We quote its wording back to you,
+          match each requirement against your own evidence, and mark anything
+          you&apos;d need to build before claiming it.
+        </p>
+      </header>
+      <TargetForm />
     </div>
   );
 }

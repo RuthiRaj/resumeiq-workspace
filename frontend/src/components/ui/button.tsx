@@ -25,19 +25,28 @@ export interface ButtonProps
   size?: ButtonSize;
 }
 
+const BUTTON_BASE =
+  "inline-flex items-center justify-center gap-2 rounded-sm font-medium transition-[filter,background-color,color] duration-200 ease-out disabled:pointer-events-none disabled:opacity-50";
+
+/** Shared class recipe so links can look like buttons without a Button wrapper. */
+export function buttonClasses({
+  variant = "primary",
+  size = "md",
+  className,
+}: {
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+  className?: string;
+} = {}): string {
+  return cn(BUTTON_BASE, variantClasses[variant], sizeClasses[size], className);
+}
+
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant = "primary", size = "md", type = "button", ...props }, ref) => (
     <button
       ref={ref}
       type={type}
-      className={cn(
-        "inline-flex items-center justify-center gap-2 rounded-sm font-medium",
-        "transition-[filter,background-color,color] duration-200 ease-out",
-        "disabled:pointer-events-none disabled:opacity-50",
-        variantClasses[variant],
-        sizeClasses[size],
-        className,
-      )}
+      className={buttonClasses({ variant, size, className })}
       {...props}
     />
   ),

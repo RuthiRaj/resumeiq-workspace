@@ -1,11 +1,8 @@
-import { PlaceholderPage } from "@/components/placeholder-page";
+import { TargetsList } from "@/features/targets/targets-list";
+
+/** `/targets` (PRD §6.4). Client-rendered list of saved job targets. */
+export const instant = false;
 
 export default function TargetsPage() {
-  return (
-    <PlaceholderPage
-      title="Job targets"
-      milestone="Coming in F4"
-      description="Target roles with job descriptions, staged AI analysis, match reports, skill gaps and improvement roadmaps."
-    />
-  );
+  return <TargetsList />;
 }
