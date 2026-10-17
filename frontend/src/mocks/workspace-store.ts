@@ -268,7 +268,7 @@ export function restoreItem(
       delete next.deletedAt;
       draft.items[index] = next;
     },
-    [{ itemId: id, op: "edit", label }],
+    [{ itemId: id, op: "restore", label }],
     now,
   );
 }
