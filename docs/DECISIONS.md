@@ -346,3 +346,77 @@ never bumps the workspace version. `item-editor-sheet.test.tsx` locks in both th
 setValue path and the invalid-then-corrected recovery; reverting to the `type`
 filter fails 3 of its 4 cases.
 
+## ADR-019 — 2026-10-17 — F3 workspace audit: contract alignment + one real defect
+
+Context: end-to-end audit of the workspace feature (F3 frontend against the B1
+OpenAPI `docs/api/openapi.json` on `feat/b1-workspace-api`). Three wire
+mismatches were fixable on the frontend now (ADR numbers 016–018 are reserved on
+the B1 branch, which is not yet merged):
+
+1. **Nullable fields.** `WorkspaceItemResponse` models `organization`,
+   `startDate`, `endDate`, `location`, `deletedAt` and the changelog `label` as
+   `string | null`, but `WorkspaceItemSchema` / `WorkspaceChangeLogEntrySchema`
+   only used `.optional()`. A real response carrying `null` would fail
+   `safeParse` and, at B7, feed a null into a controlled input. Fixed with
+   `.nullish()`.
+2. **Month precision.** The editor's `startDate`/`endDate` accepted any string up
+   to 20 characters. ADR-017 sets the wire format to `YYYY-MM`, and the
+   "end before start" check is a lexicographic `>` that is only correct at month
+   precision. Added `MonthValueSchema` (`^\d{4}-(0[1-9]|1[0-2])$`, empty = unset)
+   and used it in `WorkspaceItemFormSchema`; day precision and `2024-13` now fail
+   inline with "Use month precision, e.g. 2024-06".
+3. **Restore operation.** The B1 mapper collapses a DB `restore` into the wire
+   `op: "edit"` (ADR-017 §5 proposed keeping the distinction). Added `restore` to
+   `WorkspaceChangeOpSchema`, taught `describeChange`/`RecentChanges` about it,
+   and made the mock store emit `restore` on undo instead of `edit`, so history
+   can tell an undo apart from an edit.
+
+Defect found and fixed (regression-tested): `AttachmentsEditor.startUpload`
+called `finish()` — which appends the attachment and calls `onChange` — from
+*inside* a `setPending` updater. React StrictMode double-invokes updaters, so one
+file was appended twice with the same id (a duplicate attachment and a duplicate
+React key). Confirmed by an E2E assertion (`attachment-item` resolved to 2). Fix:
+progress is tracked in a ref and `finish()` runs from the interval callback, never
+from an updater, and `finish()` is idempotent.
+
+Still backend-side (documented, not fixable on this branch):
+- The B1 mapper should emit `op: "restore"` (today `edit`). The frontend accepts
+  both, so this is forward-compatible; reconcile when B1 merges.
+- `WorkspaceItemUpdate` accepts `section`/`order`, which the frontend never
+  sends (`deletedAt` is correctly absent). No change needed before B7.
+- The mock lets an edit touch a soft-deleted item; B1 answers 404. The UI never
+  does this, so parity is deferred to B7.
+
+Accepted, not a defect: `GET /api/v1/auth/session` answers **401** when nobody
+is signed in, and the browser logs every 401 in the console. That is the designed
+"no session" signal (the client maps it to `null`); the E2E console audit ignores
+only that one 401 and still fails on hydration, duplicate-key and React warnings.
+
+Consequence: `tests/e2e/workspace-audit.spec.ts` adds keyboard reorder,
+attachments, persona switching, failure-recovery and a console/hydration guard;
+`schemas.test.ts` / `workspace-utils.test.ts` / `workspace-store.test.ts` lock in
+the null, month and restore behaviour.
+
+## ADR-020 — 2026-10-17 — npm audit: dev-only `braces` advisory deferred
+
+Context: `npm audit` reports 5 high-severity advisories, all one chain in the
+lint toolchain: `eslint-config-next` → `@next/eslint-plugin-next` → `fast-glob` →
+`micromatch` → `braces` (`braces` stack-exhaustion DoS, GHSA-vfj7-8cjw-p6xm).
+
+Options checked:
+- `braces` latest published version is **3.0.3** and the advisory's vulnerable
+  range is `*` (all versions), so there is no patched release to pin or override.
+  `micromatch` (4.0.8) and `fast-glob` are likewise already at their latest and
+  flagged.
+- `npm audit fix --force` only offers `eslint-config-next@14.2.35`, a **major
+  downgrade** (project is on 16.4.2) and explicitly off-limits.
+- An `overrides` entry cannot point at a version that does not exist.
+
+Decision: defer. None of the vulnerable packages are runtime dependencies —
+`npm audit --omit=dev` reports **0 vulnerabilities** — and the only remediation
+would break lint/CI. Re-check when upstream `fast-glob` drops `micromatch`, or
+`braces`/`micromatch` ship a patched release to override.
+
+Consequence: `npm audit` (full tree) keeps reporting the dev chain by design and
+is tracked here rather than silenced with a breaking downgrade.
+

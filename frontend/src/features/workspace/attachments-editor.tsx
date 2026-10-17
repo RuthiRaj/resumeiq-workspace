@@ -49,7 +49,10 @@ export function AttachmentsEditor({
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const valueRef = useRef<Attachment[]>(value);
-  const timers = useRef<number[]>([]);
+  /** Live upload timers, keyed by upload id. */
+  const timers = useRef<Map<string, number>>(new Map());
+  /** Progress lives in a ref so the interval's state updater stays pure. */
+  const progress = useRef<Map<string, number>>(new Map());
   const [pending, setPending] = useState<PendingUpload[]>([]);
   const [error, setError] = useState<string | null>(null);
 
@@ -61,18 +64,23 @@ export function AttachmentsEditor({
     const activeTimers = timers.current;
     return () => {
       activeTimers.forEach((timer) => window.clearInterval(timer));
+      activeTimers.clear();
     };
   }, []);
 
   function finish(upload: PendingUpload) {
+    timers.current.delete(upload.id);
+    progress.current.delete(upload.id);
     const attachment: Attachment = {
       id: upload.id,
       name: upload.name,
       url: `mock://${upload.id}`,
     };
+    setPending((current) => current.filter((item) => item.id !== upload.id));
+    // Never append the same upload twice (a re-entrant finish must be a no-op).
+    if (valueRef.current.some((item) => item.id === attachment.id)) return;
     valueRef.current = [...valueRef.current, attachment];
     onChange(valueRef.current);
-    setPending((current) => current.filter((item) => item.id !== upload.id));
   }
 
   function startUpload(file: File) {
@@ -83,21 +91,24 @@ export function AttachmentsEditor({
       type: describeType(file.name, file.type),
       progress: 0,
     };
+    progress.current.set(id, 0);
     setPending((current) => [...current, upload]);
     const timer = window.setInterval(() => {
+      const next = Math.min(100, (progress.current.get(id) ?? 0) + 12);
+      progress.current.set(id, next);
+      if (next >= 100) {
+        // Finish from the timer callback, never from inside a state updater:
+        // StrictMode double-invokes updaters, which appended the file twice and
+        // produced a duplicate-key warning.
+        window.clearInterval(timer);
+        finish({ ...upload, progress: 100 });
+        return;
+      }
       setPending((current) =>
-        current.map((item) => {
-          if (item.id !== id) return item;
-          const progress = Math.min(100, item.progress + 12);
-          if (progress >= 100) {
-            window.clearInterval(timer);
-            finish({ ...item, progress: 100 });
-          }
-          return { ...item, progress };
-        }),
+        current.map((item) => (item.id === id ? { ...item, progress: next } : item)),
       );
     }, 90);
-    timers.current.push(timer);
+    timers.current.set(id, timer);
   }
 
   function onFiles(files: FileList | null) {

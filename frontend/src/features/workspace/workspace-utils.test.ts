@@ -151,6 +151,9 @@ describe("workspace-utils: form mapping (PRD §6.1 WS-3)", () => {
   it("describes change-log rows readably, with and without a label", () => {
     expect(describeChange({ op: "add", label: "React" })).toBe("Added “React”");
     expect(describeChange({ op: "delete" })).toBe("Deleted an item");
+    expect(describeChange({ op: "restore", label: "Docker" })).toBe("Restored “Docker”");
+    // The wire sends `null` for a missing label; it must read like "absent".
+    expect(describeChange({ op: "edit", label: null })).toBe("Updated an item");
   });
 });
 

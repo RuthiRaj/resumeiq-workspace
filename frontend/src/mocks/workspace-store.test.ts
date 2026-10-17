@@ -124,7 +124,7 @@ describe("mock workspace store: soft delete + undo", () => {
     expect(afterDelete.changelog.at(-1)).toMatchObject({ op: "delete", itemId: doomed.id });
   });
 
-  it("restores a deleted item (undo) and logs it as an edit", () => {
+  it("restores a deleted item (undo) and logs it as a restore, not an edit", () => {
     const storage = memoryStorage();
     const created = addItem(storage, USER, draft("skill", "Docker"), fixedClock);
     const id = created.items[0].id;
@@ -133,7 +133,8 @@ describe("mock workspace store: soft delete + undo", () => {
 
     expect(activeItems(restored).map((item) => item.id)).toEqual([id]);
     expect(restored.items.find((item) => item.id === id)?.deletedAt).toBeUndefined();
-    expect(restored.changelog.at(-1)).toMatchObject({ op: "edit", itemId: id, label: "Docker" });
+    // An undo is its own operation, so the history can distinguish it from an edit.
+    expect(restored.changelog.at(-1)).toMatchObject({ op: "restore", itemId: id, label: "Docker" });
   });
 });
 
