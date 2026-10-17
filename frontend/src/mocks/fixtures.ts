@@ -1,23 +1,53 @@
-import type { WorkspaceItem } from "@/lib/schemas";
+import type {
+  WorkspaceChangeLogEntry,
+  WorkspaceItem,
+  WorkspacePersona,
+} from "@/lib/schemas";
 
 /**
- * Mock fixtures (PRD §8.5). F0 ships the shape with one sample item per
- * persona; full workspaces (fresher + mid-level) and 3 sample JDs land in F4.
- * All fixture claims model evidence states — nothing here is fabricated as
- * verified unless it carries supporting evidence (PRD hard rule).
+ * Mock fixtures (PRD §8.5): two sample workspaces — a fresher with thin
+ * experience and a mid-level developer — plus seeded change logs.
+ *
+ * Nothing here is fabricated as *verified* unless it carries a supporting
+ * document or link (PRD §4.2 hard rule). The evidence state on every item is
+ * deliberate so the dashboard glows and badges show every state.
  */
-export const fixtureWorkspaceVersion = 1;
+export interface WorkspaceSeed {
+  version: number;
+  items: WorkspaceItem[];
+  changelog: WorkspaceChangeLogEntry[];
+  updatedAt: string;
+}
 
-export const fixtureItems: WorkspaceItem[] = [
+const FRESHER_UPDATED = "2026-10-16T09:05:00.000Z";
+const MIDLEVEL_UPDATED = "2026-10-16T09:12:00.000Z";
+
+const fresherItems: WorkspaceItem[] = [
   {
-    id: "ws-item-ada-edu",
+    id: "frs-personal",
+    section: "personal",
+    title: "Ada Fern",
+    organization: "",
+    location: "Example City",
+    bullets: [],
+    tags: ["open to internships"],
+    links: ["https://example.com/ada"],
+    attachments: [],
+    evidence: "attested",
+    order: 0,
+  },
+  {
+    id: "frs-education",
     section: "education",
     title: "B.Sc. Computer Science",
     organization: "Example State University",
     startDate: "2022-09",
     endDate: "2026-06",
     location: "Example City",
-    bullets: ["Relevant coursework: data structures, databases, web development."],
+    bullets: [
+      "Relevant coursework: data structures, databases, web development.",
+      "Final-year project focused on accessible web interfaces.",
+    ],
     tags: ["databases", "web"],
     links: [],
     attachments: [],
@@ -25,17 +55,302 @@ export const fixtureItems: WorkspaceItem[] = [
     order: 0,
   },
   {
-    id: "ws-item-ada-proj",
+    id: "frs-project-tracker",
     section: "project",
     title: "Campus event tracker",
     organization: "Course project",
     startDate: "2025-01",
     endDate: "2025-04",
-    bullets: ["Built a single-page event tracker used by two student clubs."],
-    tags: ["typescript", "react"],
+    bullets: [
+      "Built a single-page event tracker used by two student clubs.",
+      "Wrote the UI in TypeScript and React; stored events in SQLite.",
+    ],
+    tags: ["typescript", "react", "sqlite"],
+    links: ["https://github.com/example/campus-event-tracker"],
+    attachments: [],
+    evidence: "verified",
+    order: 0,
+  },
+  {
+    id: "frs-skill-ts",
+    section: "skill",
+    title: "TypeScript",
+    bullets: [],
+    tags: ["language"],
+    links: [],
+    attachments: [],
+    evidence: "attested",
+    order: 0,
+  },
+  {
+    id: "frs-skill-react",
+    section: "skill",
+    title: "React",
+    bullets: [],
+    tags: ["frontend"],
+    links: [],
+    attachments: [],
+    evidence: "attested",
+    order: 1,
+  },
+  {
+    id: "frs-skill-docker",
+    section: "skill",
+    title: "Docker (coursework only)",
+    bullets: [],
+    tags: ["devops"],
     links: [],
     attachments: [],
     evidence: "related",
-    order: 1,
+    order: 2,
+  },
+  {
+    id: "frs-course-cs50",
+    section: "course",
+    title: "CS50x: Introduction to Computer Science",
+    organization: "edX",
+    endDate: "2024-08",
+    bullets: ["Completed all problem sets; final project was a budgeting web app."],
+    tags: ["algorithms"],
+    links: [],
+    attachments: [],
+    evidence: "attested",
+    order: 0,
+  },
+  {
+    id: "frs-cert-meta",
+    section: "certificate",
+    title: "Meta Front-End Developer (in progress)",
+    organization: "Coursera",
+    startDate: "2026-02",
+    bullets: [],
+    tags: ["frontend"],
+    links: [],
+    attachments: [],
+    evidence: "related",
+    order: 0,
+  },
+  {
+    id: "frs-achievement-deans",
+    section: "achievement",
+    title: "Dean's list",
+    organization: "Example State University",
+    endDate: "2025-06",
+    bullets: ["Named for two consecutive semesters."],
+    tags: [],
+    links: [],
+    attachments: [],
+    evidence: "attested",
+    order: 0,
+  },
+  {
+    id: "frs-extra-coding-club",
+    section: "extracurricular",
+    title: "Coding club coordinator",
+    organization: "Example State University",
+    startDate: "2024-09",
+    bullets: ["Ran weekly beginner sessions for about fifteen students."],
+    tags: ["community"],
+    links: [],
+    attachments: [],
+    evidence: "missing",
+    order: 0,
   },
 ];
+
+const fresherChangelog: WorkspaceChangeLogEntry[] = [
+  { seq: 1, workspaceVersion: 3, itemId: "frs-education", op: "add", at: "2026-10-16T09:01:00.000Z", label: "B.Sc. Computer Science" },
+  { seq: 2, workspaceVersion: 4, itemId: "frs-project-tracker", op: "add", at: "2026-10-16T09:03:00.000Z", label: "Campus event tracker" },
+  { seq: 3, workspaceVersion: 5, itemId: "frs-skill-react", op: "add", at: "2026-10-16T09:05:00.000Z", label: "React" },
+];
+
+const midlevelItems: WorkspaceItem[] = [
+  {
+    id: "mid-personal",
+    section: "personal",
+    title: "Ravi Menon",
+    location: "Example City",
+    bullets: [],
+    tags: ["backend", "platform"],
+    links: ["https://example.com/ravi"],
+    attachments: [],
+    evidence: "attested",
+    order: 0,
+  },
+  {
+    id: "mid-experience-northwind",
+    section: "experience",
+    title: "Software Engineer",
+    organization: "Northwind Labs",
+    startDate: "2023-02",
+    location: "Remote",
+    bullets: [
+      "Owned the billing service's read path and cut p95 latency from 480ms to 120ms.",
+      "Introduced integration tests that caught a data-migration regression before release.",
+    ],
+    tags: ["typescript", "postgres", "observability"],
+    links: [],
+    attachments: [{ id: "att-northwind-letter", name: "northwind-offer-letter.pdf", url: "mock://att-northwind-letter" }],
+    evidence: "verified",
+    order: 0,
+  },
+  {
+    id: "mid-experience-acme",
+    section: "experience",
+    title: "Junior Developer",
+    organization: "Acme Corp",
+    startDate: "2021-06",
+    endDate: "2023-01",
+    location: "Example City",
+    bullets: ["Maintained the internal admin dashboard used by the support team."],
+    tags: ["javascript", "react"],
+    links: [],
+    attachments: [],
+    evidence: "attested",
+    order: 1,
+  },
+  {
+    id: "mid-project-pdf",
+    section: "project",
+    title: "Open-source PDF exporter",
+    organization: "Personal project",
+    startDate: "2024-03",
+    bullets: [
+      "Published a small library that renders structured documents to ATS-safe PDFs.",
+      "Handled the layout and pagination so exported text stays selectable.",
+    ],
+    tags: ["typescript", "pdf"],
+    links: ["https://github.com/example/pdf-exporter"],
+    attachments: [],
+    evidence: "verified",
+    order: 0,
+  },
+  {
+    id: "mid-skill-ts",
+    section: "skill",
+    title: "TypeScript",
+    bullets: [],
+    tags: ["language"],
+    links: [],
+    attachments: [],
+    evidence: "attested",
+    order: 0,
+  },
+  {
+    id: "mid-skill-postgres",
+    section: "skill",
+    title: "PostgreSQL",
+    bullets: [],
+    tags: ["database"],
+    links: [],
+    attachments: [],
+    evidence: "attested",
+    order: 1,
+  },
+  {
+    id: "mid-skill-k8s",
+    section: "skill",
+    title: "Kubernetes (learning)",
+    bullets: [],
+    tags: ["devops"],
+    links: [],
+    attachments: [],
+    evidence: "related",
+    order: 2,
+  },
+  {
+    id: "mid-education",
+    section: "education",
+    title: "B.Eng. Computer Engineering",
+    organization: "Example Institute of Technology",
+    startDate: "2017-08",
+    endDate: "2021-05",
+    bullets: [],
+    tags: [],
+    links: [],
+    attachments: [],
+    evidence: "attested",
+    order: 0,
+  },
+  {
+    id: "mid-cert-aws",
+    section: "certificate",
+    title: "AWS Certified Cloud Practitioner",
+    organization: "Amazon Web Services",
+    endDate: "2024-11",
+    bullets: [],
+    tags: ["cloud"],
+    links: [],
+    attachments: [{ id: "att-aws-cert", name: "aws-cloud-practitioner.pdf", url: "mock://att-aws-cert" }],
+    evidence: "verified",
+    order: 0,
+  },
+  {
+    id: "mid-publication",
+    section: "publication",
+    title: "Parsing resumes without inventing facts",
+    organization: "Example Tech Blog",
+    endDate: "2025-09",
+    bullets: ["Explained an evidence-first approach to resume extraction."],
+    tags: ["nlp"],
+    links: ["https://example.com/blog/evidence-first-extraction"],
+    attachments: [],
+    evidence: "verified",
+    order: 0,
+  },
+  {
+    id: "mid-training",
+    section: "training",
+    title: "Advanced React Patterns workshop",
+    organization: "Example Workshops",
+    endDate: "2024-06",
+    bullets: [],
+    tags: ["react"],
+    links: [],
+    attachments: [],
+    evidence: "attested",
+    order: 0,
+  },
+  {
+    id: "mid-achievement-latency",
+    section: "achievement",
+    title: "Cut billing read-path latency 75%",
+    organization: "Northwind Labs",
+    endDate: "2025-05",
+    bullets: ["Replaced an N+1 query pattern and added covering indexes."],
+    tags: ["performance"],
+    links: [],
+    attachments: [],
+    evidence: "attested",
+    order: 0,
+  },
+];
+
+const midlevelChangelog: WorkspaceChangeLogEntry[] = [
+  { seq: 1, workspaceVersion: 7, itemId: "mid-experience-northwind", op: "edit", at: "2026-10-16T09:08:00.000Z", label: "Software Engineer" },
+  { seq: 2, workspaceVersion: 8, itemId: "mid-skill-k8s", op: "add", at: "2026-10-16T09:10:00.000Z", label: "Kubernetes (learning)" },
+  { seq: 3, workspaceVersion: 9, itemId: "mid-publication", op: "add", at: "2026-10-16T09:12:00.000Z", label: "Parsing resumes without inventing facts" },
+];
+
+export const WORKSPACE_FIXTURES: Record<WorkspacePersona, WorkspaceSeed> = {
+  fresher: {
+    version: 5,
+    items: fresherItems,
+    changelog: fresherChangelog,
+    updatedAt: FRESHER_UPDATED,
+  },
+  midlevel: {
+    version: 9,
+    items: midlevelItems,
+    changelog: midlevelChangelog,
+    updatedAt: MIDLEVEL_UPDATED,
+  },
+  empty: {
+    version: 1,
+    items: [],
+    changelog: [],
+    updatedAt: FRESHER_UPDATED,
+  },
+};
+
+export const DEFAULT_PERSONA: WorkspacePersona = "empty";

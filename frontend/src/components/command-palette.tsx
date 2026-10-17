@@ -79,7 +79,7 @@ export function CommandPalette() {
         keywords: "create add workspace experience project skill",
         icon: Plus,
         run: () => {
-          toast({ tone: "info", title: "Workspace editors land in F3", description: "Taking you to the workspace meanwhile." });
+          toast({ tone: "info", title: "Add a workspace item", description: "Pick the section to add to." });
           router.push("/workspace");
         },
       },

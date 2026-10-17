@@ -36,7 +36,19 @@ export function Toaster() {
           <div className="min-w-0 flex-1">
             <p className="text-sm font-medium text-text">{t.title}</p>
             {t.description ? (
-              <p className="mt-0.5 truncate text-xs text-muted">{t.description}</p>
+              <p className="mt-0.5 text-xs text-muted">{t.description}</p>
+            ) : null}
+            {t.action ? (
+              <button
+                type="button"
+                className="mt-1.5 rounded-sm border border-white/[0.16] px-2 py-0.5 text-xs font-medium text-text hover:bg-white/[0.08]"
+                onClick={() => {
+                  dismiss(t.id);
+                  t.action?.onAction();
+                }}
+              >
+                {t.action.label}
+              </button>
             ) : null}
           </div>
           <button

@@ -242,7 +242,7 @@ function QuickCreate() {
           className="flex w-full items-center gap-2.5 rounded-sm px-2.5 py-2 text-left text-sm hover:bg-white/[0.06]"
           onClick={() => {
             setOpen(false);
-            toast({ tone: "info", title: "Workspace editors land in F3", description: "Taking you to the workspace meanwhile." });
+            toast({ tone: "info", title: "Add a workspace item", description: "Pick the section to add to." });
             router.push("/workspace");
           }}
         >

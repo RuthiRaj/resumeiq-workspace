@@ -5,6 +5,8 @@ import type {
   Workspace,
   WorkspaceChangeLogEntry,
   WorkspaceItem,
+  WorkspacePersona,
+  WorkspaceReorderInput,
 } from "@/lib/schemas";
 import type { Consent } from "@/lib/privacy/consent";
 
@@ -15,17 +17,6 @@ import type { Consent } from "@/lib/privacy/consent";
  */
 const BASE = "/api/v1";
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
-    headers: { "Content-Type": "application/json" },
-    ...init,
-  });
-  if (!res.ok) {
-    throw new ApiError(`Request failed: ${res.status} ${res.statusText}`, res.status, path);
-  }
-  return (await res.json()) as T;
-}
-
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -35,6 +26,40 @@ export class ApiError extends Error {
     super(message);
     this.name = "ApiError";
   }
+}
+
+/** Best-effort extraction of a server error message ({error} or FastAPI {detail}). */
+function errorMessage(body: unknown, fallback: string): string {
+  if (body && typeof body === "object") {
+    const record = body as Record<string, unknown>;
+    if (typeof record.error === "string") return record.error;
+    const detail = record.detail;
+    if (typeof detail === "string") return detail;
+    if (detail && typeof detail === "object") {
+      const message = (detail as Record<string, unknown>).message;
+      if (typeof message === "string") return message;
+    }
+  }
+  return fallback;
+}
+
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, {
+    headers: { "Content-Type": "application/json" },
+    ...init,
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new ApiError(
+      errorMessage(body, `Request failed: ${res.status} ${res.statusText}`),
+      res.status,
+      path,
+    );
+  }
+  if (res.status === 204) return undefined as T;
+  const text = await res.text();
+  if (!text) return undefined as T;
+  return JSON.parse(text) as T;
 }
 
 export const api = {
@@ -51,8 +76,16 @@ export const api = {
       method: "PATCH",
       body: JSON.stringify(patch),
     }),
+  /** Soft delete (PRD §6.1 WS-5). Undo = `restoreItem`. */
   deleteItem: (id: string) =>
     request<void>(`/workspace/items/${id}`, { method: "DELETE" }),
+  restoreItem: (id: string) =>
+    request<WorkspaceItem>(`/workspace/items/${id}/restore`, { method: "POST" }),
+  reorderItems: (input: WorkspaceReorderInput) =>
+    request<Workspace>("/workspace/reorder", {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
 
   // --- Standard resume (B1 contract) ---
   getStandardResume: () => request<Resume>("/resume/standard"),
@@ -79,5 +112,19 @@ export const api = {
     request<{ consent: Consent }>("/privacy/consent", {
       method: "POST",
       body: JSON.stringify(input),
+    }),
+
+  // --- Dev-only fixture controls (no-op outside `next dev`) ---
+  getDevState: () =>
+    request<{ persona: WorkspacePersona; failures: boolean }>("/dev/workspace-persona"),
+  setWorkspacePersona: (persona: WorkspacePersona) =>
+    request<{ ok: true }>("/dev/workspace-persona", {
+      method: "POST",
+      body: JSON.stringify({ persona }),
+    }),
+  setMockFailures: (enabled: boolean) =>
+    request<{ enabled: boolean }>("/dev/failures", {
+      method: "POST",
+      body: JSON.stringify({ enabled }),
     }),
 };
