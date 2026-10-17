@@ -107,6 +107,7 @@ export function ItemEditorSheet({
 
   const [status, setStatus] = useState<SaveStatus>("idle");
   const [savedAt, setSavedAt] = useState<string | undefined>(undefined);
+  const [errorMessage, setErrorMessage] = useState<string | undefined>(undefined);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   const modeRef = useRef(mode);
@@ -114,13 +115,22 @@ export function ItemEditorSheet({
   modeRef.current = mode;
   itemIdRef.current = item?.id ?? null;
   const saveTimer = useRef<number | undefined>(undefined);
+  /**
+   * Serialised values as last persisted (or as loaded). The autosave watcher
+   * compares against it instead of RHF's `isDirty` flag, because RHF has no
+   * "saved" concept: after a successful save the form is still dirty relative
+   * to its original defaults, which would re-save the same values forever.
+   */
+  const savedSnapshot = useRef<string | null>(null);
 
   // (Re)initialise the form whenever the sheet opens or a different item loads.
   useEffect(() => {
     if (!open) return;
     form.reset(item ? toFormValues(item) : emptyValues());
+    savedSnapshot.current = JSON.stringify(form.getValues());
     setStatus(item ? "saved" : "idle");
     setSavedAt(undefined);
+    setErrorMessage(undefined);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, item?.id]);
 
@@ -129,10 +139,12 @@ export function ItemEditorSheet({
     const valid = await form.trigger();
     if (!valid) {
       setStatus("error");
+      setErrorMessage("Fix the highlighted fields, then it saves automatically.");
       return;
     }
     const values = form.getValues();
     const sent = JSON.stringify(values);
+    setErrorMessage(undefined);
     setStatus("saving");
     try {
       if (modeRef.current === "create") {
@@ -150,15 +162,19 @@ export function ItemEditorSheet({
         patch: toItemPatch(values),
       });
       // Only clear the unsaved flag if nothing changed while the save was in flight.
+      savedSnapshot.current = sent;
       if (JSON.stringify(form.getValues()) === sent) {
         setStatus("saved");
         setSavedAt(new Date().toISOString());
       } else {
         setStatus("dirty");
-        save.current();
+        void save.current();
       }
     } catch {
       setStatus("error");
+      setErrorMessage(
+        "Couldn’t save your changes. They’re still here — try Save now.",
+      );
     }
   };
 
@@ -168,13 +184,16 @@ export function ItemEditorSheet({
     // React Compiler can't memoize RHF's `watch` subscription API; that's the
     // documented way to react to field changes without re-rendering the form.
     // eslint-disable-next-line react-hooks/incompatible-library
-    const subscription = form.watch((_values, { type }) => {
-      if (type !== "change") return;
-      if (modeRef.current !== "edit") {
-        setStatus("dirty");
-        return;
-      }
+    const subscription = form.watch((values) => {
+      // Compare by value, not by event type: `setValue` — used by the bullet,
+      // link, tag, attachment and evidence editors — notifies watchers without
+      // a `type`, so filtering on `type === "change"` never autosaved those
+      // edits and one invalid intermediate value (a half-typed URL, say) would
+      // strand the editor in its error state with no further retry.
+      if (JSON.stringify(values) === savedSnapshot.current) return;
       setStatus("dirty");
+      setErrorMessage(undefined);
+      if (modeRef.current !== "edit") return;
       if (saveTimer.current) window.clearTimeout(saveTimer.current);
       saveTimer.current = window.setTimeout(() => {
         void save.current();
@@ -283,7 +302,7 @@ export function ItemEditorSheet({
               <SaveStatusIndicator
                 status={status}
                 savedAt={savedAt}
-                errorMessage="Fix the highlighted fields, then it saves automatically."
+                errorMessage={errorMessage}
               />
               <div className="flex gap-2">
                 <Button

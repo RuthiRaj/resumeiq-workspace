@@ -313,3 +313,36 @@ parallel E2E load. Two things had to change:
    client-SSR layers. `next build` was unaffected, which is why the regression
    only showed up under `next dev`.
 
+## ADR-015 — 2026-10-17 — Autosave diffs values, not RHF event types
+
+Context: F3's editor autosave subscribed with `form.watch((_values, { type }) => ...)`
+and returned early unless `type === "change"`. Only the plain inputs (`title`,
+`organisation`, dates) are `register`ed, so they were the only fields that could
+schedule a save. The bullet, link, tag, attachment and evidence editors commit
+through `form.setValue`; React Hook Form's `setValue` notifies watchers with a
+`{ name, values }` payload and **no `type`** (see `_setValue` in
+`react-hook-form/dist/index.esm.mjs` v7.90), so every one of those edits was
+silently ignored. A save that failed validation on an intermediate value — a
+half-typed URL such as `https:/` is rejected by the link refinement — then
+stranded the editor: status stayed `error` with no further retry, because the
+next keystrokes were all `setValue` edits. That is the real, user-visible bug
+behind the one flaky E2E run; it was not a test artifact. The same filter also
+made the two failure modes indistinguishable, since both branches showed the
+same hard-coded message.
+
+Decision: the watcher compares `JSON.stringify(values)` against a
+`savedSnapshot` ref instead of inspecting the event. Any value change that
+differs from what was last persisted schedules the debounced save; a change back
+to the persisted value schedules nothing. RHF's own `isDirty` cannot express
+this — it is measured against the sheet's opening defaults, so it stays `true`
+after a successful save and would re-save the same values forever. `save.current`
+updates the snapshot only on success (so a validation failure retries on the
+next edit) and now sets a distinct message per failure mode: "Fix the highlighted
+fields…" for schema errors, "Couldn't save your changes…" for request errors.
+
+Consequence: opening an editor no longer counts as a change (the reset also
+emits a valueless `type`, and the snapshot guard absorbs it), so browsing an item
+never bumps the workspace version. `item-editor-sheet.test.tsx` locks in both the
+setValue path and the invalid-then-corrected recovery; reverting to the `type`
+filter fails 3 of its 4 cases.
+
