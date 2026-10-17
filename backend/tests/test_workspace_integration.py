@@ -16,7 +16,9 @@ so they prove RLS and the transactional versioning end to end:
 * the full mutation lifecycle (create/read/update/soft-delete/restore);
 * user A cannot read, update, delete, restore or reorder user B's items;
 * the change log and the standard resume are per-user;
-* verified evidence without an attachment or link is rejected by the database.
+* verified evidence without an attachment or link is rejected by the database;
+* the ``anon`` role cannot call any ``api_workspace_*`` function (migration 0003);
+* an authenticated user cannot create a version row without a change-log entry.
 """
 
 from __future__ import annotations
@@ -246,6 +248,133 @@ def test_verified_evidence_without_support_is_rejected_by_database() -> None:
             )
             assert create.status_code >= 400
             assert (create.json() or {}).get("code") == "P0001"
+        finally:
+            await tidy_up(repository, created.id)
+
+    asyncio.run(run())
+
+
+def _error_code(response: httpx.Response) -> str:
+    try:
+        body = response.json()
+    except ValueError:
+        return ""
+    return str(body.get("code", "")) if isinstance(body, dict) else ""
+
+
+def test_anon_role_cannot_call_any_workspace_function() -> None:
+    """The anon role must not reach any api_workspace_* RPC (migration 0003).
+
+    Valid arguments are sent on purpose: if anon *could* execute, the call would
+    fail with a functional error (``28000`` not authenticated, ``P0002`` not
+    found, ``P0001`` invalid) rather than ``42501`` permission denied / ``404``
+    not in the schema cache — so this distinguishes "blocked" from "allowed".
+    """
+
+    async def run() -> None:
+        settings = supabase_auth.env()
+        base = f"{settings.supabase_url.rstrip('/')}/rest/v1"
+        anon_key = settings.supabase_publishable_key
+        headers = {
+            "apikey": anon_key,
+            "Authorization": f"Bearer {anon_key}",  # the anon JWT -> role anon
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        }
+        placeholder = str(uuid4())
+        calls: dict[str, dict[str, object]] = {
+            "api_workspace_create": {
+                "p_section": "skill",
+                "p_title": unique_title("anon"),
+                "p_organization": None,
+                "p_start_date": None,
+                "p_end_date": None,
+                "p_location": None,
+                "p_bullets": [],
+                "p_tags": [],
+                "p_links": [],
+                "p_attachments": [],
+                "p_evidence": "attested",
+            },
+            "api_workspace_update": {"p_id": placeholder, "p_patch": {"title": "x"}},
+            "api_workspace_delete": {"p_id": placeholder},
+            "api_workspace_restore": {"p_id": placeholder},
+            "api_workspace_reorder": {"p_section": "skill", "p_ids": [placeholder]},
+            # dropped by 0003: must not exist for anyone
+            "api_workspace_next_seq": {"p_user": placeholder},
+            "api_workspace_next_version": {"p_user": placeholder},
+        }
+        async with httpx.AsyncClient(base_url=base, headers=headers, timeout=20.0) as client:
+            for name, body in calls.items():
+                response = await client.post(f"/rpc/{name}", json=body)
+                code = _error_code(response)
+                blocked = code in {"42501", "PGRST202"} or response.status_code in (401, 404)
+                assert response.status_code >= 400 and blocked, (
+                    f"{name} was reachable by anon (HTTP {response.status_code}, code {code!r})"
+                )
+
+    asyncio.run(run())
+
+
+def test_authenticated_user_cannot_create_version_without_changelog() -> None:
+    """A workspace version can never exist without a matching change-log entry.
+
+    ``api_workspace_next_version`` used to allow exactly that as a standalone RPC;
+    migration 0003 removes it and adds a deferred constraint trigger so even a
+    direct Data API insert of a version row is rejected at commit.
+    """
+
+    async def run() -> None:
+        token = supabase_auth.access_token_a()
+        user_id = supabase_auth.current_user_id(token)
+        settings = supabase_auth.env()
+        base = f"{settings.supabase_url.rstrip('/')}/rest/v1"
+        headers = {
+            "apikey": settings.supabase_publishable_key,
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "Prefer": "return=representation",
+        }
+        repository = repo_for(token)
+        current_version = (await repository.get_workspace("")).version
+        # Above any real per-user version so it can never collide, but low enough
+        # that a leaked row could not overflow the next MAX(version) + 1 bump.
+        sentinel_version = current_version + 100_000
+
+        async with httpx.AsyncClient(base_url=base, headers=headers, timeout=20.0) as client:
+            # 1. the standalone version-bump helper no longer exists
+            bump = await client.post("/rpc/api_workspace_next_version", json={"p_user": user_id})
+            assert bump.status_code >= 400
+
+            # 2. a direct version insert with no change-log row is rejected
+            direct = await client.post(
+                "/workspace_versions",
+                json={"user_id": user_id, "version": sentinel_version},
+            )
+            assert direct.status_code >= 400
+
+            # 3. nothing was committed
+            check = await client.get(
+                "/workspace_versions",
+                params={
+                    "user_id": f"eq.{user_id}",
+                    "version": f"eq.{sentinel_version}",
+                    "select": "version",
+                },
+            )
+            assert check.status_code == 200
+            assert check.json() == []
+
+        # 4. the supported path keeps the pair together: the current workspace
+        #    version always has at least one change_log entry.
+        created = await repository.create_item(
+            "", WorkspaceItemCreate(section="skill", title=unique_title("invariant"))
+        )
+        try:
+            entries = await repository.list_changelog("")
+            logged_versions = {entry.workspaceVersion for entry in entries}
+            assert (await repository.get_workspace("")).version in logged_versions
         finally:
             await tidy_up(repository, created.id)
 

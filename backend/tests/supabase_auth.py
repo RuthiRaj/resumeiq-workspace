@@ -147,3 +147,23 @@ def access_token_b() -> str:
         settings.supabase_test_password_b,
         "SUPABASE_TEST_*_B",
     )
+
+
+def current_user_id(token: str) -> str:
+    """Resolve the caller's user id via Supabase Auth (token never logged)."""
+    settings = env()
+    base = settings.supabase_url.rstrip("/")
+    response = httpx.get(
+        f"{base}/auth/v1/user",
+        headers={
+            "apikey": settings.supabase_publishable_key,
+            "Authorization": f"Bearer {token}",
+        },
+        timeout=_TIMEOUT_SECONDS,
+    )
+    if response.status_code != 200:
+        raise MissingCredentialsError(f"Supabase /user failed (HTTP {response.status_code}).")
+    user_id = response.json().get("id")
+    if not user_id:
+        raise MissingCredentialsError("Supabase /user returned no id.")
+    return str(user_id)

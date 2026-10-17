@@ -414,3 +414,51 @@ Decisions (the wire/frontend is the contract; `/frontend` is not edited):
    the Pydantic create/patch models, and the SQL functions (defence in depth), so
    an item can never end up `verified` without a document or link (PRD §4.2).
 
+## ADR-018 — 2026-10-17 — B1 hardening: RPC privileges and the version↔log invariant
+
+Context: after B1 was written, a read-only review of the live project
+(security/performance advisors + `pg_proc`/`pg_policies` inspection) found issues
+that are not data leaks but should not ship:
+
+* all seven `api_workspace_*` functions were executable by `anon`, because
+  `CREATE FUNCTION` grants `EXECUTE` to `PUBLIC` by default and migration 0002
+  only *added* a grant to `authenticated`;
+* `api_workspace_next_seq` / `api_workspace_next_version` trusted a
+  **caller-supplied user id** (`p_user`) and were exposed as Data API RPCs. RLS
+  meant a caller could not read or write another user's rows, but calling
+  `next_version(<own id>)` inserted a `workspace_versions` row **with no
+  `change_log` row**, breaking the "every mutation bumps the version *and* logs
+  it" invariant;
+* `set_updated_at()` had a mutable `search_path`; every RLS policy called
+  `auth.uid()` per row (advisor 0003); four foreign keys were unindexed.
+
+Decision — migration `0003_hardening.sql` (forward-only):
+
+1. **Inline the two helpers into the five mutation functions and `DROP` them.**
+   Of the three options offered, this is the safest:
+   * "revoke from `authenticated` too" does **not** work: the mutation functions
+     are `SECURITY INVOKER`, so the caller (`authenticated`) must itself hold
+     `EXECUTE` on any helper it calls — revoking breaks the functions;
+   * "assert `p_user = auth.uid()`" leaves an RPC that can still bump a version
+     without a log row;
+   * inlining removes the standalone surface entirely, so the only code that
+     inserts a version also writes its `change_log` row in the same transaction.
+2. **A deferred constraint trigger** (`workspace_versions_require_changelog`)
+   re-checks at commit that every inserted `workspace_versions` row has a
+   `change_log` row with the same `(user_id, workspace_version)`. Dropping the
+   helper is not sufficient on its own: RLS lets a user `INSERT` their own
+   `workspace_versions` rows directly through the Data API. The deferred check
+   (it must be deferred, because the functions insert the version row before the
+   log row) makes the invariant true for every writer.
+3. `REVOKE EXECUTE … FROM PUBLIC, anon` on the five RPCs (and on
+   `set_updated_at`), keeping `GRANT … TO authenticated`; pin
+   `set_updated_at`'s `search_path`; rewrite the 54 policies to
+   `(select auth.uid())`; add the four covering indexes.
+
+Consequence: the workspace RPCs are usable only by `authenticated`; a workspace
+version can no longer exist without its change-log entry, even via a direct
+table write; the advisors' security/performance warnings are addressed. New
+integration tests assert the anon role cannot call any `api_workspace_*` function
+and that an authenticated user cannot insert a version row without a matching
+change-log entry.
+
