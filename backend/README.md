@@ -90,14 +90,18 @@ known mismatches are in ADR-016/ADR-017.
 ```bash
 cd backend
 uv run pytest            # unit + contract tests (in-memory repo, httpx.MockTransport)
-RUN_SUPABASE_INTEGRATION=1 \
-  SUPABASE_URL=... SUPABASE_PUBLISHABLE_KEY=... SUPABASE_TEST_TOKEN_A=... \
-  uv run pytest tests/test_workspace_integration.py   # opt-in; skipped otherwise
+
+# opt-in integration tests (skipped unless backend/.env has the values below)
+uv run pytest tests/test_workspace_integration.py
 ```
 
-Integration tests hit a real project with a real user JWT (so they also prove RLS
-and the transactional versioning). Without the flag they are skipped; no keys are
-ever printed.
+Integration tests read `backend/.env` (never committed). Set
+`RUN_SUPABASE_INTEGRATION=1`, `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` and two
+test users (`SUPABASE_TEST_EMAIL_A`/`_PASSWORD_A` and `..._B`); the helper
+`tests/supabase_auth.py` signs them in through Supabase Auth. They hit a real
+project with a real user JWT, so they prove RLS, the per-user change log and
+standard resume, and the transactional versioning. Without the flag they are
+skipped; no key, password or token is ever printed.
 
 ## Supabase JWT verification (what was verified)
 
