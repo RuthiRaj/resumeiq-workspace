@@ -1,10 +1,24 @@
 # Database (Supabase Postgres)
 
-Migration `db/migrations/0001_initial.sql` creates the B0 schema for PRD
-section 6. Apply it with the Supabase SQL editor or CLI (`supabase db push`
-once the project is linked). It references `auth.users` / `auth.uid()`, so it
-only runs on Supabase Postgres (or a local Postgres with an `auth` schema
-stub) — not on vanilla local Postgres.
+Forward-only migrations: `0001_initial.sql` creates the B0 schema (PRD section
+6); `0002_workspace_api.sql` adds the B1 workspace columns + functions. Apply
+them in order with the Supabase SQL editor or CLI (`supabase db push` once the
+project is linked). They reference `auth.users` / `auth.uid()`, so they only run
+on Supabase Postgres (or a local Postgres with an `auth` schema stub) — not on
+vanilla local Postgres.
+
+## Migration 0002 — B1 workspace API
+
+- `change_log` gains `label text` (captured at write time so the log stays
+  readable after a soft delete) and a per-user monotonic `seq integer`
+  (NOT NULL, unique per user) — the wire changelog entry needs both (ADR-017).
+- Seven `SECURITY INVOKER` functions perform each mutation atomically (version
+  bump + `change_log` append + item change in one transaction):
+  `api_workspace_create/update/delete/restore/reorder`, plus the
+  `api_workspace_next_version` / `api_workspace_next_seq` helpers.
+- `SECURITY INVOKER` keeps RLS effective (functions run as `authenticated`);
+  EXECUTE is granted to `authenticated` only. The backend reaches them through
+  the Data API with the caller's JWT (ADR-016).
 
 ## Tables
 
@@ -33,7 +47,8 @@ stub) — not on vanilla local Postgres.
 (PRD section 4.2):
 
 - `verified` — a supporting document/link exists (`evidence_links` row).
-  The B1 API must reject `verified` items with no evidence link.
+  The B1 API rejects `verified` items with no evidence link, in the request
+  models *and* in the SQL functions.
 - `attested` — typed by the user, no supporting artefact (import default, IM-3).
 - `related` — adjacent but not equivalent (e.g. TypeScript for a JS requirement).
 - `missing` — known gap; never rendered as a positive claim.
@@ -68,11 +83,15 @@ items; unsupported statements are removed or flagged `needs confirmation`
 
 ## Validation status
 
-> **Not executed against a live database.** No local Postgres is available in
-> this environment (`psql` not installed; Supabase project not linked), so
-> `0001_initial.sql` has been carefully reviewed but **not run**. Before B1,
-> apply it to a linked Supabase project and confirm with:
->
-> ```sql
-> select tablename from pg_tables where schemaname = 'public' order by 1;
-> ```
+Both migrations were applied to the Supabase dev project on 2026-10-17 and the
+result was verified read-only:
+
+- `0001_initial.sql`: 16 tables in `public`, **all with RLS enabled** — 11 with
+  four policies (own-row CRUD), 5 insert-only with two (`analysis_reports`,
+  `audit_events`, `change_log`, `resume_versions`, `workspace_versions`).
+- `0002_workspace_api.sql`: the seven `api_workspace_*` functions exist with the
+  expected signatures; `change_log.label`/`seq` added.
+
+Not yet exercised against the live project with a real user JWT: the opt-in
+integration tests (`RUN_SUPABASE_INTEGRATION=1`, see `backend/README.md`). The
+unit/contract tests run the in-memory repository and `httpx.MockTransport`.

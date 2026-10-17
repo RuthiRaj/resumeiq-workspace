@@ -56,10 +56,516 @@
           }
         }
       }
+    },
+    "/api/v1/workspace": {
+      "get": {
+        "tags": [
+          "workspace"
+        ],
+        "summary": "Get the workspace",
+        "operationId": "get_workspace_api_v1_workspace_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspace/changelog": {
+      "get": {
+        "tags": [
+          "workspace"
+        ],
+        "summary": "List the workspace change log (newest first)",
+        "operationId": "get_changelog_api_v1_workspace_changelog_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ChangeLogEntryResponse"
+                  },
+                  "type": "array",
+                  "title": "Response Get Changelog Api V1 Workspace Changelog Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspace/items/{item_id}": {
+      "get": {
+        "tags": [
+          "workspace"
+        ],
+        "summary": "Get a single workspace item",
+        "operationId": "get_item_api_v1_workspace_items__item_id__get",
+        "parameters": [
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Item Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceItemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "workspace"
+        ],
+        "summary": "Update a workspace item",
+        "operationId": "update_item_api_v1_workspace_items__item_id__patch",
+        "parameters": [
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Item Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkspaceItemUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceItemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "workspace"
+        ],
+        "summary": "Soft-delete a workspace item (undo with restore)",
+        "operationId": "delete_item_api_v1_workspace_items__item_id__delete",
+        "parameters": [
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Item Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Missing or invalid token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspace/items": {
+      "post": {
+        "tags": [
+          "workspace"
+        ],
+        "summary": "Create a workspace item",
+        "operationId": "create_item_api_v1_workspace_items_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkspaceItemCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceItemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspace/items/{item_id}/restore": {
+      "post": {
+        "tags": [
+          "workspace"
+        ],
+        "summary": "Restore a soft-deleted workspace item",
+        "operationId": "restore_item_api_v1_workspace_items__item_id__restore_post",
+        "parameters": [
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Item Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceItemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspace/reorder": {
+      "post": {
+        "tags": [
+          "workspace"
+        ],
+        "summary": "Reorder a section's items (one version bump)",
+        "operationId": "reorder_api_v1_workspace_reorder_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkspaceReorderRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/resume/standard": {
+      "get": {
+        "tags": [
+          "resume"
+        ],
+        "summary": "Derive the standard resume from the workspace",
+        "operationId": "get_standard_resume_api_v1_resume_standard_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResumeResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "Attachment": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "url"
+        ],
+        "title": "Attachment",
+        "description": "Attachment metadata. The file bytes are out of scope for B1 (PRD WS-2)."
+      },
+      "ChangeLogEntryResponse": {
+        "properties": {
+          "seq": {
+            "type": "integer",
+            "title": "Seq"
+          },
+          "workspaceVersion": {
+            "type": "integer",
+            "title": "Workspaceversion"
+          },
+          "itemId": {
+            "type": "string",
+            "title": "Itemid"
+          },
+          "op": {
+            "type": "string",
+            "enum": [
+              "add",
+              "edit",
+              "delete",
+              "reorder"
+            ],
+            "title": "Op"
+          },
+          "at": {
+            "type": "string",
+            "title": "At"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          }
+        },
+        "type": "object",
+        "required": [
+          "seq",
+          "workspaceVersion",
+          "itemId",
+          "op",
+          "at"
+        ],
+        "title": "ChangeLogEntryResponse",
+        "description": "``GET /workspace/changelog`` entry (newest first).\n\n``label`` is captured at write time so the log stays readable after a soft\ndelete (ADR-013). ``op`` maps the DB ``action`` (which also has ``restore``)\nonto the wire enum, where a restore is surfaced as an edit."
+      },
+      "Claim": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "evidenceIds": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Evidenceids"
+          },
+          "confirmed": {
+            "type": "boolean",
+            "title": "Confirmed",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "Claim"
+      },
       "ErrorDetail": {
         "properties": {
           "code": {
@@ -89,6 +595,19 @@
           "detail"
         ],
         "title": "ErrorResponse"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
       },
       "HealthResponse": {
         "properties": {
@@ -166,6 +685,633 @@
         ],
         "title": "MeResponse",
         "description": "Authenticated caller identity. PII-minimal: only what the token asserts."
+      },
+      "ResumeResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "standard",
+              "tailored"
+            ],
+            "title": "Kind"
+          },
+          "targetId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Targetid"
+          },
+          "workspaceVersion": {
+            "type": "integer",
+            "title": "Workspaceversion"
+          },
+          "stale": {
+            "type": "boolean",
+            "title": "Stale",
+            "default": false
+          },
+          "sections": {
+            "items": {
+              "$ref": "#/components/schemas/ResumeSection"
+            },
+            "type": "array",
+            "title": "Sections"
+          },
+          "createdAt": {
+            "type": "string",
+            "title": "Createdat"
+          },
+          "updatedAt": {
+            "type": "string",
+            "title": "Updatedat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "workspaceVersion",
+          "createdAt",
+          "updatedAt"
+        ],
+        "title": "ResumeResponse"
+      },
+      "ResumeSection": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "claims": {
+            "items": {
+              "$ref": "#/components/schemas/Claim"
+            },
+            "type": "array",
+            "title": "Claims"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key"
+        ],
+        "title": "ResumeSection"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "WorkspaceItemCreate": {
+        "properties": {
+          "section": {
+            "type": "string",
+            "enum": [
+              "personal",
+              "education",
+              "experience",
+              "internship",
+              "project",
+              "skill",
+              "achievement",
+              "extracurricular",
+              "certificate",
+              "course",
+              "publication",
+              "training"
+            ],
+            "title": "Section"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "organization": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Organization"
+          },
+          "startDate": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 20
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Startdate"
+          },
+          "endDate": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 20
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enddate"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location"
+          },
+          "bullets": {
+            "items": {
+              "type": "string",
+              "maxLength": 600
+            },
+            "type": "array",
+            "maxItems": 30,
+            "title": "Bullets"
+          },
+          "tags": {
+            "items": {
+              "type": "string",
+              "maxLength": 40
+            },
+            "type": "array",
+            "maxItems": 30,
+            "title": "Tags"
+          },
+          "links": {
+            "items": {
+              "type": "string",
+              "maxLength": 500
+            },
+            "type": "array",
+            "maxItems": 20,
+            "title": "Links"
+          },
+          "attachments": {
+            "items": {
+              "$ref": "#/components/schemas/Attachment"
+            },
+            "type": "array",
+            "maxItems": 10,
+            "title": "Attachments"
+          },
+          "evidence": {
+            "type": "string",
+            "enum": [
+              "verified",
+              "attested",
+              "related",
+              "missing"
+            ],
+            "title": "Evidence",
+            "default": "attested"
+          }
+        },
+        "type": "object",
+        "required": [
+          "section",
+          "title"
+        ],
+        "title": "WorkspaceItemCreate",
+        "description": "``POST /workspace/items`` body (``WorkspaceItemSchema`` minus server fields)."
+      },
+      "WorkspaceItemResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "section": {
+            "type": "string",
+            "enum": [
+              "personal",
+              "education",
+              "experience",
+              "internship",
+              "project",
+              "skill",
+              "achievement",
+              "extracurricular",
+              "certificate",
+              "course",
+              "publication",
+              "training"
+            ],
+            "title": "Section"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "organization": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Organization"
+          },
+          "startDate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Startdate"
+          },
+          "endDate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enddate"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location"
+          },
+          "bullets": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Bullets"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tags"
+          },
+          "links": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Links"
+          },
+          "attachments": {
+            "items": {
+              "$ref": "#/components/schemas/Attachment"
+            },
+            "type": "array",
+            "title": "Attachments"
+          },
+          "evidence": {
+            "type": "string",
+            "enum": [
+              "verified",
+              "attested",
+              "related",
+              "missing"
+            ],
+            "title": "Evidence"
+          },
+          "order": {
+            "type": "integer",
+            "title": "Order"
+          },
+          "deletedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deletedat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "section",
+          "title",
+          "evidence",
+          "order"
+        ],
+        "title": "WorkspaceItemResponse",
+        "description": "Wire item returned by the workspace endpoints."
+      },
+      "WorkspaceItemUpdate": {
+        "properties": {
+          "section": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "personal",
+                  "education",
+                  "experience",
+                  "internship",
+                  "project",
+                  "skill",
+                  "achievement",
+                  "extracurricular",
+                  "certificate",
+                  "course",
+                  "publication",
+                  "training"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Section"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "organization": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Organization"
+          },
+          "startDate": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 20
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Startdate"
+          },
+          "endDate": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 20
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enddate"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location"
+          },
+          "bullets": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string",
+                  "maxLength": 600
+                },
+                "type": "array",
+                "maxItems": 30
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bullets"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string",
+                  "maxLength": 40
+                },
+                "type": "array",
+                "maxItems": 30
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tags"
+          },
+          "links": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string",
+                  "maxLength": 500
+                },
+                "type": "array",
+                "maxItems": 20
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Links"
+          },
+          "attachments": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Attachment"
+                },
+                "type": "array",
+                "maxItems": 10
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attachments"
+          },
+          "evidence": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "verified",
+                  "attested",
+                  "related",
+                  "missing"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence"
+          },
+          "order": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order"
+          }
+        },
+        "type": "object",
+        "title": "WorkspaceItemUpdate",
+        "description": "``PATCH /workspace/items/{id}`` body \u2014 partial (unset fields are untouched).\n\n``deletedAt`` is intentionally absent: deletion and restore have dedicated\nendpoints (ADR-013). ``order`` is accepted for parity with the mock, but the\ndedicated reorder endpoint is the version-bumping path (WS-6)."
+      },
+      "WorkspaceReorderRequest": {
+        "properties": {
+          "section": {
+            "type": "string",
+            "enum": [
+              "personal",
+              "education",
+              "experience",
+              "internship",
+              "project",
+              "skill",
+              "achievement",
+              "extracurricular",
+              "certificate",
+              "course",
+              "publication",
+              "training"
+            ],
+            "title": "Section"
+          },
+          "orderedIds": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Orderedids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "section",
+          "orderedIds"
+        ],
+        "title": "WorkspaceReorderRequest",
+        "description": "``POST /workspace/reorder`` body (PRD WS-6). One version bump per call."
+      },
+      "WorkspaceResponse": {
+        "properties": {
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/WorkspaceItemResponse"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "updatedAt": {
+            "type": "string",
+            "title": "Updatedat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "version",
+          "items",
+          "updatedAt"
+        ],
+        "title": "WorkspaceResponse",
+        "description": "``GET /workspace`` body."
       }
     }
   }

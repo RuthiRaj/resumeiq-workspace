@@ -1,8 +1,12 @@
-# ResumeIQ backend (FastAPI) — B0 scaffold
+# ResumeIQ backend (FastAPI) — B0 scaffold + B1 workspace API
 
-B0 scope only: app scaffold, Supabase JWT auth (`GET /api/v1/me`), `GET /health`,
-security defaults, Postgres schema + RLS, OpenAPI contract export, Docker, CI.
-No workspace API, no AI calls, no parsing (those are B1+).
+B0: app scaffold, Supabase JWT auth (`GET /api/v1/me`), `GET /health`, security
+defaults, Postgres schema + RLS, OpenAPI contract export, Docker, CI.
+
+B1: the workspace API under `/api/v1` (items across all sections, evidence
+states, attachment metadata, per-user versioning + append-only change log,
+soft-delete/restore/reorder) and the deterministic standard-resume sync. No AI
+calls, no document parsing, no job analysis (those are B2+).
 
 ## Requirements
 
@@ -54,6 +58,46 @@ Key notes:
   asymmetric signing keys; the docs strongly discourage local HS256
   verification (see `app/api/deps.py` header + ADR-010).
 - `CORS_ORIGINS` is an exact allowlist (comma-separated). No wildcard.
+- `SUPABASE_PUBLISHABLE_KEY` is the Data API `apikey` header (publishable/anon
+  key). Workspace queries also send the **caller's JWT**, so RLS applies; the
+  `service_role` key is never used (ADR-016).
+- `RUN_SUPABASE_INTEGRATION=1` opts into the integration tests (see below).
+
+## API (B1)
+
+All workspace/resume endpoints require `Authorization: Bearer <Supabase JWT>` and
+mirror the F3 mock contract (`frontend/src/mocks/handlers.ts`):
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/api/v1/workspace` | current version + active items |
+| GET | `/api/v1/workspace/changelog` | append-only log, newest first |
+| GET | `/api/v1/workspace/items/{id}` | a single active item |
+| POST | `/api/v1/workspace/items` | create (201) |
+| PATCH | `/api/v1/workspace/items/{id}` | partial update |
+| DELETE | `/api/v1/workspace/items/{id}` | soft delete (204) |
+| POST | `/api/v1/workspace/items/{id}/restore` | undo a soft delete |
+| POST | `/api/v1/workspace/reorder` | one version bump (WS-6) |
+| GET | `/api/v1/resume/standard` | deterministic standard resume |
+
+Every mutation bumps the per-user workspace version exactly once and appends a
+`change_log` row in the same transaction. `verified` items must carry a supporting
+document or link (enforced in the models *and* in SQL). Wire↔DB mappings and the
+known mismatches are in ADR-016/ADR-017.
+
+## Tests
+
+```bash
+cd backend
+uv run pytest            # unit + contract tests (in-memory repo, httpx.MockTransport)
+RUN_SUPABASE_INTEGRATION=1 \
+  SUPABASE_URL=... SUPABASE_PUBLISHABLE_KEY=... SUPABASE_TEST_TOKEN_A=... \
+  uv run pytest tests/test_workspace_integration.py   # opt-in; skipped otherwise
+```
+
+Integration tests hit a real project with a real user JWT (so they also prove RLS
+and the transactional versioning). Without the flag they are skipped; no keys are
+ever printed.
 
 ## Supabase JWT verification (what was verified)
 
@@ -65,9 +109,10 @@ cache); legacy HS256 shared secret kept as opt-in fallback; `aud`
 
 ## Database
 
-Schema + RLS live in `db/migrations/0001_initial.sql` (see `db/README.md`).
-Not yet applied anywhere: link a Supabase project and run it in the SQL
-editor (or `supabase db push`), then continue with B1.
+Schema + RLS live in `db/migrations/` (`0001_initial.sql`, then
+`0002_workspace_api.sql`) — see `db/README.md`. Apply them with the Supabase SQL
+editor or CLI (`supabase db push` once the project is linked). `0002` adds the
+readable `change_log` columns and the `SECURITY INVOKER` workspace functions.
 
 ## Docker / Render
 

@@ -13,6 +13,15 @@ def test_defaults() -> None:
     assert settings.rate_limit_per_minute == 60
     assert settings.cors_origins == ["http://localhost:3000"]
     assert settings.auth_configured is False
+    assert settings.data_api_configured is False
+
+
+def test_data_api_configured_requires_url_and_key() -> None:
+    assert Settings(supabase_url="https://x.supabase.co").data_api_configured is False
+    assert Settings(supabase_publishable_key="pk").data_api_configured is False
+    settings = Settings(supabase_url="https://x.supabase.co/", supabase_publishable_key="pk")
+    assert settings.rest_url == "https://x.supabase.co/rest/v1"
+    assert settings.data_api_configured is True
 
 
 def test_env_overrides(monkeypatch: pytest.MonkeyPatch) -> None:

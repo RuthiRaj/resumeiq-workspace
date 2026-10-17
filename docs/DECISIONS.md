@@ -346,3 +346,71 @@ never bumps the workspace version. `item-editor-sheet.test.tsx` locks in both th
 setValue path and the invalid-then-corrected recovery; reverting to the `type`
 filter fails 3 of its 4 cases.
 
+## ADR-016 — 2026-10-17 — Workspace data access: Data API + caller JWT + RPC
+
+Context: B1 needs every query scoped to the authenticated user *and* enforced by
+Row Level Security, plus "increment the version and append the change_log row in
+the same transaction". The backend has no database driver and no database
+password — only `httpx`.
+
+Decision (checked against the current Supabase docs, "Securing your API"): talk
+to Postgres through the **Data API (PostgREST)** and pass the **caller's JWT** on
+every request (`Authorization: Bearer <user jwt>`, `apikey: <publishable key>`).
+PostgREST sets `request.jwt.claims` and role `authenticated`, so every statement
+runs as `auth.uid()` and RLS applies in the database — this is Supabase's
+"pass the user JWT to Postgres" idiom, and it needs no database password. The
+`service_role` key (which bypasses RLS) is never used by the backend.
+
+Mutations run through `SECURITY INVOKER` SQL functions (migration
+`0002_workspace_api.sql`). Because the function runs as the caller, RLS stays
+effective; because it runs inside the single PostgREST request transaction, the
+per-user version bump, the `change_log` append and the item change commit
+atomically. EXECUTE is granted to `authenticated` explicitly (Supabase is moving
+to opt-in default privileges).
+
+Consequence: one extra migration surface (7 functions) and a repository that
+speaks PostgREST, but no DB password, no connection pooling to manage, and RLS is
+enforced by Postgres as the primary control — the app-level `user_id` filters are
+defence in depth. Unit tests use an in-memory repository; the Data API path is
+covered by `httpx.MockTransport` tests and by opt-in integration tests
+(`RUN_SUPABASE_INTEGRATION=1`), which are skipped otherwise.
+
+## ADR-017 — 2026-10-17 — Workspace wire ↔ DB mapping (mismatches + resolutions)
+
+Context: B1 must expose exactly the shapes the F3 frontend already uses
+(`frontend/src/lib/schemas`, `frontend/src/mocks/handlers.ts`) on top of the B0
+schema (`0001_initial.sql`). The two do not line up perfectly.
+
+Decisions (the wire/frontend is the contract; `/frontend` is not edited):
+
+1. `order` (wire) ↔ `position` (DB). Kept as-is, mapped in the repository. The
+   DB column name is the odd one out; a future migration could rename it, but
+   nothing depends on the DB name.
+2. **Dates.** The wire sends **month precision** (`startDate`/`endDate`, e.g.
+   `2022-09`) because the editor uses `<input type="month">`; the DB columns are
+   `date` (day precision). Resolution: pad to the first of the month on write and
+   truncate back to `YYYY-MM` on read, which round-trips client values exactly
+   (the altered value is invisible to the UI). Proposed long-term: either the DB
+   stores these as `text`, or the frontend adopts full dates — if the frontend
+   ever needs day precision the current mapping must change.
+3. `attachments` (wire, `{id,name,url}`) have no column; they map to the
+   `evidence_links` rows (`url`→`url`, `name`→`label`, `id`→`id`). The wire's
+   `links: string[]` maps to `workspace_items.links`.
+4. **`change_log` label + seq.** The wire changelog entry carries `label`
+   (captured at write time so the log stays readable after a soft delete) and a
+   monotonic `seq`; the B0 table had neither. Resolution (migration 0002): add
+   `change_log.label text` and `change_log.seq integer` (NOT NULL, unique per
+   user). This also closes the ADR-013 openapi gap.
+5. **`restore`.** The DB `action` enum has `restore`; the wire `op` enum does not
+   (`add|edit|delete|reorder`). The DB stores the faithful `restore` and the
+   repository maps it to the wire `edit` (the log row still has the right label).
+   Proposed: add `restore` to the wire enum in a later frontend milestone so the
+   distinction is not lost; not done here because `/frontend` is frozen.
+6. **Reorder validation.** The mock silently ignores ids that are not in the
+   section; the backend rejects the request (422) unless every id is an active
+   item of that section. Stricter on purpose — a silent no-op would still bump
+   the version and write misleading log rows.
+7. **`verified` needs support.** Enforced in three places: the wire form (client),
+   the Pydantic create/patch models, and the SQL functions (defence in depth), so
+   an item can never end up `verified` without a document or link (PRD §4.2).
+

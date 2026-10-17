@@ -21,15 +21,17 @@ only when an expected issuer is configured, and ``sub`` is required.
 """
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Annotated, Any
 
 import jwt
-from fastapi import HTTPException, Request, status
+from fastapi import Depends, HTTPException, Request, status
 from jwt import PyJWKClient
 from jwt.types import Options
 
 from app.core.config import Settings
 from app.core.logging import get_logger
+from app.repositories.workspace import SupabaseWorkspaceRepository, WorkspaceRepository
+from app.services.workspace_service import WorkspaceService
 
 logger = get_logger(__name__)
 
@@ -157,3 +159,41 @@ def get_current_user(request: Request) -> UserClaims:
     if scheme.lower() != "bearer" or not token:
         raise _unauthorized("missing_credentials", "Missing bearer token.")
     return verify_supabase_jwt(token.strip(), settings)
+
+
+def get_bearer_token(request: Request) -> str:
+    """Raw bearer token, forwarded to the Data API so Postgres sees the caller."""
+    authorization = request.headers.get("authorization", "")
+    scheme, _, token = authorization.partition(" ")
+    if scheme.lower() != "bearer" or not token.strip():
+        raise _unauthorized("missing_credentials", "Missing bearer token.")
+    return token.strip()
+
+
+def get_workspace_repository(request: Request) -> WorkspaceRepository:
+    """A workspace repository bound to the caller's JWT (RLS enforced in Postgres).
+
+    Tests override this dependency with the in-memory repository. The token is
+    validated separately by ``get_current_user``; here we only forward it.
+    """
+    settings: Settings = request.app.state.settings
+    if not settings.data_api_configured:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "code": "data_api_not_configured",
+                "message": "Server data access is not configured.",
+            },
+        )
+    return SupabaseWorkspaceRepository(
+        settings.rest_url,
+        settings.supabase_publishable_key,
+        get_bearer_token(request),
+    )
+
+
+def get_workspace_service(
+    repository: Annotated[WorkspaceRepository, Depends(get_workspace_repository)],
+) -> WorkspaceService:
+    """FastAPI dependency: the workspace service over the request's repository."""
+    return WorkspaceService(repository)

@@ -41,6 +41,9 @@ line-length = 100
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
 ignore = ["SIM108"]
+# " – " and " · " are intentional: the standard-resume text must match the F3
+# mock derivation character-for-character (frontend/src/mocks/workspace-store.ts).
+allowed-confusables = ["–", "·"]
 
 [tool.ruff.format]
 
