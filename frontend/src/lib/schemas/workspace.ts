@@ -61,21 +61,27 @@ export const AttachmentSchema = z.object({
 });
 export type Attachment = z.infer<typeof AttachmentSchema>;
 
+/**
+ * Workspace item as returned by `GET /workspace` (B1 OpenAPI
+ * `WorkspaceItemResponse`). Optional text fields are *nullable* on the wire
+ * (`string | null`), so they must be modelled as `nullish` — `.optional()`
+ * alone rejects a `null` the backend legitimately sends for "not set".
+ */
 export const WorkspaceItemSchema = z.object({
   id: z.string(),
   section: WorkspaceSectionSchema,
   title: z.string().min(1, "Title is required"),
-  organization: z.string().optional(),
-  startDate: z.string().optional(),
-  endDate: z.string().optional(),
-  location: z.string().optional(),
+  organization: z.string().nullish(),
+  startDate: z.string().nullish(),
+  endDate: z.string().nullish(),
+  location: z.string().nullish(),
   bullets: z.array(z.string()).default([]),
   tags: z.array(z.string()).default([]),
   links: z.array(z.string()).default([]),
   attachments: z.array(AttachmentSchema).default([]),
   evidence: EvidenceStateSchema,
   order: z.number(),
-  deletedAt: z.string().optional(),
+  deletedAt: z.string().nullish(),
 });
 export type WorkspaceItem = z.infer<typeof WorkspaceItemSchema>;
 
@@ -86,18 +92,34 @@ export const WorkspaceSchema = z.object({
 });
 export type Workspace = z.infer<typeof WorkspaceSchema>;
 
+/**
+ * Change-log operation (PRD §6.1 WS-4, ADR-013/ADR-017). `restore` is the undo
+ * of a soft delete: the B1 database stores it as its own `action`, so the
+ * frontend models it explicitly rather than collapsing every undo into `edit`.
+ * The current B1 wire mapper still surfaces a restore as `edit`; the backend
+ * should send `restore` verbatim once reconciled (see docs/DECISIONS.md).
+ */
+export const WorkspaceChangeOpSchema = z.enum([
+  "add",
+  "edit",
+  "delete",
+  "reorder",
+  "restore",
+]);
+export type WorkspaceChangeOp = z.infer<typeof WorkspaceChangeOpSchema>;
+
 export const WorkspaceChangeLogEntrySchema = z.object({
   seq: z.number().int().nonnegative(),
   workspaceVersion: z.number().int().nonnegative(),
   itemId: z.string(),
-  op: z.enum(["add", "edit", "delete", "reorder"]),
+  op: WorkspaceChangeOpSchema,
   at: z.string(),
   /**
    * Human label for the affected item, captured at write time so the log stays
-   * readable after a soft delete. Optional so an entry without it stays valid.
-   * PROPOSED ADDITION for B1 — see docs/DECISIONS.md ADR-013.
+   * readable after a soft delete. Nullable on the wire (ADR-013): the B1
+   * response models it as `string | null`.
    */
-  label: z.string().optional(),
+  label: z.string().nullish(),
 });
 export type WorkspaceChangeLogEntry = z.infer<
   typeof WorkspaceChangeLogEntrySchema
@@ -122,6 +144,21 @@ function isHttpUrl(value: string): boolean {
 }
 
 /**
+ * Month-precision date input (PRD §6.1 WS-3, ADR-017). The workspace wire format
+ * is `YYYY-MM` only (the backend normalises to month precision), so the editor
+ * rejects day precision, partial years and free text. An empty value means "not
+ * set". Enforcing this also makes the start/end comparison below a correct
+ * lexicographic test, which it would not be for day-precision strings.
+ */
+export const MonthValueSchema = z
+  .string()
+  .trim()
+  .max(20)
+  .refine((value) => value === "" || /^\d{4}-(0[1-9]|1[0-2])$/.test(value), {
+    message: "Use month precision, e.g. 2024-06",
+  });
+
+/**
  * Editor-facing schema (React Hook Form + Zod, PRD §6.1 WS-3, §7.7).
  *
  * Stricter than the wire `WorkspaceItemSchema` so inline validation catches
@@ -137,8 +174,8 @@ export const WorkspaceItemFormSchema = z
       .min(1, "Title is required")
       .max(200, "Keep the title under 200 characters"),
     organization: z.string().trim().max(200, "Keep this under 200 characters"),
-    startDate: z.string().max(20),
-    endDate: z.string().max(20),
+    startDate: MonthValueSchema,
+    endDate: MonthValueSchema,
     location: z.string().trim().max(200, "Keep this under 200 characters"),
     bullets: z
       .array(z.string().trim().max(600, "Keep each bullet under 600 characters"))

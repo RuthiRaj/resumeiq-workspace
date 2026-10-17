@@ -15,6 +15,7 @@ const OP_COLOR: Record<WorkspaceChangeLogEntry["op"], string> = {
   edit: "bg-evidence-attested",
   delete: "bg-evidence-missing",
   reorder: "bg-evidence-related",
+  restore: "bg-evidence-verified",
 };
 
 /** Recent workspace changes, newest first (PRD §6.1 WS-4, §7.5). */

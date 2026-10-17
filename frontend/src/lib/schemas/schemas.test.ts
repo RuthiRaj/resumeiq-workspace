@@ -4,6 +4,8 @@ import {
   EvidenceStateSchema,
   RequirementSchema,
   ResumeSchema,
+  WorkspaceChangeLogEntrySchema,
+  WorkspaceItemFormSchema,
   WorkspaceItemSchema,
   WorkspaceSchema,
 } from "@/lib/schemas";
@@ -85,5 +87,75 @@ describe("contract schemas (PRD §8.3)", () => {
       updatedAt: new Date().toISOString(),
     });
     expect(parsed.success).toBe(true);
+  });
+
+  it("accepts the B1 wire shape, where optional item fields are null", () => {
+    // Regression: `WorkspaceItemResponse` sends `null`, not `undefined`, for an
+    // unset field. Parsing it must not fail at backend integration (B7).
+    const wireItem = {
+      id: "ws-2",
+      section: "experience",
+      title: "Backend Engineer",
+      organization: null,
+      startDate: null,
+      endDate: null,
+      location: null,
+      bullets: [],
+      tags: [],
+      links: [],
+      attachments: [],
+      evidence: "attested",
+      order: 0,
+      deletedAt: null,
+    };
+    const parsed = WorkspaceItemSchema.safeParse(wireItem);
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.organization).toBeNull();
+      expect(parsed.data.deletedAt).toBeNull();
+    }
+  });
+
+  it("models a restore as its own change-log operation", () => {
+    const base = {
+      seq: 9,
+      workspaceVersion: 4,
+      itemId: "ws-2",
+      at: new Date().toISOString(),
+    };
+    expect(
+      WorkspaceChangeLogEntrySchema.safeParse({ ...base, op: "restore", label: null }).success,
+    ).toBe(true);
+    // An unknown op is still rejected.
+    expect(
+      WorkspaceChangeLogEntrySchema.safeParse({ ...base, op: "undelete" }).success,
+    ).toBe(false);
+  });
+
+  it("enforces month precision on editor dates (ADR-017)", () => {
+    const form = {
+      title: "Backend Engineer",
+      organization: "",
+      startDate: "2024-06",
+      endDate: "2025-01",
+      location: "",
+      bullets: [],
+      tags: [],
+      links: [],
+      attachments: [],
+      evidence: "attested" as const,
+    };
+    expect(WorkspaceItemFormSchema.safeParse(form).success).toBe(true);
+    // Day precision and a narrow month are both rejected.
+    expect(
+      WorkspaceItemFormSchema.safeParse({ ...form, startDate: "2024-06-15" }).success,
+    ).toBe(false);
+    expect(
+      WorkspaceItemFormSchema.safeParse({ ...form, startDate: "2024-13" }).success,
+    ).toBe(false);
+    // A completely empty date is "not set" and stays valid.
+    expect(
+      WorkspaceItemFormSchema.safeParse({ ...form, startDate: "", endDate: "" }).success,
+    ).toBe(true);
   });
 });

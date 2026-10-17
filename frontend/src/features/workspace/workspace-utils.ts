@@ -1,6 +1,7 @@
 import {
   WORKSPACE_SECTION_ORDER,
   type EvidenceState,
+  type WorkspaceChangeOp,
   type WorkspaceItem,
   type WorkspaceItemFormValues,
   type WorkspaceSection,
@@ -115,8 +116,8 @@ export function reorderIds(ids: string[], activeId: string, overId: string): str
 
 /** Human summary of a change-log entry (label is captured at write time). */
 export function describeChange(entry: {
-  op: "add" | "edit" | "delete" | "reorder";
-  label?: string;
+  op: WorkspaceChangeOp;
+  label?: string | null;
 }): string {
   const target = entry.label ? `“${entry.label}”` : "an item";
   switch (entry.op) {
@@ -128,6 +129,8 @@ export function describeChange(entry: {
       return `Deleted ${target}`;
     case "reorder":
       return `Reordered ${target}`;
+    case "restore":
+      return `Restored ${target}`;
   }
 }
 
