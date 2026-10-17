@@ -131,3 +131,48 @@ def test_postgrest_p0002_raises_item_not_found() -> None:
             await repo(handler).soft_delete_item("user-a", "missing")
 
     asyncio.run(run())
+
+
+def test_list_changelog_maps_every_action_including_restore() -> None:
+    actions = ["create", "update", "delete", "restore", "reorder"]
+    rows = [
+        {
+            "seq": 5 - index,
+            "workspace_version": 10 - index,
+            "entity_id": "i1",
+            "action": action,
+            "created_at": f"t{index}",
+            "label": "A",
+        }
+        for index, action in enumerate(actions)
+    ]
+
+    def handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json=rows)
+
+    async def run() -> None:
+        entries = await repo(handler).list_changelog("user-a")
+        # DB ``restore`` now surfaces as ``restore`` (ADR-019), not ``edit``.
+        assert [entry.op for entry in entries] == [
+            "add",
+            "edit",
+            "delete",
+            "restore",
+            "reorder",
+        ]
+
+    asyncio.run(run())
+
+
+def test_update_on_a_soft_deleted_item_returns_not_found() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path.endswith("/rpc/api_workspace_update")
+        # The SQL function filters ``deleted_at IS NULL`` and raises P0002, so a
+        # PATCH on a soft-deleted item must not mutate anything.
+        return httpx.Response(404, json={"code": "P0002", "message": "item not found"})
+
+    async def run() -> None:
+        with pytest.raises(ItemNotFoundError):
+            await repo(handler).update_item("user-a", "gone", {"title": "Zombie"})
+
+    asyncio.run(run())

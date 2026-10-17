@@ -59,7 +59,7 @@ WORKSPACE_SECTION_ORDER: tuple[WorkspaceSection, ...] = (
     "training",
 )
 
-ChangeLogOp = Literal["add", "edit", "delete", "reorder"]
+ChangeLogOp = Literal["add", "edit", "delete", "reorder", "restore"]
 
 TitleText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)]
 ShortText = Annotated[str, StringConstraints(strip_whitespace=True, max_length=200)]
@@ -206,8 +206,8 @@ class ChangeLogEntryResponse(BaseModel):
     """``GET /workspace/changelog`` entry (newest first).
 
     ``label`` is captured at write time so the log stays readable after a soft
-    delete (ADR-013). ``op`` maps the DB ``action`` (which also has ``restore``)
-    onto the wire enum, where a restore is surfaced as an edit.
+    delete (ADR-013). ``op`` maps the DB ``action`` 1:1, including ``restore``
+    (an undo of a soft delete), which the frontend enum carries as of ADR-019.
     """
 
     seq: int

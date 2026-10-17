@@ -101,6 +101,28 @@ def test_delete_then_restore_flow(
     assert restored.status_code == 200
     assert "deletedAt" not in restored.json()
     assert len(workspace_client.get(f"{BASE}/workspace", headers=auth_headers).json()["items"]) == 1
+    # The undo is logged as its own op, not an edit (ADR-019).
+    assert (
+        workspace_client.get(f"{BASE}/workspace/changelog", headers=auth_headers).json()[0]["op"]
+        == "restore"
+    )
+
+
+def test_patch_on_a_soft_deleted_item_is_404(
+    workspace_client: TestClient, auth_headers: dict[str, str]
+) -> None:
+    item = create(workspace_client, auth_headers)
+    workspace_client.delete(f"{BASE}/workspace/items/{item['id']}", headers=auth_headers)
+
+    patched = workspace_client.patch(
+        f"{BASE}/workspace/items/{item['id']}",
+        json={"title": "Zombie"},
+        headers=auth_headers,
+    )
+    assert patched.status_code == 404, patched.text
+    assert patched.json()["detail"]["code"] == "not_found"
+    # It stayed deleted: a PATCH may not resurrect it.
+    assert workspace_client.get(f"{BASE}/workspace", headers=auth_headers).json()["items"] == []
 
 
 def test_changelog_is_newest_first(

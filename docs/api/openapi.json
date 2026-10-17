@@ -510,7 +510,8 @@
               "add",
               "edit",
               "delete",
-              "reorder"
+              "reorder",
+              "restore"
             ],
             "title": "Op"
           },
@@ -539,7 +540,7 @@
           "at"
         ],
         "title": "ChangeLogEntryResponse",
-        "description": "``GET /workspace/changelog`` entry (newest first).\n\n``label`` is captured at write time so the log stays readable after a soft\ndelete (ADR-013). ``op`` maps the DB ``action`` (which also has ``restore``)\nonto the wire enum, where a restore is surfaced as an edit."
+        "description": "``GET /workspace/changelog`` entry (newest first).\n\n``label`` is captured at write time so the log stays readable after a soft\ndelete (ADR-013). ``op`` maps the DB ``action`` 1:1, including ``restore``\n(an undo of a soft delete), which the frontend enum carries as of ADR-019."
       },
       "Claim": {
         "properties": {

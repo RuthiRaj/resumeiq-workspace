@@ -8,7 +8,7 @@ match (mirrors the F3 mock store in
 * a brand-new workspace starts at version 1;
 * every mutation bumps the version **exactly once** and appends change-log rows
   in the same commit;
-* deletes are soft, so undo is a restore (logged as an edit);
+* deletes are soft, so undo is a restore (logged as a ``restore``);
 * reorder bumps once but logs one row per moved id;
 * the change log keeps the item label captured at write time.
 """
@@ -153,7 +153,7 @@ class InMemoryWorkspaceRepository:
 
         def apply() -> None:
             items[index] = restored
-            self._log(user_id, item_id, "edit", _label(restored))
+            self._log(user_id, item_id, "restore", _label(restored))
 
         self._commit(user_id, apply)
         return restored.model_copy()

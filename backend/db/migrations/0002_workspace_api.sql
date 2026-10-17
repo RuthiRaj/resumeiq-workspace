@@ -259,7 +259,7 @@ END;
 $$;
 
 -- ---------------------------------------------------------------------------
--- restore (undo a soft delete) — logged as action 'restore' (wire shows edit)
+-- restore (undo a soft delete) — logged as action 'restore' (surfaced as 'restore')
 -- ---------------------------------------------------------------------------
 
 CREATE OR REPLACE FUNCTION public.api_workspace_restore(p_id uuid)

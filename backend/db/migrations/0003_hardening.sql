@@ -228,7 +228,7 @@ BEGIN
 END;
 $$;
 
--- api_workspace_restore (logged as action 'restore'; the wire shows an edit)
+-- api_workspace_restore (logged as action 'restore'; the wire shows 'restore')
 CREATE OR REPLACE FUNCTION public.api_workspace_restore(p_id uuid)
 RETURNS void
 LANGUAGE plpgsql

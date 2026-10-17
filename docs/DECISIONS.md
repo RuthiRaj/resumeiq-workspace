@@ -406,6 +406,14 @@ Decisions (the wire/frontend is the contract; `/frontend` is not edited):
    repository maps it to the wire `edit` (the log row still has the right label).
    Proposed: add `restore` to the wire enum in a later frontend milestone so the
    distinction is not lost; not done here because `/frontend` is frozen.
+
+   **Update 2026-10-17 (reconcile with ADR-019).** The frontend wire enum now
+   carries `restore` (ADR-019), so the collapse is gone: the repository maps DB
+   `action` to wire `op` **1:1** (`restore` → `restore`, see `workspace.py`
+   `_ACTION_TO_OP`) and the in-memory double logs `restore` too. The original
+   "map to `edit`" resolution above is superseded. `docs/api/openapi.json` was
+   re-exported: `ChangeLogEntryResponse.op` is now
+   `add|edit|delete|reorder|restore`.
 6. **Reorder validation.** The mock silently ignores ids that are not in the
    section; the backend rejects the request (422) unless every id is an active
    item of that section. Stricter on purpose — a silent no-op would still bump

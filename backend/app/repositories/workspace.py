@@ -34,11 +34,12 @@ from app.schemas.workspace import (
 )
 
 # DB ``change_log.action`` -> wire ``ChangeLogEntryResponse.op`` (ADR-017):
-# a restore is surfaced as an edit because the wire enum has no ``restore``.
+# the mapping is 1:1, including ``restore`` — the frontend enum now carries it
+# (ADR-019), so an undo is no longer collapsed into an ``edit``.
 _ACTION_TO_OP = {
     "create": "add",
     "update": "edit",
-    "restore": "edit",
+    "restore": "restore",
     "delete": "delete",
     "reorder": "reorder",
 }

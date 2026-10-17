@@ -65,7 +65,7 @@ def test_reorder_bumps_version_once_and_logs_each_id() -> None:
     asyncio.run(run())
 
 
-def test_delete_is_soft_and_restore_is_logged_as_edit() -> None:
+def test_delete_is_soft_and_restore_is_logged_as_restore() -> None:
     async def run() -> None:
         svc = service()
         created = await svc.create_item(USER, create_item())
@@ -79,7 +79,25 @@ def test_delete_is_soft_and_restore_is_logged_as_edit() -> None:
         restored = await svc.restore_item(USER, created.id)
         assert restored.deletedAt is None
         assert [i.id for i in (await svc.get_workspace(USER)).items] == [created.id]
-        assert (await svc.list_changelog(USER))[0].op == "edit"
+        # An undo is its own op, not an edit (ADR-019).
+        assert (await svc.list_changelog(USER))[0].op == "restore"
+
+    asyncio.run(run())
+
+
+def test_update_on_a_soft_deleted_item_is_not_found() -> None:
+    async def run() -> None:
+        svc = service()
+        created = await svc.create_item(USER, create_item())
+        await svc.soft_delete_item(USER, created.id)
+
+        # PATCH on a soft-deleted item must behave like an unknown item: 404,
+        # and it must not resurrect or edit it.
+        with pytest.raises(ItemNotFoundError):
+            await svc.update_item(USER, created.id, WorkspaceItemUpdate(title="Zombie"))
+        with pytest.raises(ItemNotFoundError):
+            await svc.get_item(USER, created.id)
+        assert (await svc.get_workspace(USER)).items == []
 
     asyncio.run(run())
 
