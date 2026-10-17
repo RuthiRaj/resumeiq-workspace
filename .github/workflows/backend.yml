@@ -1,32 +1,97 @@
 name: Backend
 
+# A `paths:` filter cannot be used on the pull_request trigger: a required check
+# that never starts leaves the pull request blocked instead of reporting. The
+# trigger therefore always fires (same as ci.yml) and the `detect` job decides
+# whether the heavy `backend` job has anything to do.
 on:
   push:
     branches: ["**"]
-    paths:
-      - "backend/**"
-      - "docs/api/openapi.json"
-      - ".github/workflows/backend.yml"
   pull_request:
-    paths:
-      - "backend/**"
-      - "docs/api/openapi.json"
-      - ".github/workflows/backend.yml"
 
 jobs:
+  # Cheap gate. Runs on every push and every pull request and reports whether
+  # any backend-relevant file changed.
+  detect:
+    name: Detect backend changes
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.changed.outputs.backend }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history so the diff ranges below are always resolvable.
+          fetch-depth: 0
+      - id: changed
+        name: Did backend/, docs/api/ or this workflow change?
+        env:
+          EVENT: ${{ github.event_name }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -eu
+          paths=(backend docs/api/openapi.json .github/workflows/backend.yml)
+
+          if [ "$EVENT" = "pull_request" ]; then
+            # Three dots: exactly what this pull request adds, so being behind
+            # the base branch can never produce a false "changed".
+            range="$PR_BASE...$PR_HEAD"
+          elif [ -n "$PUSH_BEFORE" ] && [ "$PUSH_BEFORE" != "0000000000000000000000000000000000000000" ]; then
+            range="$PUSH_BEFORE..$SHA"
+          else
+            # New branch or force push: no usable base commit.
+            range=""
+          fi
+
+          # Unknown range or a git error -> "changed", so the full gate runs
+          # rather than risk skipping it.
+          if [ -z "$range" ] || ! git diff --name-only "$range" -- "${paths[@]}" > changed.txt; then
+            echo "backend=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ -s changed.txt ]; then
+            echo "Changed backend-relevant files:"
+            cat changed.txt
+            echo "backend=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No files under backend/, docs/api/ or this workflow changed."
+            echo "backend=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  # The required check: it always starts, so it always reports a result.
+  # Every real step runs unless `detect` positively said nothing relevant
+  # changed - an empty or missing result (detector failure) runs the full gate,
+  # so a broken detector can never hide a real failure.
   backend:
+    needs: detect
+    if: always()
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: backend
     steps:
+      - name: Nothing to check
+        if: needs.detect.outputs.backend == 'false'
+        run: echo "No files under backend/ or docs/api/ changed - skipping the backend gate."
+
       - uses: actions/checkout@v4
+        if: needs.detect.outputs.backend != 'false'
       - uses: actions/setup-python@v5
+        if: needs.detect.outputs.backend != 'false'
         with:
           python-version: "3.12"
       - uses: astral-sh/setup-uv@v5
+        if: needs.detect.outputs.backend != 'false'
       - run: uv sync --frozen
+        if: needs.detect.outputs.backend != 'false'
       - run: uv run ruff check .
+        if: needs.detect.outputs.backend != 'false'
       - run: uv run ruff format --check .
+        if: needs.detect.outputs.backend != 'false'
       - run: uv run mypy app
+        if: needs.detect.outputs.backend != 'false'
       - run: uv run pytest
+        if: needs.detect.outputs.backend != 'false'
