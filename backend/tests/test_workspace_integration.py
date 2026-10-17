@@ -54,6 +54,23 @@ def repo_for(token: str) -> SupabaseWorkspaceRepository:
     )
 
 
+def account_a() -> tuple[SupabaseWorkspaceRepository, str]:
+    """User A's repository **and** user id.
+
+    The Supabase repository scopes every read with ``user_id=eq.<id>`` on top of
+    RLS (its protocol requires it), so the real id is needed: the JWT alone is not
+    enough for the PostgREST filter and ``user_id=eq.`` is a uuid syntax error.
+    """
+    token = supabase_auth.access_token_a()
+    return repo_for(token), supabase_auth.current_user_id(token)
+
+
+def account_b() -> tuple[SupabaseWorkspaceRepository, str]:
+    """User B's repository and user id (the "other user" in isolation tests)."""
+    token = supabase_auth.access_token_b()
+    return repo_for(token), supabase_auth.current_user_id(token)
+
+
 async def rpc(token: str, name: str, body: dict[str, object]) -> httpx.Response:
     """Call a PostgREST RPC directly, bypassing the pydantic request models."""
     settings = supabase_auth.env()
@@ -72,39 +89,39 @@ def unique_title(prefix: str = "integration") -> str:
     return f"{prefix}-{datetime.now(UTC).isoformat()}-{uuid4().hex[:8]}"
 
 
-async def tidy_up(repository: SupabaseWorkspaceRepository, item_id: str) -> None:
+async def tidy_up(repository: SupabaseWorkspaceRepository, user_id: str, item_id: str) -> None:
     """Best-effort soft delete so a failed run never leaves active rows behind."""
     with contextlib.suppress(ItemNotFoundError):
-        await repository.soft_delete_item("", item_id)
+        await repository.soft_delete_item(user_id, item_id)
 
 
 def test_full_mutation_lifecycle() -> None:
     async def run() -> None:
-        repository = repo_for(supabase_auth.access_token_a())
-        before = (await repository.get_workspace("")).version
+        repository, uid = account_a()
+        before = (await repository.get_workspace(uid)).version
 
         created = await repository.create_item(
-            "", WorkspaceItemCreate(section="skill", title=unique_title())
+            uid, WorkspaceItemCreate(section="skill", title=unique_title())
         )
         assert created.id
         try:
-            fetched = await repository.get_item("", created.id)
+            fetched = await repository.get_item(uid, created.id)
             assert fetched is not None and fetched.id == created.id
 
-            updated = await repository.update_item("", created.id, {"title": "renamed"})
+            updated = await repository.update_item(uid, created.id, {"title": "renamed"})
             assert updated.title == "renamed"
 
-            await repository.soft_delete_item("", created.id)
-            assert await repository.get_item("", created.id) is not None  # still readable by id
-            listing = await repository.get_workspace("")
+            await repository.soft_delete_item(uid, created.id)
+            assert await repository.get_item(uid, created.id) is not None  # still readable by id
+            listing = await repository.get_workspace(uid)
             assert all(i.id != created.id for i in listing.items)
 
-            await repository.restore_item("", created.id)
-            after = await repository.get_workspace("")
+            await repository.restore_item(uid, created.id)
+            after = await repository.get_workspace(uid)
             assert after.version > before
             assert any(i.id == created.id for i in after.items)
         finally:
-            await tidy_up(repository, created.id)
+            await tidy_up(repository, uid, created.id)
 
     asyncio.run(run())
 
@@ -112,36 +129,36 @@ def test_full_mutation_lifecycle() -> None:
 @_NEEDS_USER_B
 def test_user_a_cannot_read_update_delete_restore_or_reorder_user_b_items() -> None:
     async def run() -> None:
-        user_a = repo_for(supabase_auth.access_token_a())
-        user_b = repo_for(supabase_auth.access_token_b())
+        user_a, uid_a = account_a()
+        user_b, uid_b = account_b()
 
         b_item = await user_b.create_item(
-            "", WorkspaceItemCreate(section="skill", title=unique_title("b-item"))
+            uid_b, WorkspaceItemCreate(section="skill", title=unique_title("b-item"))
         )
         try:
             # read: RLS hides B's row from A entirely
-            assert await user_a.get_item("", b_item.id) is None
-            assert all(i.id != b_item.id for i in (await user_a.get_workspace("")).items)
+            assert await user_a.get_item(uid_a, b_item.id) is None
+            assert all(i.id != b_item.id for i in (await user_a.get_workspace(uid_a)).items)
 
             # update / delete / restore: the SQL guard scopes on auth.uid()
             with pytest.raises(ItemNotFoundError):
-                await user_a.update_item("", b_item.id, {"title": "hijacked"})
+                await user_a.update_item(uid_a, b_item.id, {"title": "hijacked"})
             with pytest.raises(ItemNotFoundError):
-                await user_a.soft_delete_item("", b_item.id)
+                await user_a.soft_delete_item(uid_a, b_item.id)
             with pytest.raises(ItemNotFoundError):
-                await user_a.restore_item("", b_item.id)
+                await user_a.restore_item(uid_a, b_item.id)
 
             # reorder: B's id is not an active item in A's section
             with pytest.raises(InvalidReorderError):
-                await user_a.reorder("", "skill", [b_item.id])
+                await user_a.reorder(uid_a, "skill", [b_item.id])
 
             # B's item is untouched by every attempt above
-            still_there = await user_b.get_item("", b_item.id)
+            still_there = await user_b.get_item(uid_b, b_item.id)
             assert still_there is not None
             assert still_there.title == b_item.title
             assert still_there.deletedAt is None
         finally:
-            await tidy_up(user_b, b_item.id)
+            await tidy_up(user_b, uid_b, b_item.id)
 
     asyncio.run(run())
 
@@ -149,25 +166,25 @@ def test_user_a_cannot_read_update_delete_restore_or_reorder_user_b_items() -> N
 @_NEEDS_USER_B
 def test_change_log_is_per_user() -> None:
     async def run() -> None:
-        user_a = repo_for(supabase_auth.access_token_a())
-        user_b = repo_for(supabase_auth.access_token_b())
+        user_a, uid_a = account_a()
+        user_b, uid_b = account_b()
 
         a_item = await user_a.create_item(
-            "", WorkspaceItemCreate(section="skill", title=unique_title("a-log"))
+            uid_a, WorkspaceItemCreate(section="skill", title=unique_title("a-log"))
         )
         b_item = await user_b.create_item(
-            "", WorkspaceItemCreate(section="skill", title=unique_title("b-log"))
+            uid_b, WorkspaceItemCreate(section="skill", title=unique_title("b-log"))
         )
         try:
-            a_ids = {entry.itemId for entry in await user_a.list_changelog("")}
-            b_ids = {entry.itemId for entry in await user_b.list_changelog("")}
+            a_ids = {entry.itemId for entry in await user_a.list_changelog(uid_a)}
+            b_ids = {entry.itemId for entry in await user_b.list_changelog(uid_b)}
             assert a_item.id in a_ids
             assert b_item.id not in a_ids
             assert b_item.id in b_ids
             assert a_item.id not in b_ids
         finally:
-            await tidy_up(user_a, a_item.id)
-            await tidy_up(user_b, b_item.id)
+            await tidy_up(user_a, uid_a, a_item.id)
+            await tidy_up(user_b, uid_b, b_item.id)
 
     asyncio.run(run())
 
@@ -175,17 +192,17 @@ def test_change_log_is_per_user() -> None:
 @_NEEDS_USER_B
 def test_standard_resume_is_per_user() -> None:
     async def run() -> None:
-        user_a = repo_for(supabase_auth.access_token_a())
-        user_b = repo_for(supabase_auth.access_token_b())
+        user_a, uid_a = account_a()
+        user_b, uid_b = account_b()
 
         a_item = await user_a.create_item(
-            "", WorkspaceItemCreate(section="skill", title=unique_title("a-resume"))
+            uid_a, WorkspaceItemCreate(section="skill", title=unique_title("a-resume"))
         )
         b_item = await user_b.create_item(
-            "", WorkspaceItemCreate(section="skill", title=unique_title("b-resume"))
+            uid_b, WorkspaceItemCreate(section="skill", title=unique_title("b-resume"))
         )
         try:
-            resume = build_standard_resume(await user_a.get_workspace(""))
+            resume = build_standard_resume(await user_a.get_workspace(uid_a))
             evidence_ids = {
                 evidence_id
                 for section in resume.sections
@@ -195,8 +212,8 @@ def test_standard_resume_is_per_user() -> None:
             assert a_item.id in evidence_ids  # A's own evidence is present
             assert b_item.id not in evidence_ids  # B's never leaks into A's resume
         finally:
-            await tidy_up(user_a, a_item.id)
-            await tidy_up(user_b, b_item.id)
+            await tidy_up(user_a, uid_a, a_item.id)
+            await tidy_up(user_b, uid_b, b_item.id)
 
     asyncio.run(run())
 
@@ -213,9 +230,10 @@ def test_verified_evidence_without_support_is_rejected_by_database() -> None:
     async def run() -> None:
         token = supabase_auth.access_token_a()
         repository = repo_for(token)
+        uid = supabase_auth.current_user_id(token)
 
         created = await repository.create_item(
-            "", WorkspaceItemCreate(section="skill", title=unique_title("no-support"))
+            uid, WorkspaceItemCreate(section="skill", title=unique_title("no-support"))
         )
         try:
             update = await rpc(
@@ -249,7 +267,7 @@ def test_verified_evidence_without_support_is_rejected_by_database() -> None:
             assert create.status_code >= 400
             assert (create.json() or {}).get("code") == "P0001"
         finally:
-            await tidy_up(repository, created.id)
+            await tidy_up(repository, uid, created.id)
 
     asyncio.run(run())
 
@@ -337,7 +355,7 @@ def test_authenticated_user_cannot_create_version_without_changelog() -> None:
             "Prefer": "return=representation",
         }
         repository = repo_for(token)
-        current_version = (await repository.get_workspace("")).version
+        current_version = (await repository.get_workspace(user_id)).version
         # Above any real per-user version so it can never collide, but low enough
         # that a leaked row could not overflow the next MAX(version) + 1 bump.
         sentinel_version = current_version + 100_000
@@ -369,13 +387,13 @@ def test_authenticated_user_cannot_create_version_without_changelog() -> None:
         # 4. the supported path keeps the pair together: the current workspace
         #    version always has at least one change_log entry.
         created = await repository.create_item(
-            "", WorkspaceItemCreate(section="skill", title=unique_title("invariant"))
+            user_id, WorkspaceItemCreate(section="skill", title=unique_title("invariant"))
         )
         try:
-            entries = await repository.list_changelog("")
+            entries = await repository.list_changelog(user_id)
             logged_versions = {entry.workspaceVersion for entry in entries}
-            assert (await repository.get_workspace("")).version in logged_versions
+            assert (await repository.get_workspace(user_id)).version in logged_versions
         finally:
-            await tidy_up(repository, created.id)
+            await tidy_up(repository, user_id, created.id)
 
     asyncio.run(run())
