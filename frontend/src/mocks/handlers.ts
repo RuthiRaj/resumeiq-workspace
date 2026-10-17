@@ -1,5 +1,18 @@
 import { http, HttpResponse } from "msw";
-import { fixtureItems, fixtureWorkspaceVersion } from "./fixtures";
+import {
+  addItem,
+  activeItems,
+  deriveStandardResume,
+  failuresEnabled,
+  loadWorkspace,
+  personaOf,
+  reorderItems,
+  restoreItem,
+  setFailures,
+  setPersona,
+  softDeleteItem,
+  updateItem,
+} from "./workspace-store";
 import {
   clearSession,
   findUserByEmail,
@@ -17,14 +30,21 @@ import {
   loadConsent,
   saveConsent,
 } from "@/lib/privacy/consent";
+import {
+  WorkspaceItemSchema,
+  WorkspacePersonaSchema,
+  WorkspaceReorderInputSchema,
+} from "@/lib/schemas";
 import { z } from "zod";
 
 /**
  * MSW handlers implementing the same endpoints the FastAPI backend will
  * expose later (PRD §8.3), so no UI rewrite is needed at integration (B7).
  * F2 adds: mock auth (signup/signin/OAuth/reset/session/signout) + AI
- * consent. State lives in localStorage so the mock session persists across
- * reloads; handlers add ~350ms latency so loading states are exercisable.
+ * consent. F3 adds: the persistent workspace (versioning, change log, soft
+ * delete/restore, reorder) and the derived standard resume. State lives in
+ * localStorage so it survives reloads; handlers add ~350ms latency so loading
+ * and sync states are exercisable (PRD §8.4: sync within 500ms).
  */
 
 const SIGNUP_TIME = "2026-10-16T09:00:00.000Z";
@@ -50,6 +70,17 @@ const OAuthBody = z.object({ provider: OAuthProviderSchema });
 const ResetBody = z.object({ email: EmailSchema });
 
 const ConsentBody = z.object({ aiProcessing: z.boolean() });
+
+const CreateItemBody = WorkspaceItemSchema.omit({
+  id: true,
+  order: true,
+  deletedAt: true,
+});
+
+const UpdateItemBody = WorkspaceItemSchema.omit({ id: true }).partial();
+
+const PersonaBody = z.object({ persona: WorkspacePersonaSchema });
+const FailuresBody = z.object({ enabled: z.boolean() });
 
 async function latency(): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, 350));
@@ -195,26 +226,161 @@ export const authHandlers = [
   }),
 ];
 
-export const handlers = [
-  http.get("/api/v1/workspace", () =>
-    HttpResponse.json({
-      version: fixtureWorkspaceVersion,
-      items: fixtureItems,
-      updatedAt: SIGNUP_TIME,
-    }),
-  ),
+/** Identity of the caller for the mock store (mock auth session). */
+function currentUserId(): string {
+  return loadSession(storage())?.user.id ?? "guest";
+}
 
-  http.get("/api/v1/resume/standard", () =>
-    HttpResponse.json({
-      id: "resume-standard",
-      kind: "standard",
-      workspaceVersion: fixtureWorkspaceVersion,
-      stale: false,
-      sections: [],
-      createdAt: SIGNUP_TIME,
-      updatedAt: SIGNUP_TIME,
-    }),
-  ),
+/** Dev-only failure simulation (PRD §7.7 error states, §8.4). */
+function failIfEnabled() {
+  if (failuresEnabled(storage())) {
+    return HttpResponse.json(
+      { error: "Simulated offline failure (dev toggle). Turn it off in the workspace dev bar." },
+      { status: 503 },
+    );
+  }
+  return null;
+}
 
-  ...authHandlers,
+function workspaceBody(userId: string) {
+  const ws = loadWorkspace(storage(), userId);
+  return { version: ws.version, items: activeItems(ws), updatedAt: ws.updatedAt };
+}
+
+export const workspaceHandlers = [
+  http.get("/api/v1/workspace", async () => {
+    await latency();
+    return failIfEnabled() ?? HttpResponse.json(workspaceBody(currentUserId()));
+  }),
+
+  http.get("/api/v1/workspace/changelog", async () => {
+    await latency();
+    const failure = failIfEnabled();
+    if (failure) return failure;
+    const ws = loadWorkspace(storage(), currentUserId());
+    // Newest first: the dashboard "recent changes" list reads top-down.
+    return HttpResponse.json([...ws.changelog].sort((a, b) => b.seq - a.seq));
+  }),
+
+  http.post("/api/v1/workspace/items", async ({ request }) => {
+    await latency();
+    const failure = failIfEnabled();
+    if (failure) return failure;
+    const parsed = CreateItemBody.safeParse(await request.json().catch(() => null));
+    if (!parsed.success) {
+      return HttpResponse.json(
+        { error: "Some fields need attention before this item can be saved." },
+        { status: 422 },
+      );
+    }
+    const userId = currentUserId();
+    const ws = addItem(storage(), userId, { ...parsed.data, order: 0 });
+    const createdId = [...ws.changelog].reverse().find((entry) => entry.op === "add")?.itemId;
+    const created = ws.items.find((item) => item.id === createdId);
+    return HttpResponse.json(created ?? { error: "not found" }, { status: 201 });
+  }),
+
+  http.patch("/api/v1/workspace/items/:id", async ({ request, params }) => {
+    await latency();
+    const failure = failIfEnabled();
+    if (failure) return failure;
+    const parsed = UpdateItemBody.safeParse(await request.json().catch(() => null));
+    if (!parsed.success) {
+      return HttpResponse.json(
+        { error: "Some fields need attention before this item can be saved." },
+        { status: 422 },
+      );
+    }
+    try {
+      const ws = updateItem(storage(), currentUserId(), String(params.id), parsed.data);
+      const updated = ws.items.find((item) => item.id === params.id);
+      return HttpResponse.json(updated);
+    } catch {
+      return HttpResponse.json({ error: "That workspace item no longer exists." }, { status: 404 });
+    }
+  }),
+
+  http.delete("/api/v1/workspace/items/:id", async ({ params }) => {
+    await latency();
+    const failure = failIfEnabled();
+    if (failure) return failure;
+    try {
+      softDeleteItem(storage(), currentUserId(), String(params.id));
+      return new HttpResponse(null, { status: 204 });
+    } catch {
+      return HttpResponse.json({ error: "That workspace item no longer exists." }, { status: 404 });
+    }
+  }),
+
+  http.post("/api/v1/workspace/items/:id/restore", async ({ params }) => {
+    await latency();
+    const failure = failIfEnabled();
+    if (failure) return failure;
+    try {
+      const ws = restoreItem(storage(), currentUserId(), String(params.id));
+      return HttpResponse.json(ws.items.find((item) => item.id === params.id));
+    } catch {
+      return HttpResponse.json({ error: "That workspace item no longer exists." }, { status: 404 });
+    }
+  }),
+
+  http.post("/api/v1/workspace/reorder", async ({ request }) => {
+    await latency();
+    const failure = failIfEnabled();
+    if (failure) return failure;
+    const parsed = WorkspaceReorderInputSchema.safeParse(await request.json().catch(() => null));
+    if (!parsed.success) {
+      return HttpResponse.json({ error: "Reorder request was malformed." }, { status: 422 });
+    }
+    const userId = currentUserId();
+    reorderItems(storage(), userId, parsed.data);
+    return HttpResponse.json(workspaceBody(userId));
+  }),
+
+  http.get("/api/v1/resume/standard", async () => {
+    await latency();
+    const failure = failIfEnabled();
+    if (failure) return failure;
+    const ws = loadWorkspace(storage(), currentUserId());
+    return HttpResponse.json(deriveStandardResume(ws));
+  }),
+
+  // --- Dev-only fixture controls (never available outside `next dev`) ---
+  http.get("/api/v1/dev/workspace-persona", async () => {
+    if (process.env.NODE_ENV !== "development") {
+      return HttpResponse.json({ error: "Not found." }, { status: 404 });
+    }
+    return HttpResponse.json({
+      persona: personaOf(storage(), currentUserId()),
+      failures: failuresEnabled(storage()),
+    });
+  }),
+
+  http.post("/api/v1/dev/workspace-persona", async ({ request }) => {
+    if (process.env.NODE_ENV !== "development") {
+      return HttpResponse.json({ error: "Not found." }, { status: 404 });
+    }
+    await latency();
+    const parsed = PersonaBody.safeParse(await request.json().catch(() => null));
+    if (!parsed.success) {
+      return HttpResponse.json({ error: "Unknown persona." }, { status: 400 });
+    }
+    setPersona(storage(), currentUserId(), parsed.data.persona);
+    return HttpResponse.json({ ok: true });
+  }),
+
+  http.post("/api/v1/dev/failures", async ({ request }) => {
+    if (process.env.NODE_ENV !== "development") {
+      return HttpResponse.json({ error: "Not found." }, { status: 404 });
+    }
+    const parsed = FailuresBody.safeParse(await request.json().catch(() => null));
+    if (!parsed.success) {
+      return HttpResponse.json({ error: "Expected { enabled: boolean }." }, { status: 400 });
+    }
+    setFailures(storage(), parsed.data.enabled);
+    return HttpResponse.json({ enabled: parsed.data.enabled });
+  }),
 ];
+
+/** All mock endpoints (workspace + auth + consent). */
+export const handlers = [...workspaceHandlers, ...authHandlers];
