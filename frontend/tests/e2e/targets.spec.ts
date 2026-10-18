@@ -71,7 +71,9 @@ async function signUp(
   }
 
   await expect(page).toHaveURL(/\/workspace$/, { timeout: NAV_TIMEOUT });
-  await expect(page.getByRole("heading", { name: "Your workspace" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Your workspace", level: 1 }),
+  ).toBeVisible();
 }
 
 /** Read from the mock API in the page context (the MSW worker intercepts it). */
@@ -239,6 +241,9 @@ test("target intake and consent gate: no consent, no analysis — then theatre t
   page,
 }) => {
   await signUp(page, { consent: "declined" });
+  // A real workspace first, so the report below is a meaningful one (the
+  // strong posting against an empty workspace is honestly a zero).
+  await apiPost(page, "/api/v1/dev/workspace-persona", { persona: "midlevel" });
 
   await fillTargetFromFixture(page, "strong");
 
