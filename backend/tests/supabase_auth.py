@@ -1,18 +1,22 @@
 """Sign-in helper for the opt-in Supabase integration tests (B1 verification).
 
-Reads values from ``backend/.env`` (or the real environment) via
-pydantic-settings and exchanges the two test users' email/password for access
-tokens through Supabase Auth (password grant). Nothing here logs or prints a
-password or a token, and importing the module is silent, so a skipped run stays
-quiet.
+Reads the runtime project values from ``backend/.env`` and the test-only gate and
+credentials from ``backend/.env.test`` (git-ignored; see ``.env.test.example``)
+via pydantic-settings. Keeping the credentials out of the runtime ``.env`` means a
+deployed backend never holds test passwords.
 
-Required values (see ``backend/.env.example``):
+The two test users' email/password are exchanged for access tokens through
+Supabase Auth (password grant). Nothing here logs or prints a password or a
+token, and importing the module is silent, so a skipped run stays quiet.
+
+Values (see ``backend/.env.test.example``):
 
     RUN_SUPABASE_INTEGRATION=1
-    SUPABASE_URL=https://<project>.supabase.co
-    SUPABASE_PUBLISHABLE_KEY=<publishable/anon key>
     SUPABASE_TEST_EMAIL_A / SUPABASE_TEST_PASSWORD_A
     SUPABASE_TEST_EMAIL_B / SUPABASE_TEST_PASSWORD_B   # optional (isolation)
+
+``SUPABASE_URL`` and ``SUPABASE_PUBLISHABLE_KEY`` are read from the runtime
+``backend/.env``.
 
 An explicit ``SUPABASE_TEST_TOKEN_A`` / ``SUPABASE_TEST_TOKEN_B`` wins over the
 email/password pair when present, so an already-signed-in token can be reused.
@@ -26,8 +30,11 @@ from pathlib import Path
 import httpx
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-#: ``backend/.env`` resolved from this file, so the helper works from any CWD.
-_ENV_FILE = Path(__file__).resolve().parents[1] / ".env"
+#: Runtime project values (URL + publishable key), from ``backend/.env``.
+_RUNTIME_ENV_FILE = Path(__file__).resolve().parents[1] / ".env"
+#: Test-only gate + credentials, from ``backend/.env.test``. Loaded last so it
+#: wins over the runtime file for any name that appears in both.
+_TEST_ENV_FILE = Path(__file__).resolve().parents[1] / ".env.test"
 _TIMEOUT_SECONDS = 20.0
 
 
@@ -36,9 +43,13 @@ class MissingCredentialsError(RuntimeError):
 
 
 class _IntegrationEnv(BaseSettings):
-    """Only the fields the integration tests need; unknown vars are ignored."""
+    """Only the fields the integration tests need; unknown vars are ignored.
 
-    model_config = SettingsConfigDict(env_file=_ENV_FILE, extra="ignore")
+    Loads the runtime ``.env`` (project URL + publishable key) first, then
+    ``.env.test`` (gate + credentials) so the test file wins on any overlap.
+    """
+
+    model_config = SettingsConfigDict(env_file=(_RUNTIME_ENV_FILE, _TEST_ENV_FILE), extra="ignore")
 
     run_supabase_integration: bool = False
     supabase_url: str = ""
@@ -90,8 +101,8 @@ def isolation_available() -> bool:
 
 def skip_reason() -> str:
     return (
-        "integration disabled: set RUN_SUPABASE_INTEGRATION=1, SUPABASE_URL, "
-        "SUPABASE_PUBLISHABLE_KEY and the test-user credentials in backend/.env"
+        "integration disabled: set RUN_SUPABASE_INTEGRATION=1 and the test-user "
+        "credentials in backend/.env.test (see backend/.env.test.example)"
     )
 
 
