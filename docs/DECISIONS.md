@@ -718,3 +718,44 @@ one dev button, the report cannot silently flatten into one band without a test
 failure, and the E2E suite exercises the same composition the real backend will
 serve at B7.
 
+## ADR-025 — 2026-10-18 — Backend CI skip path: a pre-checkout step must not inherit `working-directory: backend`
+
+Context: the Backend workflow has to keep a *required* `backend` check that
+always reports, so `paths:` filters are not used on the trigger. Instead a cheap
+`detect` job decides whether anything backend-relevant changed and the `backend`
+job either runs the full gate or short-circuits with a "Nothing to check" step.
+On the first frontend-only run through that skip path (PR #10) the required
+"backend" check failed after ~5 s on both `pull_request` and `push`, while
+"Detect backend changes" passed.
+
+Root cause: the job declares `defaults.run.working-directory: backend`, and that
+default applies to **every** `run` step in the job — including "Nothing to
+check". That step *is* the skip path, and it runs before `actions/checkout`,
+which the skip path also skips. On a fresh runner `backend/` does not exist until
+checkout creates it, so the shell could not `cd` into it and the step failed
+immediately with `working directory 'backend' does not exist`. The failure had
+nothing to do with detection: the detector correctly reported
+`backend=false`.
+
+Decision: keep the job-level `working-directory: backend` for the heavy steps and
+pin the "Nothing to check" step to `working-directory: ${{ github.workspace }}`,
+which always exists on the runner. Nothing else changes — the `on:` triggers, the
+job id `backend`, its required check name, every heavy step, and the fail-safe
+(`if: needs.detect.outputs.backend != 'false'`, so an empty or missing detector
+result still runs the whole gate) are untouched.
+
+Rejected alternatives:
+- Give each of the five heavy steps its own `working-directory: backend` and drop
+  the job default. Correct, but a bigger diff that re-creates the same footgun
+  for any future step added before checkout.
+- Move the echo into the `detect` job. Breaks the "always starts, always reports"
+  contract, because the required check is the `backend` job itself.
+
+Consequence: a PR that touches none of `backend/`, `docs/api/openapi.json` or this
+workflow reports a green "backend" check in seconds; a PR that touches any of
+them still runs `uv sync --frozen`, `ruff check`, `ruff format --check`, `mypy` and
+`pytest` unchanged.
+
+Numbering note: ADRs 021–024 are claimed by the F4 branch (now merged), so this
+one is 025 rather than 021 to avoid duplicate headings.
+
