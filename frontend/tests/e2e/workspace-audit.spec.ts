@@ -77,7 +77,7 @@ async function signUpToWorkspace(page: Page) {
   await page.getByRole("button", { name: "Consent and continue" }).click();
 
   await expect(page).toHaveURL(/\/workspace$/, { timeout: NAV_TIMEOUT });
-  await expect(page.getByRole("heading", { name: "Your workspace" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Your workspace", exact: true })).toBeVisible();
 }
 
 async function seedItems(page: Page, section: string, titles: string[]) {
@@ -188,7 +188,7 @@ test("surfaces a designed error state when the mock API fails, then recovers", a
   await signUpToWorkspace(page);
   await seedItems(page, "project", ["Resilient item"]);
   await gotoReady(page, "/workspace");
-  await expect(page.getByRole("heading", { name: "Your workspace" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Your workspace", exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: "Simulate failure" }).click();
   await expect(page.getByRole("button", { name: "Failures on" })).toBeVisible();

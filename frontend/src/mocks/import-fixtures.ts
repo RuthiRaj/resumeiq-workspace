@@ -9,11 +9,14 @@ import type {
 /**
  * Simulated document extraction (PRD §6.2 IM-1..IM-3).
  *
- * F4 has no parser yet: this module fabricates *the document*, never a claim
- * about the user. Each generated field records the line of the simulated
- * preview it was read from, so the side-by-side review screen is coherent and
- * every highlighted value can be checked against its source line. The UI
- * labels the preview as simulated.
+ * This build has no parser: this module fabricates *the document*, never a
+ * claim about the user. Every name in the sample text is deliberately
+ * unmistakable — "Sample …" throughout — so nothing here can be mistaken for
+ * something read out of the user's own file, and the review screen shows a
+ * "Sample" tag on every card and a demo-mode banner above them. Each generated
+ * field records the line of the simulated preview it was read from, so the
+ * side-by-side review is coherent and every highlighted value can be checked
+ * against its source line.
  *
  * Three outcomes are produced deterministically, so tests and demos are stable:
  *  - file name containing "cert"  → a certificate with a credential link
@@ -24,23 +27,23 @@ import type {
  */
 
 const RESUME_LINES = [
-  "EXAMPLE CANDIDATE",
-  "Example City · example.candidate@example.com",
+  "SAMPLE APPLICANT",
+  "Sample City · sample.applicant@example.com",
   "",
   "EXPERIENCE",
   "Backend Intern",
-  "Example Payments Ltd",
+  "Sample Payments Ltd",
   "2024-06 – 2024-09",
   "Built an internal reporting endpoint used by the support team.",
   "Wrote integration tests for the refund flow.",
   "",
   "EDUCATION",
   "B.Sc. Information Technology",
-  "Example State University",
+  "Sample State University",
   "2021-08 – 2025-05",
   "",
   "PROJECTS",
-  "Recipe box",
+  "Sample Recipe Box",
   "Personal project",
   "2025-01",
   "A small recipe organiser built with React and TypeScript.",
@@ -51,12 +54,12 @@ const RESUME_LINES = [
 
 const CERTIFICATE_LINES = [
   "CERTIFICATE OF COMPLETION",
-  "Example Cloud Fundamentals",
-  "Issued to: Example Candidate",
-  "Issued by: Example Learning",
+  "Sample Cloud Fundamentals",
+  "Issued to: Sample Applicant",
+  "Issued by: Sample Learning",
   "Issued: 2025-03",
-  "Credential ID: ABCD-1234",
-  "Verify at: https://example.com/credentials/abcd-1234",
+  "Credential ID: SAMPLE-1234",
+  "Verify at: https://example.com/credentials/sample-1234",
 ];
 
 /** 1-based line number of the first preview line containing `needle`. */
@@ -132,7 +135,7 @@ function resumeItems(lines: string[]): ImportReviewItem[] {
     fields: [
       field("title", "Role", "Backend Intern", 0.94, lineOf(lines, "Backend Intern")),
       // Uncertain: the parser only half-trusts the employer line.
-      field("organization", "Employer", "Example Payments Ltd", 0.68, lineOf(lines, "Example Payments Ltd")),
+      field("organization", "Employer", "Sample Payments Ltd", 0.68, lineOf(lines, "Sample Payments Ltd")),
       field("startDate", "Start", "2024-06", 0.9, lineOf(lines, "2024-06 – 2024-09")),
       // Uncertain: the end date is close to another date in the document.
       field("endDate", "End", "2024-09", 0.55, lineOf(lines, "2024-06 – 2024-09")),
@@ -149,7 +152,7 @@ function resumeItems(lines: string[]): ImportReviewItem[] {
     section: "education",
     fields: [
       field("title", "Qualification", "B.Sc. Information Technology", 0.93, lineOf(lines, "B.Sc. Information")),
-      field("organization", "Institution", "Example State University", 0.9, lineOf(lines, "Example State University")),
+      field("organization", "Institution", "Sample State University", 0.9, lineOf(lines, "Sample State University")),
       field("startDate", "Start", "2021-08", 0.88, lineOf(lines, "2021-08 – 2025-05")),
       field("endDate", "End", "2025-05", 0.7, lineOf(lines, "2021-08 – 2025-05")),
     ],
@@ -159,7 +162,7 @@ function resumeItems(lines: string[]): ImportReviewItem[] {
     id: "ext-project",
     section: "project",
     fields: [
-      field("title", "Project", "Recipe box", 0.9, lineOf(lines, "Recipe box")),
+      field("title", "Project", "Sample Recipe Box", 0.9, lineOf(lines, "Sample Recipe Box")),
       field("organization", "Context", "Personal project", 0.85, lineOf(lines, "Personal project")),
       field("startDate", "Start", "2025-01", 0.8, lineOf(lines, "2025-01")),
       // Nothing to read: flagged as uncertain so the user decides (ongoing?).
@@ -169,21 +172,22 @@ function resumeItems(lines: string[]): ImportReviewItem[] {
     tags: ["react", "typescript"],
   });
 
+  // Skills are reviewed as a single card of chips, not one card per skill, and
+  // the extraction keeps the individual names in `tags` (PRD §6.1 WS-3).
   const skillLine = lineOf(lines, "TypeScript, React, PostgreSQL");
-  const skills = ["TypeScript", "React", "PostgreSQL"].map((name, index) =>
-    buildItem({
-      id: `ext-skill-${name.toLowerCase()}`,
-      section: "skill",
-      fields: [field("title", "Skill", name, 0.92 - index * 0.02, skillLine)],
-    }),
-  );
+  const skills = buildItem({
+    id: "ext-skills",
+    section: "skill",
+    fields: [field("title", "Skills", "Skills", 0.92, skillLine)],
+    tags: ["TypeScript", "React", "PostgreSQL"],
+  });
 
   const personal = buildItem({
     id: "ext-personal",
     section: "personal",
     fields: [
-      field("title", "Name", "Example Candidate", 0.95, lineOf(lines, "EXAMPLE CANDIDATE")),
-      field("location", "Location", "Example City", 0.8, lineOf(lines, "Example City")),
+      field("title", "Name", "Sample Applicant", 0.95, lineOf(lines, "SAMPLE APPLICANT")),
+      field("location", "Location", "Sample City", 0.8, lineOf(lines, "Sample City")),
     ],
   });
 
@@ -192,7 +196,7 @@ function resumeItems(lines: string[]): ImportReviewItem[] {
     internship,
     education,
     project,
-    ...skills,
+    skills,
   ].map((item) => toReviewItem(item));
 }
 
@@ -201,8 +205,8 @@ function certificateItems(lines: string[]): ImportReviewItem[] {
     id: "ext-certificate",
     section: "certificate",
     fields: [
-      field("title", "Certificate", "Example Cloud Fundamentals", 0.9, lineOf(lines, "Example Cloud Fundamentals")),
-      field("organization", "Issuer", "Example Learning", 0.9, lineOf(lines, "Issued by")),
+      field("title", "Certificate", "Sample Cloud Fundamentals", 0.9, lineOf(lines, "Sample Cloud Fundamentals")),
+      field("organization", "Issuer", "Sample Learning", 0.9, lineOf(lines, "Issued by")),
       field("endDate", "Issued", "2025-03", 0.85, lineOf(lines, "Issued: 2025-03")),
     ],
     tags: ["cloud"],
@@ -210,7 +214,7 @@ function certificateItems(lines: string[]): ImportReviewItem[] {
   return [
     toReviewItem(certificate, {
       kind: "link",
-      url: "https://example.com/credentials/abcd-1234",
+      url: "https://example.com/credentials/sample-1234",
     }),
   ];
 }

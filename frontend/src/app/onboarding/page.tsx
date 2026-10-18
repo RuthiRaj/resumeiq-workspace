@@ -107,7 +107,7 @@ function OnboardingFlow() {
   }
 
   return (
-    <main className="relative mx-auto flex min-h-screen w-full max-w-xl flex-col justify-center px-6 py-16">
+    <main className="relative mx-auto flex min-h-screen w-full max-w-xl flex-col justify-center overflow-hidden px-6 py-16">
       <div aria-hidden="true" className="glow-violet pointer-events-none absolute -top-24 left-1/2 size-96 -translate-x-1/2" />
       <p className="font-mono text-xs uppercase tracking-[0.25em] text-accent-cyan">
         Step {step} of 2 · {user ? `for ${user.name}` : "Setup"}
@@ -164,7 +164,12 @@ function OnboardingFlow() {
           </h2>
           <p className="mt-2 text-sm leading-relaxed text-muted">{AI_PROVIDER_DISCLOSURE}</p>
           {consentLoading ? (
-            <div className="mt-4 flex flex-col gap-2" aria-busy="true" aria-label="Loading consent">
+            <div
+              role="status"
+              className="mt-4 flex flex-col gap-2"
+              aria-busy="true"
+              aria-label="Loading consent"
+            >
               <Skeleton className="h-4 w-full" />
               <Skeleton className="h-4 w-2/3" />
             </div>

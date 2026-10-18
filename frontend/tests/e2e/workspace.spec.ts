@@ -54,7 +54,7 @@ async function signUpToWorkspace(page: Page) {
   await page.getByRole("button", { name: "Consent and continue" }).click();
 
   await expect(page).toHaveURL(/\/workspace$/, { timeout: NAV_TIMEOUT });
-  await expect(page.getByRole("heading", { name: "Your workspace" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Your workspace", exact: true })).toBeVisible();
 }
 
 /** Arrange: create items directly through the mock API so tests stay focused. */
@@ -103,10 +103,11 @@ test("adds an item from the dashboard and shows it in its section", async ({ pag
   await sheet.getByRole("button", { name: "Save item" }).click();
 
   await expect(page.getByText("Project added")).toBeVisible();
-  // The dashboard section card now reports one item.
-  await expect(
-    page.getByRole("region", { name: "All sections" }).getByRole("link", { name: /Projects, 1 item/ }),
-  ).toBeVisible({ timeout: NAV_TIMEOUT });
+  // The dashboard section card now reports one item (stable test id; the card
+  // no longer carries an aria-label — see section-card.tsx).
+  await expect(page.getByTestId("section-count-project")).toHaveText("1", {
+    timeout: NAV_TIMEOUT,
+  });
 
   // And the item is really on its section page.
   await gotoReady(page, "/workspace/project");

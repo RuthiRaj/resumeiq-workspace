@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { AppShell } from "@/components/app-shell";
 import { QueryProvider } from "@/components/query-provider";
 import { Toaster } from "@/components/toaster";
+import { SimulatedFailuresBanner } from "@/features/dev/simulated-failures-banner";
 import { AuthProvider } from "@/lib/auth/context";
 import { AuthGuard } from "@/features/auth/auth-guard";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -20,7 +21,12 @@ export default function AuthenticatedLayout({
       <AuthProvider>
         <Suspense
           fallback={
-            <div className="mx-auto max-w-3xl px-6 py-10" aria-busy="true" aria-label="Loading">
+            <div
+              role="status"
+              className="mx-auto max-w-3xl px-6 py-10"
+              aria-busy="true"
+              aria-label="Loading"
+            >
               <Skeleton className="h-8 w-1/3" />
               <Skeleton className="mt-3 h-4 w-full" />
             </div>
@@ -31,6 +37,9 @@ export default function AuthenticatedLayout({
           </AuthGuard>
         </Suspense>
         <Toaster />
+        {/* Lives here rather than in AppShell: the banner reads the QueryClient,
+            and AppShell is also rendered standalone by /design-system. */}
+        <SimulatedFailuresBanner />
       </AuthProvider>
     </QueryProvider>
   );

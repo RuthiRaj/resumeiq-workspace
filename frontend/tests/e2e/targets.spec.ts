@@ -176,10 +176,10 @@ test("import: staged extraction, side-by-side review, nothing saved until confir
 
   // The source is on the page next to the extracted fields.
   await expect(page.getByTestId("source-preview")).toContainText(
-    "EXAMPLE CANDIDATE",
+    "SAMPLE APPLICANT",
   );
   await expect(page.getByTestId("review-progress")).toContainText("0 confirmed");
-  await expect(page.getByTestId("review-progress")).toContainText("7 pending");
+  await expect(page.getByTestId("review-progress")).toContainText("5 pending");
 
   // IM-2: nothing has entered the workspace yet.
   expect(await workspaceItems(page)).toHaveLength(0);
@@ -196,7 +196,7 @@ test("import: staged extraction, side-by-side review, nothing saved until confir
     .fill("https://example.com/credentials/abc");
   await page.getByTestId("attach-link-ext-internship").click();
   await expect(internship).toContainText(
-    "A certificate is attached, so confirming records this as Verified.",
+    "Supporting evidence is attached, so confirming records this as Verified.",
   );
 
   await page.getByTestId("confirm-ext-internship").click();
@@ -231,7 +231,7 @@ test("import: staged extraction, side-by-side review, nothing saved until confir
     { timeout: NAV_TIMEOUT },
   );
   const afterSecond = await workspaceItems(page);
-  const project = afterSecond.find((item) => item.title === "Recipe box");
+  const project = afterSecond.find((item) => item.title === "Sample Recipe Box");
   expect(project?.evidence).toBe("attested");
 });
 
