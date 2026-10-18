@@ -61,9 +61,21 @@ describe("contract schemas (PRD §8.3)", () => {
 
   it("clamps report scores to 0–100", () => {
     const base = {
+      targetId: "t-1",
+      workspaceVersion: 9,
+      generatedAt: new Date().toISOString(),
       score: 87,
-      factors: [{ name: "Required skills", weight: 0.4, value: 92 }],
+      factors: [
+        { name: "Required skills", weight: 0.47, value: 92, detail: "6 matched of 7." },
+      ],
+      methodology: {
+        note: "Weighted average of the factors below.",
+        scoreDisclaimer: "Not a probability of being hired.",
+        atsDisclaimer: "Not a guarantee of passing an ATS.",
+        atsNote: "Deterministic checks only.",
+      },
       requirements: [],
+      skills: { documented: [], demonstrated: [], notEvidenced: [], toDevelop: [] },
       included: [],
       excluded: [],
       roadmap: [],
