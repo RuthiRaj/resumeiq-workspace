@@ -1,8 +1,10 @@
 """Config loading: defaults, env overrides, derived JWKS/issuer URLs."""
 
 import pytest
+from fastapi.testclient import TestClient
 
-from app.core.config import Settings, get_settings
+from app.core.config import MissingSettingsError, Settings, get_settings
+from app.main import create_app
 
 
 def test_defaults() -> None:
@@ -61,3 +63,31 @@ def test_explicit_jwks_url_wins() -> None:
     )
     assert settings.jwks_url == "https://custom.example/jwks.json"
     assert settings.jwt_issuer == "https://custom.example/auth/v1"
+
+
+def test_missing_required_names_variables_but_never_values() -> None:
+    settings = Settings(_env_file=None)
+    assert settings.missing_required() == ["SUPABASE_URL", "SUPABASE_PUBLISHABLE_KEY"]
+    with pytest.raises(MissingSettingsError) as excinfo:
+        settings.validate_required()
+    message = str(excinfo.value)
+    assert "SUPABASE_URL" in message
+    assert "SUPABASE_PUBLISHABLE_KEY" in message
+
+
+def test_validate_required_passes_when_configured() -> None:
+    secret_value = "placeholder-not-a-real-key"
+    settings = Settings(
+        _env_file=None,
+        supabase_url="https://test.supabase.co",
+        supabase_publishable_key=secret_value,
+    )
+    assert settings.missing_required() == []
+    settings.validate_required()  # must not raise
+
+
+def test_startup_fails_fast_when_required_settings_are_missing() -> None:
+    app = create_app(Settings(_env_file=None, environment="development"))
+    with pytest.raises(MissingSettingsError) as excinfo, TestClient(app):
+        pass
+    assert "SUPABASE_URL" in str(excinfo.value)

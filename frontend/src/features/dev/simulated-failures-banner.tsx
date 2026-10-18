@@ -15,7 +15,7 @@ import { workspaceKeys } from "@/features/workspace/use-workspace";
  * `next build` compiles `process.env.NODE_ENV` to `"production"` and this
  * component renders nothing, and the dev-only API is loaded through a dynamic
  * import so no production page chunk contains it
- * (`npm run check:dev-excluded`, ADR-026).
+ * (`npm run check:dev-excluded`, ADR-027).
  */
 export function SimulatedFailuresBanner() {
   if (process.env.NODE_ENV !== "development") return null;

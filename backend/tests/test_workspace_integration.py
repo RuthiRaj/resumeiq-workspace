@@ -1,14 +1,16 @@
 """Opt-in integration tests against a real Supabase project (B1 verification).
 
-Skipped by default. To run them, put the values below in ``backend/.env`` (never
-committed) and set ``RUN_SUPABASE_INTEGRATION=1``:
+Skipped by default. To run them, put the test-only values below in
+``backend/.env.test`` (git-ignored; see ``backend/.env.test.example``) and set
+``RUN_SUPABASE_INTEGRATION=1``:
 
-    SUPABASE_URL / SUPABASE_PUBLISHABLE_KEY
     SUPABASE_TEST_EMAIL_A / SUPABASE_TEST_PASSWORD_A
     SUPABASE_TEST_EMAIL_B / SUPABASE_TEST_PASSWORD_B   # isolation tests
 
-``tests/supabase_auth.py`` signs the two users in through Supabase Auth and hands
-back access tokens; no password, key or token is ever printed.
+``SUPABASE_URL`` and ``SUPABASE_PUBLISHABLE_KEY`` are read from the runtime
+``backend/.env``. ``tests/supabase_auth.py`` signs the two users in through
+Supabase Auth and hands back access tokens; no password, key or token is ever
+printed.
 
 These exercise the Data API + the ``api_workspace_*`` functions with a real JWT,
 so they prove RLS and the transactional versioning end to end:

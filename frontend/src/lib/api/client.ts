@@ -23,7 +23,7 @@ import type { Consent } from "@/lib/privacy/consent";
  * backend without a UI rewrite. F0: endpoint shapes + types only.
  *
  * Development-only endpoints (fixture switcher, failure simulation) live in
- * `./dev` so that a production build cannot contain them — see ADR-026.
+ * `./dev` so that a production build cannot contain them — see ADR-027.
  */
 const BASE = "/api/v1";
 
@@ -164,7 +164,7 @@ export const api = {
       body: JSON.stringify(input),
     }),
 
-  // --- Dev-only fixture controls live in `./dev` (see ADR-026) ---
+  // --- Dev-only fixture controls live in `./dev` (see ADR-027) ---
   /** Writes the three demo job targets (PRD §8.5). Development only. */
   createSampleTargets: () =>
     request<{ targets: JobTarget[] }>("/dev/sample-targets", { method: "POST" }),

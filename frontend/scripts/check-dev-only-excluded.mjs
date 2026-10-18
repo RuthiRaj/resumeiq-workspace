@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Dev-only exclusion check (ADR-026).
+ * Dev-only exclusion check (ADR-027).
  *
  * A developer who left the "Failures on" toggle enabled used to break the whole
  * app on every later page load, with no obvious way back. The fix makes the

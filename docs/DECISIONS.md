@@ -759,7 +759,65 @@ them still runs `uv sync --frozen`, `ruff check`, `ruff format --check`, `mypy` 
 Numbering note: ADRs 021–024 are claimed by the F4 branch (now merged), so this
 one is 025 rather than 021 to avoid duplicate headings.
 
-## ADR-026 — 2026-10-18 — UI/QA sweep: placement, dev-only state, and honest import review
+## ADR-026 — 2026-10-18 — Environment hygiene: runtime vs test env, fail-fast startup, secret guard
+
+Context: the runtime `backend/.env` held integration-test credentials, `.env.example`
+mixed runtime and test variables with no grouping, the backend started happily with
+no Supabase configuration (failing only per-request with `auth_not_configured` or
+`data_api_not_configured`), `frontend/.env.example` advertised a variable no code
+read, and nothing prevented a `service_role` key from being committed.
+
+Decision:
+
+1. **Split the environments.** `backend/.env` is runtime only; test-only values
+   (`RUN_SUPABASE_INTEGRATION`, `SUPABASE_TEST_*`) live in `backend/.env.test`
+   (git-ignored, with a committed `backend/.env.test.example`), so a deployed
+   backend never carries test passwords. `run_supabase_integration` was removed
+   from `Settings` because nothing in the app read it. `tests/supabase_auth.py`
+   now loads `.env` (project URL + publishable key) and `.env.test` (gate +
+   credentials) in that order, so the test file wins on any clash.
+2. **`.env.example` is grouped and complete** — App, CORS, Supabase, AI providers,
+   Limits — with a comment per variable, no real values, and the AI group
+   deliberately empty (no provider key is read before B3; adding an unread
+   variable would violate "remove what nothing reads"). `APP_VERSION` was added
+   because `main.py`/`health.py` read it.
+3. **Fail fast at startup.** `Settings.missing_required()` /
+   `Settings.validate_required()` raise `MissingSettingsError` naming the missing
+   variables (`SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`) and never a value. It is
+   enforced from a FastAPI **lifespan**, so uvicorn/a real deploy fails before
+   serving, while tests that construct an app *without* a lifespan stay hermetic.
+   Rejected alternatives: validating in `create_app()`/the constructor (would
+   break `Settings(_env_file=None)` defaults tests and the `test_openapi` /
+   `test_health` apps built with incomplete settings), and gating on
+   `environment == "production"` (the shipped example defaults to
+   `ENVIRONMENT=development`, so a misconfigured deploy would still start).
+4. **`backend/scripts/check_env.py`** reports, for the app and for the tests,
+   which required variables are `set` or `missing` — names only, never values
+   (`--strict` exits 1 when an app variable is missing).
+5. **Frontend env policy.** `frontend/.env.example` lists no active variable:
+   nothing reads one yet (MSW only), so the two Supabase names appear only as
+   commented "when B7 wires it" placeholders. A repo-wide vitest guard
+   (`frontend/src/lib/config/no-secrets.test.ts`) fails `npm run test` if a
+   secret-shaped value appears in any tracked or new non-ignored file. It matches
+   **values, not words**, so documentation that names the `service_role` key is
+   allowed; an assignment of one is not.
+6. **`.gitignore`** now also covers `private-fixtures/`, `*.pdf`/`*.docx` outside
+   `**/tests/golden/**`, `*.log`, and un-ignores `.env.test.example` so the test
+   template can be committed while `.env.test` stays ignored.
+
+Consequence: the app cannot start misconfigured and names what is missing without
+leaking a value; test credentials never reach a deployed backend; a committed
+private key fails CI. Migration note: a deployed service must now set
+`SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` or it will refuse to start, and any
+developer `.env` copied before this change should be compared with the new
+`.env.example` (the test variables moved to `.env.test`).
+
+Hygiene (same change): deleted the generated `frontend/test-results/` Playwright
+artifacts and the regenerated `frontend/AGENTS.md` (ADR-007); `git worktree prune`
+found no stale metadata; a scan of all 43 commits and the tracked tree found no
+`sb_`, `gsk_`, `nvapi-`, `github_pat_` or JWT-shaped value.
+
+## ADR-027 — 2026-10-18 — UI/QA sweep: placement, dev-only state, and honest import review
 
 Context: a pass over every built route at 360 / 768 / 1280 px surfaced six defect
 areas. Only one was a crash; the rest were honesty or consistency defects: the
@@ -918,3 +976,5 @@ specs now await the order the mock API has actually *stored* (a `persistedTitles
 helper that reads `/api/v1/workspace`) before reloading, so the assertions test
 persistence rather than latency. No application code changed.
 
+Numbering note: ADR-026 is claimed by the environment-hygiene change merged from
+`chore/clean-env`, so this one is 027 rather than 026 to avoid duplicate headings.
