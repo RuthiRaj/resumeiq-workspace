@@ -75,8 +75,15 @@ jobs:
       run:
         working-directory: backend
     steps:
+      # This step is the whole skip path and runs *before* actions/checkout
+      # (which is itself skipped when nothing backend-relevant changed). It must
+      # therefore not inherit the job-level `working-directory: backend`: on a
+      # fresh runner that directory does not exist until checkout creates it, so
+      # the step died with "working directory 'backend' does not exist" and the
+      # required check failed. Pin it to the workspace root instead.
       - name: Nothing to check
         if: needs.detect.outputs.backend == 'false'
+        working-directory: ${{ github.workspace }}
         run: echo "No files under backend/ or docs/api/ changed - skipping the backend gate."
 
       - uses: actions/checkout@v4
