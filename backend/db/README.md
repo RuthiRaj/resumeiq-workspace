@@ -3,10 +3,11 @@
 Forward-only migrations: `0001_initial.sql` creates the B0 schema (PRD section
 6); `0002_workspace_api.sql` adds the B1 workspace columns + functions;
 `0003_hardening.sql` locks down the RPC privileges and closes the
-version↔change-log gap (ADR-018). Apply them in order with the Supabase SQL
-editor or CLI (`supabase db push` once the project is linked). They reference
-`auth.users` / `auth.uid()`, so they only run on Supabase Postgres (or a local
-Postgres with an `auth` schema stub) — not on vanilla local Postgres.
+version↔change-log gap (ADR-018); `0004_imports.sql` adds the B2 import tables
+and functions (ADR-026). Apply them in order with the Supabase SQL editor or CLI
+(`supabase db push` once the project is linked). They reference `auth.users` /
+`auth.uid()`, so they only run on Supabase Postgres (or a local Postgres with an
+`auth` schema stub) — not on vanilla local Postgres.
 
 ## Migration 0002 — B1 workspace API
 
@@ -44,6 +45,36 @@ separately in the SQL editor):
   `resume_claims.user_id`, `resume_versions.user_id`, `skill_relations.user_id`,
   `skill_relations.to_skill_id`.
 
+## Migration 0004 — B2 import parsing (ADR-026)
+
+Adds what a document upload produced. **The uploaded file itself is not stored**
+— it is parsed in memory and discarded; only the extracted text and the candidate
+items are persisted (PRD §11).
+
+- `import_sessions` — one row per upload: `file_name`, `file_type` (`pdf`/`docx`),
+  `file_size`, `page_count`, `source_text` (the real extracted text the preview
+  shows), `preview_available` (false when nothing was readable, e.g. a scan).
+- `import_review_items` — one candidate per extracted entry: the immutable
+  `extraction` jsonb (per-field confidence + 1-based `sourceLine`), the editable
+  `values` jsonb, `status` (`pending`/`confirmed`/`rejected`), `support`
+  (`{kind:'file',name}` or `{kind:'link',url}`), and `workspace_item_id` once
+  confirmed. `UNIQUE (import_id, wire_id)`.
+- `api_import_create_session(...)` — inserts the session and every review item in
+  one transaction (one Data API call, so a partial session is impossible).
+- `api_import_confirm(p_import_id uuid, p_item_id text) -> uuid` — the **only**
+  import→workspace path. It reads the row's `values`/`support`, inserts the
+  `workspace_items` row, bumps the workspace version, appends the `change_log`
+  row, adds the evidence link for a certificate file, and flips the review item
+  to `confirmed`. Idempotent: a second call returns the same workspace item.
+  Evidence is `verified` only when support was attached, else `attested` (IM-3).
+- Both are `SECURITY INVOKER` with `SET search_path = public`, EXECUTE revoked
+  from `PUBLIC`/`anon` and granted to `authenticated` only; RLS policies on both
+  tables use the `(select auth.uid()) = user_id` initplan form from 0003. An item
+  update touches its session's `updated_at` via a trigger.
+- Version bump and `seq` are inlined, not called: `0003` dropped the
+  `api_workspace_next_*` helpers (ADR-018). `0004` therefore runs whether or not
+  `0003` has been applied.
+
 ## Tables
 
 | Table | Purpose (PRD) |
@@ -62,6 +93,8 @@ separately in the SQL editor):
 | `resume_versions` | Saved tailored-version history (RG-6), insert-only |
 | `resume_claims` | Every generated claim + its evidence links (RG-3) |
 | `jobs` | Async background-job tracking for slow AI work (10.1; used from B2+) |
+| `import_sessions` | One document upload's extracted text + preview state (IM-1) |
+| `import_review_items` | Candidate items awaiting the user's confirm/reject (IM-1..IM-3) |
 | `consent_records` | Explicit AI-processing consent (EX-3) |
 | `audit_events` | Append-only security trail |
 
@@ -121,3 +154,7 @@ remain, all `authenticated`-only).
 The Data API path is covered by `httpx.MockTransport` unit tests and by the
 opt-in integration tests (`RUN_SUPABASE_INTEGRATION=1`, see `backend/README.md`);
 those are skipped unless a real project and two signed-in test users are supplied.
+
+`0004_imports.sql` is authored but **not yet applied** (deliberate, per the B2
+brief): apply it in the SQL editor, then re-run the Supabase security and
+performance advisors.

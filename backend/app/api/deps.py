@@ -30,7 +30,10 @@ from jwt.types import Options
 
 from app.core.config import Settings
 from app.core.logging import get_logger
+from app.extraction.engine import DeterministicExtractionEngine, ExtractionEngine
+from app.repositories.imports import ImportRepository, SupabaseImportRepository
 from app.repositories.workspace import SupabaseWorkspaceRepository, WorkspaceRepository
+from app.services.import_service import ImportService
 from app.services.workspace_service import WorkspaceService
 
 logger = get_logger(__name__)
@@ -197,3 +200,41 @@ def get_workspace_service(
 ) -> WorkspaceService:
     """FastAPI dependency: the workspace service over the request's repository."""
     return WorkspaceService(repository)
+
+
+def get_import_repository(request: Request) -> ImportRepository:
+    """An import repository bound to the caller's JWT (RLS enforced in Postgres).
+
+    Tests override this dependency with the in-memory repository. The token is
+    validated separately by ``get_current_user``; here we only forward it.
+    """
+    settings: Settings = request.app.state.settings
+    if not settings.data_api_configured:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "code": "data_api_not_configured",
+                "message": "Server data access is not configured.",
+            },
+        )
+    return SupabaseImportRepository(
+        settings.rest_url,
+        settings.supabase_publishable_key,
+        get_bearer_token(request),
+    )
+
+
+def get_extraction_engine(request: Request) -> ExtractionEngine:
+    """The deterministic parser (no OCR, no AI). Overridden in tests if needed."""
+    settings: Settings = request.app.state.settings
+    return DeterministicExtractionEngine(timeout_seconds=settings.extraction_timeout_seconds)
+
+
+def get_import_service(
+    repository: Annotated[ImportRepository, Depends(get_import_repository)],
+    engine: Annotated[ExtractionEngine, Depends(get_extraction_engine)],
+    request: Request,
+) -> ImportService:
+    """FastAPI dependency: the import service over the request's repositories."""
+    settings: Settings = request.app.state.settings
+    return ImportService(repository, engine, max_file_bytes=settings.max_import_bytes)

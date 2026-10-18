@@ -462,6 +462,275 @@
           }
         }
       }
+    },
+    "/api/v1/imports": {
+      "get": {
+        "tags": [
+          "imports"
+        ],
+        "summary": "List recent imports",
+        "operationId": "list_imports_api_v1_imports_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ImportSummary"
+                  },
+                  "type": "array",
+                  "title": "Response List Imports Api V1 Imports Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "imports"
+        ],
+        "summary": "Upload a document for extraction review",
+        "description": "Accepts a PDF or DOCX (multipart field `file`), sniffed on magic bytes (not the file name), capped at the configured import size. The document is parsed in memory and discarded; only the extracted text and candidate items are stored. Document contents are never logged.",
+        "operationId": "create_import_api_v1_imports_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_create_import_api_v1_imports_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportUploadResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/imports/{import_id}": {
+      "get": {
+        "tags": [
+          "imports"
+        ],
+        "summary": "Get an import session with its review items",
+        "operationId": "get_import_api_v1_imports__import_id__get",
+        "parameters": [
+          {
+            "name": "import_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Import Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportSession"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/imports/{import_id}/items/{item_id}": {
+      "patch": {
+        "tags": [
+          "imports"
+        ],
+        "summary": "Update a review item (values, status or certificate support)",
+        "operationId": "update_item_api_v1_imports__import_id__items__item_id__patch",
+        "parameters": [
+          {
+            "name": "import_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Import Id"
+            }
+          },
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Item Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportItemPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportReviewItem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/imports/{import_id}/items/{item_id}/confirm": {
+      "post": {
+        "tags": [
+          "imports"
+        ],
+        "summary": "Confirm a review item into the workspace",
+        "description": "Creates the workspace item from the user's verified values and marks the review item confirmed, in one transaction. Confirmed items are User-attested unless a certificate file or link is attached (then Verified). Idempotent: confirming twice returns the same workspace item.",
+        "operationId": "confirm_item_api_v1_imports__import_id__items__item_id__confirm_post",
+        "parameters": [
+          {
+            "name": "import_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Import Id"
+            }
+          },
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Item Id"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportConfirmResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -489,6 +758,24 @@
         ],
         "title": "Attachment",
         "description": "Attachment metadata. The file bytes are out of scope for B1 (PRD WS-2)."
+      },
+      "Body_create_import_api_v1_imports_post": {
+        "properties": {
+          "file": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "binary"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "title": "Body_create_import_api_v1_imports_post"
       },
       "ChangeLogEntryResponse": {
         "properties": {
@@ -597,6 +884,113 @@
         ],
         "title": "ErrorResponse"
       },
+      "ExtractedField": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "enum": [
+              "title",
+              "organization",
+              "startDate",
+              "endDate",
+              "location"
+            ],
+            "title": "Key"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "value": {
+            "type": "string",
+            "title": "Value"
+          },
+          "confidence": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence"
+          },
+          "sourceLine": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Sourceline"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "label",
+          "value",
+          "confidence",
+          "sourceLine"
+        ],
+        "title": "ExtractedField",
+        "description": "One value the parser read, with the line it read it from."
+      },
+      "ExtractionItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "section": {
+            "type": "string",
+            "enum": [
+              "personal",
+              "education",
+              "experience",
+              "internship",
+              "project",
+              "skill",
+              "achievement",
+              "extracurricular",
+              "certificate",
+              "course",
+              "publication",
+              "training"
+            ],
+            "title": "Section"
+          },
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/ExtractedField"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Fields"
+          },
+          "bullets": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Bullets"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tags"
+          },
+          "confidence": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "section",
+          "fields",
+          "confidence"
+        ],
+        "title": "ExtractionItem",
+        "description": "A candidate workspace item produced by the deterministic parser."
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -641,6 +1035,377 @@
           "environment"
         ],
         "title": "HealthResponse"
+      },
+      "ImportConfirmResponse": {
+        "properties": {
+          "item": {
+            "$ref": "#/components/schemas/WorkspaceItemResponse"
+          },
+          "review": {
+            "$ref": "#/components/schemas/ImportReviewItem"
+          }
+        },
+        "type": "object",
+        "required": [
+          "item",
+          "review"
+        ],
+        "title": "ImportConfirmResponse",
+        "description": "``POST /imports/{id}/items/{itemId}/confirm`` body (contract \u00a72.5)."
+      },
+      "ImportItemPatch": {
+        "properties": {
+          "values": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ImportItemValues"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "pending",
+                  "confirmed",
+                  "rejected"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "support": {
+            "anyOf": [
+              {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/ImportSupportFile"
+                  },
+                  {
+                    "$ref": "#/components/schemas/ImportSupportLink"
+                  }
+                ],
+                "discriminator": {
+                  "propertyName": "kind",
+                  "mapping": {
+                    "file": "#/components/schemas/ImportSupportFile",
+                    "link": "#/components/schemas/ImportSupportLink"
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Support"
+          }
+        },
+        "type": "object",
+        "title": "ImportItemPatch",
+        "description": "``PATCH /imports/{id}/items/{itemId}`` body \u2014 all keys optional.\n\n``support: null`` removes a previously attached certificate, so the handler\nmust be able to tell \"absent\" from \"explicit null\": use :meth:`patch`."
+      },
+      "ImportItemValues": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Title",
+            "default": ""
+          },
+          "organization": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Organization",
+            "default": ""
+          },
+          "startDate": {
+            "type": "string",
+            "maxLength": 20,
+            "title": "Startdate",
+            "default": ""
+          },
+          "endDate": {
+            "type": "string",
+            "maxLength": 20,
+            "title": "Enddate",
+            "default": ""
+          },
+          "location": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Location",
+            "default": ""
+          },
+          "bullets": {
+            "items": {
+              "type": "string",
+              "maxLength": 600
+            },
+            "type": "array",
+            "maxItems": 30,
+            "title": "Bullets"
+          },
+          "tags": {
+            "items": {
+              "type": "string",
+              "maxLength": 40
+            },
+            "type": "array",
+            "maxItems": 30,
+            "title": "Tags"
+          }
+        },
+        "type": "object",
+        "title": "ImportItemValues",
+        "description": "Editable values the user verifies. Unset is ``\"\"`` (a form value)."
+      },
+      "ImportReviewItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "extraction": {
+            "$ref": "#/components/schemas/ExtractionItem"
+          },
+          "values": {
+            "$ref": "#/components/schemas/ImportItemValues"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "confirmed",
+              "rejected"
+            ],
+            "title": "Status",
+            "default": "pending"
+          },
+          "support": {
+            "anyOf": [
+              {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/ImportSupportFile"
+                  },
+                  {
+                    "$ref": "#/components/schemas/ImportSupportLink"
+                  }
+                ],
+                "discriminator": {
+                  "propertyName": "kind",
+                  "mapping": {
+                    "file": "#/components/schemas/ImportSupportFile",
+                    "link": "#/components/schemas/ImportSupportLink"
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Support"
+          },
+          "decidedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decidedat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "extraction",
+          "values"
+        ],
+        "title": "ImportReviewItem",
+        "description": "A candidate item plus the user's verified values and decision."
+      },
+      "ImportSession": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "fileName": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "fileType": {
+            "type": "string",
+            "enum": [
+              "pdf",
+              "docx"
+            ],
+            "title": "Filetype"
+          },
+          "fileSize": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Filesize"
+          },
+          "pageCount": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Pagecount"
+          },
+          "sourceText": {
+            "type": "string",
+            "title": "Sourcetext"
+          },
+          "previewAvailable": {
+            "type": "boolean",
+            "title": "Previewavailable"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ImportReviewItem"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "createdAt": {
+            "type": "string",
+            "title": "Createdat"
+          },
+          "updatedAt": {
+            "type": "string",
+            "title": "Updatedat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "fileName",
+          "fileType",
+          "fileSize",
+          "pageCount",
+          "sourceText",
+          "previewAvailable",
+          "createdAt",
+          "updatedAt"
+        ],
+        "title": "ImportSession",
+        "description": "``GET /imports/{id}`` body (and the payload inside ``POST /imports``)."
+      },
+      "ImportSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "fileName": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "fileType": {
+            "type": "string",
+            "enum": [
+              "pdf",
+              "docx"
+            ],
+            "title": "Filetype"
+          },
+          "itemCount": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Itemcount"
+          },
+          "pendingCount": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Pendingcount"
+          },
+          "confirmedCount": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Confirmedcount"
+          },
+          "createdAt": {
+            "type": "string",
+            "title": "Createdat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "fileName",
+          "fileType",
+          "itemCount",
+          "pendingCount",
+          "confirmedCount",
+          "createdAt"
+        ],
+        "title": "ImportSummary",
+        "description": "List row for ``GET /imports`` (no document text)."
+      },
+      "ImportSupportFile": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "file",
+            "title": "Kind"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "name"
+        ],
+        "title": "ImportSupportFile"
+      },
+      "ImportSupportLink": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "link",
+            "title": "Kind"
+          },
+          "url": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "url"
+        ],
+        "title": "ImportSupportLink"
+      },
+      "ImportUploadResponse": {
+        "properties": {
+          "import": {
+            "$ref": "#/components/schemas/ImportSession"
+          }
+        },
+        "type": "object",
+        "required": [
+          "import"
+        ],
+        "title": "ImportUploadResponse",
+        "description": "``POST /imports`` body. ``import`` is a Python keyword, hence the alias."
       },
       "MeResponse": {
         "properties": {

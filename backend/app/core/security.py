@@ -8,7 +8,7 @@ store (e.g. Redis) when running more than one replica.
 import time
 import uuid
 from collections import deque
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Mapping
 
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
@@ -61,24 +61,41 @@ class RequestSizeLimitMiddleware:
     """Rejects requests whose body exceeds `max_bytes` with 413.
 
     Pure ASGI so oversized bodies are rejected while streaming instead of
-    being buffered in memory first.
+    being buffered in memory first. ``path_limits`` raises the cap for specific
+    path prefixes (the document-import upload route), matched by longest prefix;
+    the default cap still applies everywhere else.
     """
 
-    def __init__(self, app: ASGIApp, max_bytes: int) -> None:
+    def __init__(
+        self,
+        app: ASGIApp,
+        max_bytes: int,
+        path_limits: Mapping[str, int] | None = None,
+    ) -> None:
         self.app = app
         self.max_bytes = max_bytes
+        self._path_limits: tuple[tuple[str, int], ...] = tuple(
+            sorted((path_limits or {}).items(), key=lambda entry: len(entry[0]), reverse=True)
+        )
+
+    def _limit_for(self, path: str) -> int:
+        for prefix, limit in self._path_limits:
+            if path.startswith(prefix):
+                return limit
+        return self.max_bytes
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "http":
             await self.app(scope, receive, send)
             return
 
+        max_bytes = self._limit_for(str(scope.get("path", "")))
         headers = {k.decode("latin-1").lower(): v.decode("latin-1") for k, v in scope["headers"]}
         try:
             declared = int(headers.get("content-length", "0") or "0")
         except ValueError:
             declared = 0
-        if declared > self.max_bytes:
+        if declared > max_bytes:
             await self._reject(scope, receive, send)
             return
 
@@ -89,7 +106,7 @@ class RequestSizeLimitMiddleware:
             message = await receive()
             if message["type"] == "http.request":
                 received += len(message.get("body", b""))
-                if received > self.max_bytes:
+                if received > max_bytes:
                     await self._reject(scope, receive, send)
                     return
                 messages.append(message)

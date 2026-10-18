@@ -7,9 +7,10 @@ import jwt
 import pytest
 from fastapi.testclient import TestClient
 
-from app.api.deps import get_workspace_repository
+from app.api.deps import get_import_repository, get_workspace_repository
 from app.core.config import Settings
 from app.main import create_app
+from app.repositories.import_memory import InMemoryImportRepository
 from app.repositories.memory import InMemoryWorkspaceRepository
 
 TEST_AUDIENCE = "authenticated"
@@ -66,6 +67,29 @@ def workspace_client(settings: Settings, fake_repo: InMemoryWorkspaceRepository)
     """App whose workspace repository is the in-memory double (no network)."""
     app = create_app(settings)
     app.dependency_overrides[get_workspace_repository] = lambda: fake_repo
+    return TestClient(app)
+
+
+@pytest.fixture()
+def import_repo(fake_repo: InMemoryWorkspaceRepository) -> InMemoryImportRepository:
+    """One in-memory import repository shared by every request in a test."""
+    return InMemoryImportRepository(fake_repo)
+
+
+@pytest.fixture()
+def import_client(
+    settings: Settings,
+    fake_repo: InMemoryWorkspaceRepository,
+    import_repo: InMemoryImportRepository,
+) -> TestClient:
+    """App whose import and workspace repositories are the in-memory doubles.
+
+    The real extraction engine is kept, so the endpoint tests exercise real PDF
+    and DOCX parsing over the synthetic documents.
+    """
+    app = create_app(settings)
+    app.dependency_overrides[get_workspace_repository] = lambda: fake_repo
+    app.dependency_overrides[get_import_repository] = lambda: import_repo
     return TestClient(app)
 
 
