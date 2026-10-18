@@ -111,6 +111,25 @@ async function rowTitles(page: Page): Promise<string[]> {
     .evaluateAll((rows) => rows.map((row) => (row.querySelector("p")?.textContent ?? "").trim()));
 }
 
+/**
+ * Titles of a section's items as the mock API has actually *stored* them.
+ * Reorder is optimistic in the UI, so a reload fired as soon as the rows look
+ * right can cancel the in-flight POST; awaiting the persisted order keeps the
+ * "persists it" assertion about persistence rather than timing.
+ */
+async function persistedTitles(page: Page, section: string): Promise<string[]> {
+  return page.evaluate(async (target) => {
+    const res = await fetch("/api/v1/workspace");
+    const body = (await res.json()) as {
+      items: { section: string; title: string; order: number; deletedAt?: string | null }[];
+    };
+    return body.items
+      .filter((item) => item.section === target && !item.deletedAt)
+      .sort((a, b) => a.order - b.order)
+      .map((item) => item.title);
+  }, section);
+}
+
 test("reorders with the keyboard on the drag handle and persists it", async ({ page }) => {
   await signUpToWorkspace(page);
   await seedItems(page, "skill", ["Alpha", "Beta", "Gamma"]);
@@ -129,6 +148,12 @@ test("reorders with the keyboard on the drag handle and persists it", async ({ p
   await page.keyboard.press("Space");
 
   await expect.poll(() => rowTitles(page)).toEqual(["Beta", "Alpha", "Gamma"]);
+  // Optimistic UI: confirm the new order reached the API before reloading.
+  await expect.poll(() => persistedTitles(page, "skill")).toEqual([
+    "Beta",
+    "Alpha",
+    "Gamma",
+  ]);
 
   await gotoReady(page, "/workspace/skill");
   await expect(page.getByTestId("workspace-item")).toHaveCount(3, { timeout: NAV_TIMEOUT });

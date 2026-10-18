@@ -905,3 +905,16 @@ its own 900 s budget (`test.describe.configure`), while every other test keeps t
 300 s default. Without it the sweep was aborted mid-way on a loaded machine and
 reported a timeout instead of its findings.
 
+Addendum 3 (same day) — an E2E race the sweep exposed in *older* specs, not a
+product defect. `workspace.spec.ts` ("Move buttons … persists across reload") and
+`workspace-audit.spec.ts` ("reorders with the keyboard … persists it") polled the
+DOM for the new row order and then reloaded immediately. But `useReorderItems`
+(`src/features/workspace/use-workspace.ts`) mutates optimistically — `onMutate`
+reorders the cache before the `PATCH` resolves — so the tests were seeing
+optimistic state and the reload cancelled the still-in-flight request. The titles
+were then correct in the DOM but never persisted, which is a timing assumption in
+the test, not a bug in reorder (the code paths are byte-identical to master). Both
+specs now await the order the mock API has actually *stored* (a `persistedTitles`
+helper that reads `/api/v1/workspace`) before reloading, so the assertions test
+persistence rather than latency. No application code changed.
+
