@@ -65,6 +65,7 @@ const CRUMBS: Record<string, string> = {
   privacy: "Privacy",
   settings: "Settings",
   onboarding: "Onboarding",
+  analysis: "Analysis",
 };
 
 function Breadcrumbs({ pathname }: { pathname: string }) {

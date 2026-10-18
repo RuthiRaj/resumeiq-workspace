@@ -1,7 +1,6 @@
 import { http, HttpResponse } from "msw";
 import {
   addItem,
-  activeItems,
   deriveStandardResume,
   failuresEnabled,
   loadWorkspace,
@@ -13,6 +12,15 @@ import {
   softDeleteItem,
   updateItem,
 } from "./workspace-store";
+import {
+  currentUserId,
+  failIfEnabled,
+  latency,
+  storage,
+  workspaceBody,
+} from "./context";
+import { importHandlers } from "./import-handlers";
+import { targetHandlers } from "./target-handlers";
 import {
   clearSession,
   findUserByEmail,
@@ -49,11 +57,6 @@ import { z } from "zod";
 
 const SIGNUP_TIME = "2026-10-16T09:00:00.000Z";
 
-function storage(): Storage {
-  // Handlers run in the browser worker; localStorage is always available.
-  return window.localStorage;
-}
-
 const SignupBody = z.object({
   name: NameSchema,
   email: EmailSchema,
@@ -81,10 +84,6 @@ const UpdateItemBody = WorkspaceItemSchema.omit({ id: true }).partial();
 
 const PersonaBody = z.object({ persona: WorkspacePersonaSchema });
 const FailuresBody = z.object({ enabled: z.boolean() });
-
-async function latency(): Promise<void> {
-  await new Promise((resolve) => setTimeout(resolve, 350));
-}
 
 function sessionResponse(user: StoredUser) {
   return {
@@ -226,27 +225,6 @@ export const authHandlers = [
   }),
 ];
 
-/** Identity of the caller for the mock store (mock auth session). */
-function currentUserId(): string {
-  return loadSession(storage())?.user.id ?? "guest";
-}
-
-/** Dev-only failure simulation (PRD §7.7 error states, §8.4). */
-function failIfEnabled() {
-  if (failuresEnabled(storage())) {
-    return HttpResponse.json(
-      { error: "Simulated offline failure (dev toggle). Turn it off in the workspace dev bar." },
-      { status: 503 },
-    );
-  }
-  return null;
-}
-
-function workspaceBody(userId: string) {
-  const ws = loadWorkspace(storage(), userId);
-  return { version: ws.version, items: activeItems(ws), updatedAt: ws.updatedAt };
-}
-
 export const workspaceHandlers = [
   http.get("/api/v1/workspace", async () => {
     await latency();
@@ -382,5 +360,10 @@ export const workspaceHandlers = [
   }),
 ];
 
-/** All mock endpoints (workspace + auth + consent). */
-export const handlers = [...workspaceHandlers, ...authHandlers];
+/** All mock endpoints (workspace + auth + consent + F4). */
+export const handlers = [
+  ...workspaceHandlers,
+  ...authHandlers,
+  ...targetHandlers,
+  ...importHandlers,
+];

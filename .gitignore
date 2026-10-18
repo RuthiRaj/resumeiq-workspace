@@ -41,6 +41,9 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
+# scratch/temp files written by ad-hoc runs and e2e debugging
+.tmp-*
+
 # lighthouse lab artifacts
 lh-*.json
 

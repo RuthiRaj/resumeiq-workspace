@@ -1,4 +1,5 @@
 import type { EvidenceState } from "@/lib/schemas";
+import { EVIDENCE_QUALITY } from "@/lib/analysis/weights";
 import type { BadgeVariant } from "@/components/ui/badge";
 
 /**
@@ -18,7 +19,8 @@ export interface EvidenceMeta {
   dot: string;
   /** Ring + glow applied to section cards holding this state. */
   glow: string;
-  /** Relative quality weight (0–1) used by the completeness methodology. */
+  /** Relative quality weight (0–1), from the shared evidence-quality table
+   *  in `lib/analysis/weights.ts` so scoring can never drift from this UI. */
   weight: number;
 }
 
@@ -39,7 +41,7 @@ export const EVIDENCE_META: Record<EvidenceState, EvidenceMeta> = {
     text: "text-evidence-verified",
     dot: "bg-evidence-verified",
     glow: "ring-1 ring-evidence-verified/40 shadow-[0_0_28px_-10px_rgba(52,211,153,0.55)]",
-    weight: 1,
+    weight: EVIDENCE_QUALITY.verified,
   },
   attested: {
     state: "attested",
@@ -50,7 +52,7 @@ export const EVIDENCE_META: Record<EvidenceState, EvidenceMeta> = {
     text: "text-evidence-attested",
     dot: "bg-evidence-attested",
     glow: "ring-1 ring-evidence-attested/40 shadow-[0_0_28px_-10px_rgba(96,165,250,0.5)]",
-    weight: 0.6,
+    weight: EVIDENCE_QUALITY.attested,
   },
   related: {
     state: "related",
@@ -61,7 +63,7 @@ export const EVIDENCE_META: Record<EvidenceState, EvidenceMeta> = {
     text: "text-evidence-related",
     dot: "bg-evidence-related",
     glow: "ring-1 ring-evidence-related/40 shadow-[0_0_28px_-10px_rgba(251,191,36,0.5)]",
-    weight: 0.3,
+    weight: EVIDENCE_QUALITY.related,
   },
   missing: {
     state: "missing",
@@ -72,6 +74,6 @@ export const EVIDENCE_META: Record<EvidenceState, EvidenceMeta> = {
     text: "text-evidence-missing",
     dot: "bg-evidence-missing",
     glow: "ring-1 ring-evidence-missing/40 shadow-[0_0_28px_-10px_rgba(251,113,133,0.5)]",
-    weight: 0,
+    weight: EVIDENCE_QUALITY.missing,
   },
 };

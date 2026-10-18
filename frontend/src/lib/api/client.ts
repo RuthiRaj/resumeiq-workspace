@@ -1,7 +1,15 @@
 import type {
   AnalysisReport,
+  AnalysisRunResponse,
+  ImportItemStatus,
+  ImportItemValues,
+  ImportReviewItem,
+  ImportSession,
+  ImportSummary,
+  ImportSupport,
   JobTarget,
   Resume,
+  TargetCreateValues,
   Workspace,
   WorkspaceChangeLogEntry,
   WorkspaceItem,
@@ -92,10 +100,47 @@ export const api = {
 
   // --- Job targets + analysis (B4 contract) ---
   listTargets: () => request<JobTarget[]>("/targets"),
-  createTarget: (input: Omit<JobTarget, "id" | "status" | "createdAt" | "updatedAt">) =>
+  getTarget: (targetId: string) => request<JobTarget>(`/targets/${targetId}`),
+  createTarget: (input: TargetCreateValues) =>
     request<JobTarget>("/targets", { method: "POST", body: JSON.stringify(input) }),
+  /** Starts (or restarts) an analysis run and returns the first run frame. */
+  startAnalysis: (targetId: string) =>
+    request<AnalysisRunResponse>(`/targets/${targetId}/analysis`, {
+      method: "POST",
+    }),
+  /** Polls the run; the mock advances it from elapsed time. */
+  getAnalysisRun: (targetId: string) =>
+    request<AnalysisRunResponse>(`/targets/${targetId}/analysis/run`),
   getAnalysis: (targetId: string) =>
     request<AnalysisReport>(`/targets/${targetId}/analysis`),
+
+  // --- Imports + extraction review (B2 contract) ---
+  /** Multipart upload; the mock reads the file's name and size. */
+  uploadImport: (file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+    return request<{ import: ImportSession }>("/imports", {
+      method: "POST",
+      body: form,
+      headers: {},
+    });
+  },
+  listImports: () => request<ImportSummary[]>("/imports"),
+  getImport: (importId: string) =>
+    request<ImportSession>(`/imports/${importId}`),
+  updateImportItem: (
+    importId: string,
+    itemId: string,
+    patch: {
+      values?: ImportItemValues;
+      status?: ImportItemStatus;
+      support?: ImportSupport | null;
+    },
+  ) =>
+    request<ImportReviewItem>(`/imports/${importId}/items/${itemId}`, {
+      method: "PATCH",
+      body: JSON.stringify(patch),
+    }),
 
   // --- Tailored resumes + history (B5 contract) ---
   getTailoredResume: (targetId: string) =>
@@ -127,4 +172,7 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ enabled }),
     }),
+  /** Writes the three demo job targets (PRD §8.5). Development only. */
+  createSampleTargets: () =>
+    request<{ targets: JobTarget[] }>("/dev/sample-targets", { method: "POST" }),
 };

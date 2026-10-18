@@ -547,6 +547,177 @@ would break lint/CI. Re-check when upstream `fast-glob` drops `micromatch`, or
 Consequence: `npm audit` (full tree) keeps reporting the dev chain by design and
 is tracked here rather than silenced with a breaking downgrade.
 
+## ADR-021 — 2026-10-18 — F4 analysis is a deterministic reference engine
+
+Context: F4 must show a compatibility score with visible methodology, classify
+every job requirement against workspace evidence, split unsupported skills into
+two honest gap types, and run ATS checks — all against mocks, with identical
+inputs producing identical outputs (PRD §6.5, §6.4 JD-5, §6.7). The backend (B4)
+does not exist yet, so the frontend needs a reference implementation it can be
+diffed against rather than hand-written fixture numbers.
+
+Decision:
+1. `frontend/src/lib/analysis/` is a pure, deterministic engine:
+   `taxonomy → extractRequirements → matchRequirements → computeFactors →
+   computeAtsReport → buildAnalysisReport`. It reads only the target and the
+   workspace items handed to it; no `Date.now()` inside the report body (the
+   caller passes `generatedAt`).
+2. **Score** = weighted sum of five factors with the PRD starting weights
+   (required 0.40, preferred 0.15, experience 0.20, education 0.10, projects
+   0.15). Requirement status maps to 1 / 0.5 / 0 for matched / partial /
+   unsupported. A factor with no applicable requirements falls back to
+   workspace depth; a factor with nothing to compare at all is **dropped** and
+   the remaining weights are renormalised. The payload carries the *effective*
+   weights and the effective weights sum to 1, so the visible breakdown always
+   reconciles with the ring.
+3. **Classification** is evidence-first: `matched` requires `verified` or
+   `attested` support; `partial` means the requirement is mentioned only by
+   items whose evidence is `related`/`missing`; `unsupported` means no mention.
+   Unsupported becomes `not_evidenced` when an adjacent taxonomy skill (or a
+   nearby requirement) exists, otherwise `genuinely_missing`. Adjacent skills
+   are related, never equivalent (PRD §4.3).
+4. **ATS** is count-based, no model: start at 100, subtract 12/7/3 per
+   high/medium/low issue, clamp 0–100. Keyword coverage counts *skill*
+   requirements only (prose requirements would fake coverage); a keyword is
+   present on a whole-word label or taxonomy alias match. Layout and
+   PDF-round-trip checks return `not_checked` until export exists rather than
+   claiming a pass.
+5. The methodology and both disclaimers ("not a probability of being hired",
+   "not a guarantee for any employer's ATS") travel **in the payload**
+   (`report.methodology`), with the same strings as the frontend constants.
+   A backend wording change therefore needs no frontend release, and a report
+   can never render a score without its method.
+6. `schemas.test.ts` + `analysis.test.ts` + `analysis-fixtures.test.ts` lock the
+   contract, the ordering of the three fixtures (≥10-point gaps), the gap
+   split, determinism and schema validity.
+
+Consequence: B4 can be validated by replaying the same target + workspace
+snapshot against this engine. Any backend change to weights, renormalisation,
+status thresholds or ATS penalties must update this ADR and the frontend tests,
+or the two implementations will disagree.
+
+## ADR-022 — 2026-10-18 — Import review: uncertainty, evidence and a two-call confirm
+
+Context: IM-1..IM-3 require a type/size-gated upload, a side-by-side review with
+uncertain fields highlighted, per-item confirmation, and User-attested vs
+Verified depending on a certificate. There is no parser in F4, so the mock
+fabricates the *document* while every claim about the user still comes from
+what the user confirms.
+
+Decision:
+1. Upload gate: PDF/DOCX only, 5 MiB (`MAX_IMPORT_BYTES`), non-empty, checked on
+   the client and again in the handler (the real B2 must sniff content, not
+   trust the extension).
+2. Extraction keeps two shapes: immutable `extraction` (what the parser read,
+   with per-field `confidence` and 1-based `sourceLine`) and editable `values`
+   (what the user verified). Confirmation copies `values`, never the raw
+   extraction. Uncertain = confidence below **0.75**, printed in the UI; an
+   item's confidence is its weakest field (conservative).
+3. The preview text is labelled "simulated" in the UI, every uncertain field
+   links to its source line, and a scanned/under-1 KB file produces the designed
+   empty state instead of invented items.
+4. **Confirm is two calls**: `POST /workspace/items` then `PATCH` the review
+   item to `confirmed`. If the create fails the item stays `pending`; nothing
+   enters the workspace before confirmation. The ordering is deliberate (create
+   first, mark second) but not atomic: a failed PATCH leaves a created item and
+   a pending review row, and re-confirming would duplicate it. This is recorded
+   as an open B2 item; `docs/api/contract-proposals.md` proposes an atomic,
+   idempotent `POST /imports/{id}/items/{item_id}/confirm` for B2 to implement
+   before the mock is removed at B7.
+5. IM-3 is derived, not chosen: `support` (file or link) → `verified`; no
+   support → `attested`. A link also becomes an evidence link and a file an
+   attachment, so `verified` stays true to its definition (ADR-017 §7).
+   Attaching a certificate goes through the same save mutation as field edits,
+   so that mutation must carry `support` as well as `values`. The first cut sent
+   only `values`, which showed "Verified" in the card while the server still
+   recorded `attested` on confirm — caught by the F4 E2E and fixed in
+   `useSaveImportValues`; the UI state and the persisted evidence now always
+   come from the same PATCH.
+6. Rejection writes no workspace item and is reversible ("Put back for review").
+
+Consequence: the review screen can always show read-vs-accepted, the evidence
+state is structurally impossible to fake, and the only known integrity gap
+(duplicate on retry after a partial confirm) is documented with a proposed fix
+rather than silently patched in the client.
+
+## ADR-023 — 2026-10-18 — Analysis theatre is driven by the run, not a client timer
+
+Context: PRD §7.4.4 asks for a six-stage theatre with a micro-animation per
+stage, a failure state with retry, and a reduced-motion version. A purely
+cosmetic timer would lie about progress and would desynchronise on reload.
+
+Decision:
+1. The run is server state (`AnalysisRun`) advanced from elapsed wall-clock time
+   and persisted in the mock store. The client polls
+   `GET /targets/{id}/analysis/run` every 300 ms while `status === "running"`
+   and stops on success/failure. Reloading the page resumes the same run.
+2. The stage contract is six keys — `reading`, `extracting`, `searching`,
+   `matching`, `scoring`, `writing` — with mocks timed 900/900/800/1000/600/900
+   ms (≈5.1 s total). Each stage has its own icon and a motion-only micro
+   animation (`animate-spin/pulse/ping/bounce` behind `motion-safe:`).
+3. **Reduced motion** is a real alternate rendering, not a faster animation:
+   `useReducedMotion()` (with a test override) removes the animation and adds a
+   static state marker plus text status; `StageProgress` exposes
+   `data-motion="full|reduced"` so E2E can assert the branch actually taken.
+   The bar, stage list, progressbar and polite `aria-live` status remain.
+4. Failure names the failed stage and code (`provider_unavailable` in the dev
+   toggle, failing at `matching`), states that nothing was saved, and offers a
+   retry that starts a **new** run from stage 1. `POST …/analysis` is the only
+   mutator; polling never starts a run.
+5. The dev failure toggle fails the *run mid-flight*, not the page load, so the
+   failure is observed in the theatre exactly as a real provider outage would
+   be (`tests/e2e/targets.spec.ts` covers fail → retry → report).
+6. Consent is checked before the run starts; without recorded consent the gate
+   replaces the theatre, and the contract asks B4 to return
+   `403 consent_required` as defence in depth (the mock cannot, because consent
+   lives in the F2 browser store).
+
+Consequence: progress shown to the user is the state the server actually holds,
+the theatre has a tested failure path, and the reduced-motion version is
+verifiable rather than assumed. SSE can replace polling later without changing
+the payload or the UI.
+
+## ADR-024 — 2026-10-18 — F4 fixtures, dev-only controls and what E2E guarantees
+
+Context: F4 acceptance requires three job descriptions (strong, partial, poor)
+that render distinct reports against the existing workspace fixtures, and the
+four screens need end-to-end coverage without a real backend or AI provider.
+
+Decision:
+1. `analysis-fixtures.ts` holds the three postings as **sample job ads**, not
+   claims about the user. Their ids are stable (`strong`, `partial`, `poor`),
+   and `analysis-fixtures.test.ts` asserts the mid-level workspace scores them
+   in order with ≥10 points between bands, that the partial posting shows all
+   three requirement states and both gap types, that the poor posting has ≥3
+   genuine gaps, and that reports are byte-identical for identical inputs.
+2. Dev-only controls (`/dev/workspace-persona`, `/dev/failures`,
+   `/dev/sample-targets`) 404 outside `next dev`; the sample targets carry
+   `sample: true` and stable ids `sample-target-{strong,partial,poor}` so E2E
+   and demos can deep-link without depending on creation order.
+3. The intake form's "load a sample posting" and the targets list's "load sample
+   targets" buttons are development-only; in production a real user never sees
+   fixture data or a fixture switcher.
+4. Wire rules carried from the F3 audit into the F4 schemas: month precision
+   (`YYYY-MM`) everywhere a user types a date, and `.nullish()` for every field
+   the database can return as `null` (ADR-019). `docs/api/openapi.json` is not
+   edited; the proposed F4 routes live in `docs/api/contract-proposals.md` for
+   B2/B4 to export later (same pattern as ADR-013).
+5. E2E covers the acceptance path in `tests/e2e/targets.spec.ts`: import gating
+   + staged extraction + side-by-side review + per-item confirm/reject + the
+   attested/verified rule; target intake behind the consent gate with nothing
+   created while consent is missing; theatre stages advancing into the full
+   report (methodology, disclaimers, requirement states, both gap buckets,
+   skills, content report, roadmap, ATS panel); the failure → retry → report
+   path; the three fixtures producing ordered, distinct scores; reduced motion;
+   and 360 px without horizontal scroll. Locators target roles, labels and
+   `data-testid` seams, never styling or copy fragments that are meant to
+   change.
+
+Consequence: the three report states are reproducible from a cold workspace with
+one dev button, the report cannot silently flatten into one band without a test
+failure, and the E2E suite exercises the same composition the real backend will
+serve at B7.
+
 ## ADR-025 — 2026-10-18 — Backend CI skip path: a pre-checkout step must not inherit `working-directory: backend`
 
 Context: the Backend workflow has to keep a *required* `backend` check that
@@ -585,7 +756,6 @@ workflow reports a green "backend" check in seconds; a PR that touches any of
 them still runs `uv sync --frozen`, `ruff check`, `ruff format --check`, `mypy` and
 `pytest` unchanged.
 
-Numbering note: ADRs 021–024 are already claimed by the in-flight F4 branch
-(PR #10), so this one is 025 rather than 021 to avoid duplicate headings once F4
-lands.
+Numbering note: ADRs 021–024 are claimed by the F4 branch (now merged), so this
+one is 025 rather than 021 to avoid duplicate headings.
 
