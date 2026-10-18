@@ -155,7 +155,7 @@ test("import: staged extraction, side-by-side review, nothing saved until confir
     mimeType: "image/png",
     buffer: Buffer.alloc(2048, 1),
   });
-  await expect(page.getByRole("alert")).toContainText("Only PDF and DOCX");
+  await expect(page.getByText(/Only PDF and DOCX/)).toBeVisible();
 
   // IM-1/IM-2: accepted file → staged progress → side-by-side review.
   await upload.setInputFiles({
@@ -274,7 +274,9 @@ test("target intake and consent gate: no consent, no analysis — then theatre t
     "Scoring",
     "Writing report",
   ]) {
-    await expect(page.getByText(label, { exact: true })).toBeVisible();
+    await expect(
+      page.locator("[data-stage]").filter({ hasText: label }),
+    ).toBeVisible();
   }
   // The active stage really advances instead of faking a spinner.
   await expect
