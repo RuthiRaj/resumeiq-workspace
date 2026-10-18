@@ -22,6 +22,7 @@ playwright-report/
 # env files (never commit secrets)
 .env*
 !.env.example
+!.env.test.example
 
 # typescript
 *.tsbuildinfo
@@ -40,6 +41,14 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+*.log
+
+# documents: never commit user uploads or private fixtures. Golden test
+# fixtures under a tests/golden/ directory are the only exception.
+*.pdf
+*.docx
+!**/tests/golden/**
+private-fixtures/
 
 # scratch/temp files written by ad-hoc runs and e2e debugging
 .tmp-*
