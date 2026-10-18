@@ -92,13 +92,18 @@ test("upload -> extraction review -> confirmed item lands in the workspace", asy
   });
   await expect(project).toHaveCount(1);
   await project.getByTestId(/confirm-/).click();
-  await expect(project.getByText("In your workspace")).toBeVisible({ timeout: NAV_TIMEOUT });
+  // Exact text: this card also renders an "Open it in your workspace" link.
+  await expect(project.getByText("In your workspace", { exact: true })).toBeVisible({
+    timeout: NAV_TIMEOUT,
+  });
 
   await expect(review.getByText("1 confirmed")).toBeVisible();
   await expect(review.getByText("1 rejected")).toBeVisible();
 
-  // Only the confirmed item exists outside the review.
-  await page.getByRole("link", { name: "Open your workspace" }).click();
+  // Only the confirmed item exists outside the review. The "Open your
+  // workspace" CTA only renders once *every* item is decided (see
+  // import-review.tsx), and this test deliberately leaves items pending.
+  await gotoReady(page, "/workspace");
   await expect(page).toHaveURL(/\/workspace$/, { timeout: NAV_TIMEOUT });
   await expect(
     page
@@ -119,7 +124,9 @@ test("an unsupported file type is rejected with a reason", async ({ page }) => {
     buffer: Buffer.alloc(2048),
   });
 
-  await expect(page.getByRole("alert")).toContainText("Only PDF and DOCX files", {
+  // Scope to the app's own alert; Next's route announcer is an empty
+  // <div role="alert" id="__next-route-announcer__"> that getByRole also matched.
+  await expect(page.locator('p[role="alert"]')).toContainText("Only PDF and DOCX files", {
     timeout: NAV_TIMEOUT,
   });
   // The dropzone stays usable for another attempt.

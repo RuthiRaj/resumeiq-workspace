@@ -118,14 +118,20 @@ async function submitTarget(page: Page) {
   await expect(page).toHaveURL(/\/targets\/[^/]+$/, { timeout: NAV_TIMEOUT });
 }
 
-/** Scores shown on `/targets` as `Score N` badges. */
-async function listScores(page: Page): Promise<number[]> {
-  const badges = page
+/**
+ * The `Score N` badge for one named target on `/targets`. The list renders
+ * newest-first (see `mocks/targets-store.ts`), so a score is matched to the
+ * target it belongs to (via the card's accessible name) rather than by list
+ * position.
+ */
+async function scoreFor(page: Page, role: string): Promise<number> {
+  const badge = page
     .getByTestId("target-list")
-    .locator("a")
+    .getByRole("link", { name: `Open the report for ${role}` })
     .getByText(/^Score \d+$/);
-  const texts = await badges.allTextContents();
-  return texts.map((text) => Number(text.replace(/\D+/g, "")));
+  await expect(badge).toBeVisible();
+  const text = await badge.innerText();
+  return Number(text.replace(/\D+/g, ""));
 }
 
 test("intake -> theatre -> full report with methodology and gap types", async ({ page }) => {
@@ -200,7 +206,8 @@ test("strong and poor postings produce distinct scores", async ({ page }) => {
   await expect(page.getByTestId("target-list")).toBeVisible({ timeout: NAV_TIMEOUT });
   await expect(page.getByText(/^Score \d+$/)).toHaveCount(2, { timeout: NAV_TIMEOUT });
 
-  const [strong, poor] = await listScores(page);
+  const strong = await scoreFor(page, "Senior Frontend Engineer");
+  const poor = await scoreFor(page, "Machine Learning Engineer");
   expect(strong).toBeGreaterThan(poor);
 });
 
