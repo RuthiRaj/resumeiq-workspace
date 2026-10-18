@@ -61,7 +61,15 @@ export function useSaveImportValues(sessionId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (item: ImportReviewItem) =>
-      api.updateImportItem(sessionId, item.id, { values: item.values }),
+      api.updateImportItem(sessionId, item.id, {
+        values: item.values,
+        // Attaching a certificate goes through this mutation too (the card
+        // hands `support` to `onSaveValues`). Sending it on every save is
+        // idempotent and stops the edit from silently dropping the evidence —
+        // without it a confirmed item would be attested although the UI showed
+        // Verified.
+        support: item.support,
+      }),
     onSuccess: () => invalidateSession(queryClient, sessionId),
   });
 }
