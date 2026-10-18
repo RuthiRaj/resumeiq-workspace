@@ -43,6 +43,11 @@ const SECTIONS = [
  * warnings for RSC/document navigations, the designed 401 session probe
  * (ADR-019), and the intentionally-triggered 503/ERR_CONNECTION_REFUSED from
  * the failure-simulation test.
+ *
+ * `next dev`'s HMR socket (`ws://…/_next/hmr`, which MSW intercepts and closes,
+ * logging "WebSocket is already in CLOSING or CLOSED state") is dev-server
+ * tooling that a production build never ships — the same reason the sweep
+ * excludes the `nextjs-portal` dev overlay.
  */
 const IGNORED_CONSOLE = [
   /favicon/i,
@@ -51,6 +56,7 @@ const IGNORED_CONSOLE = [
   /the server responded with a status of 401/i,
   /net::ERR_/i,
   /the server responded with a status of 503/i,
+  /WebSocket is already in CLOSING or CLOSED state/i,
 ];
 
 function collectConsoleProblems(page: Page): string[] {
@@ -460,7 +466,7 @@ test.describe("defect 4 — 360px overflow and control names", () => {
 });
 
 test.describe("route sweep", () => {
-  // 29 routes x 3 widths, each with a full axe pass (the design-system page
+  // 27 routes x 3 widths, each with a full axe pass (the design-system page
   // alone is enormous), against a dev server that compiles routes on demand.
   // That is genuinely long, so it gets its own budget instead of aborting
   // mid-sweep on a loaded machine.

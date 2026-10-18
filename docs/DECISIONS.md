@@ -892,8 +892,14 @@ both were dealt with explicitly instead of being silenced:
   axe's `document-title` rule fired on `/signup` during a redirect, which is a
   race, not a defect: the sweep now waits (bounded, 5 s) for a title before running
   axe, so a page that genuinely never gets one is still reported.
+- `next dev`'s HMR socket (`ws://…/_next/hmr`) is intercepted by MSW and closed,
+  which logs "WebSocket is already in CLOSING or CLOSED state" — dev-server
+  tooling that no production build ships, seen once on `/workspace/course`. The
+  sweep's console filter excludes that exact message for the same reason it
+  excludes the `nextjs-portal` dev overlay; real console errors still fail the
+  sweep.
 
-The route sweep is also expensive by nature — 29 routes x 3 widths, each with a
+The route sweep is also expensive by nature — 27 routes x 3 widths, each with a
 full axe pass against a dev server that compiles routes on demand — so it carries
 its own 900 s budget (`test.describe.configure`), while every other test keeps the
 300 s default. Without it the sweep was aborted mid-way on a loaded machine and
