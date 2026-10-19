@@ -21,6 +21,16 @@ sys.path.insert(0, str(BACKEND_DIR))
 from app.core.config import REQUIRED_ENV_VARS  # noqa: E402
 from tests import supabase_auth  # noqa: E402
 
+#: Optional AI variables, reported for visibility only (names, never values).
+OPTIONAL_AI_ENV_VARS = (
+    "GROQ_API_KEY",
+    "GROQ_BASE_URL",
+    "GROQ_MODEL",
+    "NVIDIA_API_KEY",
+    "NVIDIA_BASE_URL",
+    "NVIDIA_MODEL",
+)
+
 #: Dotenv files the backend reads, in precedence order (later wins).
 ENV_FILES = (BACKEND_DIR / ".env", BACKEND_DIR / ".env.test")
 
@@ -84,6 +94,19 @@ def main() -> int:
     )
     print(line("SUPABASE_TEST_*_A (token, or email + password)", account_a))
     print(line("SUPABASE_TEST_*_B (optional; isolation tests)", account_b))
+    print()
+    print("AI providers (optional; backend/.env):")
+    for name in OPTIONAL_AI_ENV_VARS:
+        print(line(name, present(name)))
+    ai_ready = present("GROQ_API_KEY") or present("NVIDIA_API_KEY")
+    print(
+        "AI calls would "
+        + (
+            "run against the configured provider(s)."
+            if ai_ready
+            else "fail with ai_not_configured."
+        )
+    )
     print()
     print(f"Integration tests would {'run' if supabase_auth.enabled() else 'be skipped'}.")
 

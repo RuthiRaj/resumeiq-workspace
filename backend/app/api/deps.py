@@ -21,13 +21,15 @@ only when an expected issuer is configured, and ``sub`` is required.
 """
 
 from dataclasses import dataclass, field
-from typing import Annotated, Any
+from typing import Annotated, Any, cast
 
 import jwt
 from fastapi import Depends, HTTPException, Request, status
 from jwt import PyJWKClient
 from jwt.types import Options
 
+from app.ai.consent import ConsentGrant, ConsentStore, SupabaseConsentStore
+from app.ai.gateway import AIGateway
 from app.core.config import Settings
 from app.core.logging import get_logger
 from app.extraction.engine import DeterministicExtractionEngine, ExtractionEngine
@@ -238,3 +240,57 @@ def get_import_service(
     """FastAPI dependency: the import service over the request's repositories."""
     settings: Settings = request.app.state.settings
     return ImportService(repository, engine, max_file_bytes=settings.max_import_bytes)
+
+
+# --- AI gateway (B3) -------------------------------------------------------
+
+
+def get_ai_consent_store(request: Request) -> ConsentStore:
+    """Recorded consents. Tests override via ``app.state.ai_consent_store``."""
+    store = getattr(request.app.state, "ai_consent_store", None)
+    if store is not None:
+        return cast(ConsentStore, store)
+    settings: Settings = request.app.state.settings
+    if not settings.data_api_configured:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "code": "data_api_not_configured",
+                "message": "Server data access is not configured.",
+            },
+        )
+    return SupabaseConsentStore(
+        settings.rest_url,
+        settings.supabase_publishable_key,
+        get_bearer_token(request),
+    )
+
+
+def require_ai_consent(
+    request: Request,
+    user: Annotated[UserClaims, Depends(get_current_user)],
+) -> ConsentGrant:
+    """Refuse any AI call without a recorded ``ai_processing`` grant (EX-3).
+
+    Returns the only token the gateway accepts. B4/B5 routes depend on this; B3
+    exposes no public AI endpoint, so nothing mounts it yet.
+    """
+    if not get_ai_consent_store(request).has_ai_consent(user.sub):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "code": "ai_consent_required",
+                "message": "Enable AI processing before using this feature.",
+            },
+        )
+    return ConsentGrant(user_id=user.sub)
+
+
+def get_ai_gateway(request: Request) -> AIGateway:
+    """One gateway per application (cache and quota live with it)."""
+    existing = getattr(request.app.state, "ai_gateway", None)
+    if isinstance(existing, AIGateway):
+        return existing
+    gateway = AIGateway.from_settings(request.app.state.settings)
+    request.app.state.ai_gateway = gateway
+    return gateway

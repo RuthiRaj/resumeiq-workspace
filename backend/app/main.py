@@ -8,6 +8,16 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from app.ai.errors import (
+    AIConsentRequiredError,
+    AIGroundingError,
+    AINotConfiguredError,
+    AIProviderAuthError,
+    AIProviderError,
+    AIQuotaExceededError,
+    AISchemaError,
+    AIUnavailableError,
+)
 from app.api.health import router as health_router
 from app.api.v1.router import router as v1_router
 from app.core.config import Settings, get_settings
@@ -104,6 +114,50 @@ async def _handle_extraction_unavailable(_request: Request, _exc: Exception) -> 
     )
 
 
+# --- AI gateway errors (B3) ------------------------------------------------
+# No public AI endpoint ships in B3, but the mapping is the contract B4/B5 use.
+
+
+async def _handle_ai_not_configured(_request: Request, _exc: Exception) -> JSONResponse:
+    return _error_response(
+        503, "ai_not_configured", "AI features are not configured on this server."
+    )
+
+
+async def _handle_ai_consent_required(_request: Request, _exc: Exception) -> JSONResponse:
+    return _error_response(
+        403, "ai_consent_required", "Enable AI processing before using this feature."
+    )
+
+
+async def _handle_ai_quota(_request: Request, _exc: Exception) -> JSONResponse:
+    return _error_response(
+        429, "ai_quota_exceeded", "The daily AI limit was reached. It resets tomorrow."
+    )
+
+
+async def _handle_ai_invalid_output(_request: Request, _exc: Exception) -> JSONResponse:
+    return _error_response(
+        502, "ai_invalid_output", "The AI response could not be used. Nothing was saved."
+    )
+
+
+async def _handle_ai_ungrounded(_request: Request, _exc: Exception) -> JSONResponse:
+    return _error_response(
+        502, "ai_ungrounded", "The AI output contained unsupported claims and was rejected."
+    )
+
+
+async def _handle_ai_unavailable(_request: Request, _exc: Exception) -> JSONResponse:
+    return _error_response(
+        503, "ai_unavailable", "AI providers are unavailable right now. Try again later."
+    )
+
+
+async def _handle_ai_provider_auth(_request: Request, _exc: Exception) -> JSONResponse:
+    return _error_response(502, "ai_provider_auth_failed", "AI provider authentication failed.")
+
+
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or get_settings()
     setup_logging(settings.log_level)
@@ -144,6 +198,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.add_exception_handler(ExtractionTimeoutError, _handle_extraction_unavailable)
     app.add_exception_handler(ExtractionUnavailableError, _handle_extraction_unavailable)
     app.add_exception_handler(ExtractionError, _handle_extraction_unavailable)
+
+    # AI gateway errors (B3): typed, stable codes, no prompt/response content.
+    app.add_exception_handler(AINotConfiguredError, _handle_ai_not_configured)
+    app.add_exception_handler(AIConsentRequiredError, _handle_ai_consent_required)
+    app.add_exception_handler(AIQuotaExceededError, _handle_ai_quota)
+    app.add_exception_handler(AISchemaError, _handle_ai_invalid_output)
+    app.add_exception_handler(AIGroundingError, _handle_ai_ungrounded)
+    app.add_exception_handler(AIUnavailableError, _handle_ai_unavailable)
+    app.add_exception_handler(AIProviderAuthError, _handle_ai_provider_auth)
+    app.add_exception_handler(AIProviderError, _handle_ai_unavailable)
 
     # Added last = outermost. Request path: CORS -> headers -> logging -> size -> rate -> router.
     app.add_middleware(InMemoryRateLimiter, per_minute=settings.rate_limit_per_minute)

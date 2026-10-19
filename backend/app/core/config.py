@@ -1,10 +1,12 @@
 """Application configuration (pydantic-settings). No secrets in code."""
 
 from functools import lru_cache
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
+
+AIProviderName = Literal["groq", "nvidia"]
 
 #: Variables the app cannot serve a request without. Named here so the startup
 #: check can list what is missing **by name** and never print a value.
@@ -44,6 +46,43 @@ class Settings(BaseSettings):
 
     max_request_bytes: int = 1_048_576
     rate_limit_per_minute: int = 60
+
+    # --- AI gateway (B3, PRD §10.3) ---------------------------------------
+    # Keys are OPTIONAL: the backend must start without them, and an AI call
+    # then fails with a typed ``ai_not_configured`` error instead of reaching
+    # the network. Base URLs and model IDs are configuration, never literals in
+    # the gateway (ADR-029). The defaults below were verified against the
+    # providers' docs **and live probes** on 2026-10-19 (see the ADR) and are
+    # overridable.
+    groq_api_key: str = ""
+    groq_base_url: str = "https://api.groq.com/openai/v1"
+    groq_model: str = "openai/gpt-oss-120b"
+
+    nvidia_api_key: str = ""
+    nvidia_base_url: str = "https://integrate.api.nvidia.com/v1"
+    #: Verified against the live catalog on 2026-10-19: the old default
+    #: ``meta/llama-3.3-70b-instruct`` is end-of-life (HTTP 410), so the default
+    #: is a model that answered structured-output requests during the bake-off.
+    nvidia_model: str = "openai/gpt-oss-20b"
+
+    ai_primary_provider: AIProviderName = "groq"
+    ai_secondary_provider: AIProviderName = "nvidia"
+    ai_timeout_seconds: float = 20.0
+    #: Retries *per provider* after the first failed attempt.
+    ai_max_retries: int = 1
+    ai_backoff_base_seconds: float = 0.5
+    #: A 429 whose ``Retry-After`` exceeds this falls back immediately instead
+    #: of sleeping, so one slow provider cannot hold the request.
+    ai_retry_after_cap_seconds: float = 5.0
+    #: Reasoning models spend completion tokens on reasoning before the JSON, so
+    #: a 1024-token cap truncated one bake-off generation. 2048 leaves headroom
+    #: for the four small result models without a material cost increase.
+    ai_max_output_tokens: int = 2048
+    #: Per-user, per-UTC-day AI call ceiling (in-memory in B3; the interface is
+    #: ready for a database-backed store).
+    ai_daily_quota: int = 50
+    ai_cache_ttl_seconds: int = 900
+    ai_cache_max_entries: int = 256
 
     # Document import (PRD §6.2 IM-1, §11). The upload cap is applied by
     # ``RequestSizeLimitMiddleware`` per import route and re-checked by the
@@ -93,6 +132,20 @@ class Settings(BaseSettings):
     def data_api_configured(self) -> bool:
         """True when the workspace Data API can be reached (URL + publishable key)."""
         return bool(self.rest_url and self.supabase_publishable_key)
+
+    @property
+    def ai_configured(self) -> bool:
+        """True when at least one AI provider key is present.
+
+        AI is deliberately absent from ``REQUIRED_ENV_VARS``: the app must start
+        without AI keys (B3 requirement), and only an AI call then fails.
+        """
+        return bool(self.groq_api_key or self.nvidia_api_key)
+
+    def missing_ai_optional(self) -> list[str]:
+        """Names of AI variables that are unset (never their values)."""
+        names = ("GROQ_API_KEY", "NVIDIA_API_KEY")
+        return [name for name in names if not getattr(self, name.lower())]
 
     def missing_required(self) -> list[str]:
         """Names of required variables that are unset (never their values)."""

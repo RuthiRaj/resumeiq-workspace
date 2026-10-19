@@ -1,0 +1,119 @@
+{
+  "note": "SYNTHETIC ONLY. Every person, employer, contact detail and number here is invented for the B3 bake-off. No real personal data may be added to this file.",
+  "resumes": [
+    {
+      "id": "resume_backend",
+      "profile": {
+        "full_name": "Alex Rivera",
+        "email": "alex.rivera@example.com",
+        "phone": "+1 (555) 010-0123",
+        "location": "42 Example Street, Springfield, IL 62704",
+        "website": "https://example.com/alex",
+        "linkedin": "linkedin.com/in/alex-rivera"
+      },
+      "parser_text": "Alex Rivera\nalex.rivera@example.com | +1 (555) 010-0123 | 42 Example Street, Springfield, IL 62704\n\nEXPERIENCE\nSoftware Engineer - Northwind Labs - 2021 - Present\n- Built a Python service handling 12,000 requests per day with FastAPI and PostgreSQL\n- Reduced p95 latency by 30 percent by adding Redis caching\n- Wrote Kubernetes manifests and Dockerfiles for the deployment pipeline\n\nSKILLS\nPython, FastAPI, PostgreSQL, Redis, Kubernetes, Docker, Git",
+      "evidence": [
+        {
+          "id": "w1",
+          "kind": "workspace_item",
+          "text": "Built a Python service handling 12,000 requests per day with FastAPI and PostgreSQL.",
+          "technologies": ["Python", "FastAPI", "PostgreSQL"],
+          "organizations": ["Northwind Labs"],
+          "titles": ["Software Engineer"],
+          "dates": ["2021"]
+        },
+        {
+          "id": "w2",
+          "kind": "workspace_item",
+          "text": "Reduced p95 latency by 30 percent by adding Redis caching.",
+          "technologies": ["Redis"],
+          "organizations": ["Northwind Labs"],
+          "titles": ["Software Engineer"],
+          "dates": ["2022"]
+        },
+        {
+          "id": "w3",
+          "kind": "workspace_item",
+          "text": "Wrote Kubernetes manifests and Dockerfiles for the deployment pipeline.",
+          "technologies": ["Kubernetes", "Docker"],
+          "organizations": ["Northwind Labs"],
+          "titles": ["Software Engineer"],
+          "dates": ["2023"]
+        },
+        {
+          "id": "p1",
+          "kind": "profile",
+          "text": "Alex Rivera - Software Engineer at Northwind Labs - Springfield, IL",
+          "organizations": ["Northwind Labs"],
+          "titles": ["Software Engineer"]
+        }
+      ],
+      "bullets": [
+        {
+          "id": "b1",
+          "text": "Built a Python service handling 12,000 requests per day with FastAPI and PostgreSQL"
+        },
+        {
+          "id": "b2",
+          "text": "Reduced p95 latency by 30 percent by adding Redis caching"
+        }
+      ]
+    },
+    {
+      "id": "resume_frontend",
+      "profile": {
+        "full_name": "Jordan Fields",
+        "email": "jordan.fields@example.com",
+        "phone": "+1 (555) 010-0456",
+        "location": "7 Placeholder Avenue, Springfield, IL 62704"
+      },
+      "parser_text": "Jordan Fields\njordan.fields@example.com\n\nEXPERIENCE\nFrontend Developer - Contoso Systems - 2020 - 2023\n- Shipped a React dashboard used by 400 internal users\n- Wrote JavaScript and TypeScript components with Jest tests\n\nSKILLS\nJavaScript, TypeScript, React, Jest, Git",
+      "evidence": [
+        {
+          "id": "w4",
+          "kind": "workspace_item",
+          "text": "Shipped a React dashboard used by 400 internal users.",
+          "technologies": ["React", "JavaScript"],
+          "organizations": ["Contoso Systems"],
+          "titles": ["Frontend Developer"],
+          "dates": ["2021"]
+        },
+        {
+          "id": "w5",
+          "kind": "workspace_item",
+          "text": "Wrote JavaScript and TypeScript components with Jest tests.",
+          "technologies": ["JavaScript", "TypeScript", "Jest"],
+          "organizations": ["Contoso Systems"],
+          "titles": ["Frontend Developer"],
+          "dates": ["2022"]
+        }
+      ],
+      "bullets": [
+        {
+          "id": "b3",
+          "text": "Shipped a React dashboard used by 400 internal users"
+        }
+      ]
+    }
+  ],
+  "job_descriptions": [
+    {
+      "id": "jd_backend",
+      "title": "Backend Engineer",
+      "text": "Backend Engineer at Northwind Labs.\nMust have 5 years of professional Python experience.\nMust have production experience with PostgreSQL and REST APIs.\nNice to have: Kubernetes, Terraform and GraphQL.\nYou will design services, review code and mentor two engineers.\nStrong written communication is required.",
+      "requirements": [
+        "Must have 5 years of professional Python experience",
+        "Must have production experience with PostgreSQL and REST APIs"
+      ]
+    },
+    {
+      "id": "jd_frontend",
+      "title": "Frontend Developer",
+      "text": "Frontend Developer at Contoso Systems.\nYou will build accessible React interfaces with TypeScript.\nMust have 3 years of frontend experience and strong CSS skills.\nNice to have: Vue and design-system work.\nYou will partner with designers and ship weekly.",
+      "requirements": [
+        "Must have 3 years of frontend experience and strong CSS skills",
+        "Nice to have: Vue and design-system work"
+      ]
+    }
+  ]
+}
