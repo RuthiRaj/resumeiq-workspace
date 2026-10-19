@@ -1092,3 +1092,239 @@ key before running: a 404 `PGRST205` means `0004` is not applied, so the suite
 skips and prints that exact condition instead of failing on a missing table.
 `-rs` is now in pytest's `addopts`, so every skipped opt-in run names its cause
 (gate, user A/B credentials, or the migration) even without `-v`.
+
+## ADR-029 — 2026-10-19 — B3 AI gateway: verified providers, failover, structured output
+
+Context: PRD §10.3 needs a provider-agnostic gateway over an OpenAI-compatible
+HTTP client, with Groq primary and NVIDIA-hosted secondary. Resumes are personal
+data, so data-handling terms matter as much as price, and the terms had to be
+**re-verified against the providers' current docs** rather than trusted from
+training data. B3 must ship no public AI endpoint, must start without any AI key,
+and must never fabricate qualifications, so reliability and grounding controls had
+to exist before B4/B5 consume the gateway.
+
+What was verified (docs read **and** live probes on 2026-10-19; re-verify before
+launch — the NVIDIA docs listed models the API had already retired):
+
+| | Groq (primary) | NVIDIA API catalog (secondary) |
+|---|---|---|
+| Docs | `console.groq.com/docs/openai`, `/docs/models`, `/docs/rate-limits`, `/docs/structured-outputs`, `/docs/your-data` | `docs.api.nvidia.com/nim/reference/llm-apis`, `.../openai-gpt-oss-120b-infer`, `docs.nvidia.com/nim/large-language-models/*/structured-generation.html` |
+| Base URL | `https://api.groq.com/openai/v1` | `https://integrate.api.nvidia.com/v1` |
+| Endpoint | `POST /chat/completions` (OpenAI-compatible) | `POST /chat/completions` (OpenAI-compatible) |
+| Model IDs used | `openai/gpt-oss-120b` (default; also `openai/gpt-oss-20b`, `qwen/qwen3.8-27b`) | `openai/gpt-oss-20b` (default). Probed 2026-10-19: `meta/llama-3.3-70b-instruct`, `openai/gpt-oss-120b`, `nvidia/llama-3.3-nemotron-super-49b-v1.5` and `qwen/qwen3-next-80b-a3b-instruct` all returned **HTTP 410** (end-of-life) even though the docs page still listed them; `nvidia/nemotron-3-super-120b-a12b` works but was slower and invented requirements in the bake-off |
+| Structured output | `response_format={"type":"json_schema","json_schema":{"strict":true}}` on gpt-oss and qwen models; strict needs all fields required + `additionalProperties: false` | `response_format={"type":"json_schema",...,"strict":true}` — verified 200 on `openai/gpt-oss-20b` and `nvidia/nemotron-3-super-120b-a12b`. `nvext.guided_json` is a NIM/self-hosted feature: the hosted endpoint returned **400 "unknown field `guided_json`"** for nemotron-3-super, so B3 does not use it |
+| Free-tier limits | per model: gpt-oss-120b **30 RPM / 1,000 RPD / 8K TPM / 200K TPD**; 429 responses carry `Retry-After` | API catalog is a **trial**: ~**40 RPM global hard cap**, no increase for free personal accounts; production requires NVIDIA AI Enterprise |
+| Free-tier data terms | no retention by default; reliability/abuse logs may be kept up to 30 days; Zero Data Retention is available in Data Controls; processing in GCP US | NVIDIA **API Trial Terms of Service** §2.3: content is not stored or used after each API session except stated cases; trial-only, not for production |
+
+Decision:
+
+- **One client, per-provider payload.** `app/ai/client.py` posts the same
+  OpenAI-compatible request to both providers, including the same
+  `response_format` JSON-schema block. A per-provider *profile* carries base URL,
+  model and key; **those come from `Settings`** and are overridable in `.env`, so
+  a provider/model change is configuration, not a code edit.
+- **Keys are optional config.** `REQUIRED_ENV_VARS` still lists only the Supabase
+  pair. With no key the gateway raises `AINotConfiguredError` (naming the missing
+  variables, never their values) and makes no network call; the app starts and
+  serves every other route.
+- **Fallback is limited to transient failure**: 429, 5xx and timeouts retry with
+  deterministic exponential backoff (`AI_BACKOFF_BASE_SECONDS`, capped at 8 s; no
+  jitter, so tests are stable) and then move to the secondary provider. A 429 whose
+  `Retry-After` exceeds `AI_RETRY_AFTER_CAP_SECONDS` (**5 s**) falls back
+  immediately instead of holding the request. Other 4xx (401/403/400) fail fast:
+  the same request would fail on the secondary too, and retrying a rejected schema
+  or a bad key hides a configuration error. When every provider fails transiently
+  the caller gets `AIUnavailableError` carrying the per-provider errors.
+- **Structured output with exactly one repair.** Each task is a Pydantic model;
+  the JSON schema is normalised to `additionalProperties: false` on every object
+  so strict mode accepts it. A response that is not JSON or does not match the
+  schema earns **one** repair attempt on the same provider (schema errors plus the
+  invalid, already-redacted output are fed back), then the call fails with
+  `AISchemaError` (`ai_invalid_output`). A repair failure is not silently retried a
+  third time. Groq's documented `400 / json_validate_failed` best-effort failure
+  is special-cased as an invalid *output* (its `failed_generation` becomes the
+  assistant turn for the repair); every other 400 stays a hard request error.
+  `AI_MAX_OUTPUT_TOKENS` defaults to **2048** because reasoning models spend
+  completion tokens before the JSON: at 1024 one bake-off generation was
+  truncated, which is exactly the `json_validate_failed`/empty-content path.
+- **Cache keyed by the request, scoped to the user.** SHA-256 over task + redacted
+  messages + schema + **`user_id`**; in-memory, TTL `AI_CACHE_TTL_SECONDS` (900 s),
+  LRU-bounded by `AI_CACHE_MAX_ENTRIES`. Including the user id is deliberate: cached
+  values are *restored* to their original PII, so a shared entry could leak one
+  person's data to another. A hit makes no call and consumes no quota.
+- **Quota behind an interface.** `QuotaStore` + `InMemoryDailyQuota`
+  (`AI_DAILY_QUOTA`, per user per UTC day). Consumed only on a cache miss. The
+  protocol is the seam for a database-backed `ai_usage` store later; the in-memory
+  counter is per process and resets on restart, which is acceptable for B3.
+- **Only metrics are logged.** `provider`, `model`, `latency_ms`,
+  `prompt_tokens`, `completion_tokens`, `valid`, `task`, `attempt`, `cache_hit`.
+  The logging allowlist in `app/core/logging.py` was extended with exactly those
+  keys, so a prompt, a response body or a key cannot reach a log line even by
+  mistake.
+- **Error mapping shipped ahead of the endpoints.** `app/main.py` registers
+  handlers for every AI error (`ai_not_configured` 503, `ai_consent_required` 403,
+  `ai_quota_exceeded` 429, `ai_invalid_output` 502, `ai_ungrounded` 502,
+  `ai_provider_auth_failed` 502, `ai_unavailable` 503) so B4/B5 mount routes that
+  already speak the contract's `{"code","message"}` shape.
+- **Bake-off before adoption.** `scripts/ai_bakeoff.py` measures JSON validity
+  after retries, latency p50/p95 and grounding errors per provider/model on a
+  synthetic corpus, and writes `docs/ai-bakeoff.md`. Live runs require
+  `RUN_AI_LIVE=1` **and** a key; otherwise the harness writes a "not run" report
+  instead of pretending to have numbers.
+
+Rejected alternatives:
+
+- **A provider SDK** (OpenAI/Groq Python clients). Both providers expose the same
+  OpenAI-compatible endpoint; one `httpx` client with an injectable
+  `MockTransport` keeps every reliability path testable offline, which is the
+  milestone's acceptance criterion.
+- **Fallback on any error, including 400/401.** Hides misconfiguration and
+  doubles the cost of a request that cannot succeed.
+- **Jittered backoff.** Makes retry timing untestable for no benefit at this
+  volume; the deterministic schedule plus the `Retry-After` cap is enough.
+- **Cache key without `user_id`.** Better hit rate, but cached results contain
+  restored personal data — a cross-user leak. Rejected on privacy grounds.
+- **Hardcoding URLs/model IDs in the gateway.** Would make the ADR's verification
+  stale the moment a model is renamed; settings keep one place to change.
+- **A retry loop around the repair attempt.** The PRD allows one repair; more
+  attempts cost tokens and latency without a bounded promise.
+- **`nvext.guided_json` for NVIDIA.** The NIM docs describe it, but the hosted
+  API rejected it for `nvidia/nemotron-3-super-120b-a12b` (400, unknown field
+  `guided_json`), while the OpenAI-compatible `response_format` worked on every
+  hosted model probed. One request shape for both providers is also less code.
+- **A live-verified model ID in the docs instead of the documented one.** The
+  NVIDIA docs page still listed `meta/llama-3.3-70b-instruct`, but the live API
+  returned 410 (EOL 2026-08-26). The ADR records the probe result, and the default
+  was changed to a model that answered.
+
+Consequences (accepted limits, all covered by tests):
+
+- The gateway keeps no per-model rate-limit accounting; it reacts to 429s and
+  `Retry-After` rather than staying under the published RPM/TPM budgets. Live
+  bake-off runs must therefore keep their request count small (free tiers are
+  30–40 RPM).
+- `nvext.guided_json` is not used; output is still fully validated, so a model
+  that ignores the schema degrades to "repair or fail", not to silent acceptance.
+- The NVIDIA free trial is **slow** in practice: the 2026-10-19 bake-off (11
+  synthetic cases per model, one repeat, 20 s timeout) measured p50/p95 of
+  9.4 s/19.6 s for `openai/gpt-oss-20b` (6/11 answered, 0 grounding rejections)
+  and 15.3 s/19.3 s for `nvidia/nemotron-3-super-120b-a12b` (10/11 answered, 4
+  grounding rejections). Groq answered 11/11 at p50 1.9 s / p95 6.1 s with 1
+  grounding rejection. `openai/gpt-oss-20b` stays the default secondary because it
+  did not fabricate on the synthetic corpus; the secondary is a degraded fallback
+  on the free tier, not a like-for-like alternative, and production should use a
+  paid tier or a different secondary.
+- The NVIDIA-hosted catalog drifts: four model IDs still documented on 2026-10-19
+  returned HTTP 410. Model IDs are configuration, and the bake-off is the check
+  that catches a retirement before a user does.
+- Retries (and their backoff sleeps) happen inside one request, so a slow primary
+  can add up to its retry budget before the secondary is tried. `AI_TIMEOUT_SECONDS`
+  (20 s) plus the retry-after cap bound that.
+- Cache and quota are single-process; a multi-worker deployment needs the
+  Redis/Postgres-backed stores the interfaces anticipate.
+- Grounding is enforced by the deterministic validator, not by the provider; a
+  model that cannot produce grounded claims for a task will fail that task at
+  `ai_ungrounded` rather than return something usable (see ADR-030).
+
+## ADR-030 — 2026-10-19 — B3 privacy boundary (reversible redaction) and claim validator v1
+
+Context: PRD §11 requires that personal data is stripped before any external AI
+call and that a recorded AI-processing consent gates the call; PRD §12 rates LLM
+fabrication as critical, and RG-2..RG-4 require every generated claim to be
+grounded in supplied evidence. B3 had to make both properties *structural* —
+enforced by the gateway and a dependency — rather than prompt requests the model
+is asked to honour.
+
+Decision:
+
+- **Redaction is reversible and per request.** `app/ai/privacy.py` replaces, in
+  this order, known profile fields (longest first, so "Alex Rivera" wins over
+  "Alex"), URLs, e-mails, phone numbers and street addresses with stable
+  placeholders (`[[EMAIL_1]]`, `[[FIELD_2]]`, …). The same value always maps to the
+  same placeholder inside one call; the mapping lives in memory for that call
+  only and is never logged or cached. Placeholders are JSON-safe and survive a
+  model copy.
+- **The whole rendered prompt is redacted, not just the input field.** User
+  prompt and every evidence line pass through the same session, so an e-mail that
+  only appears in the evidence text is stripped too.
+- **Restore happens before validation.** The provider's JSON is parsed, the
+  placeholders are restored, and only then is it validated against the task
+  model, so length/pattern checks see the real values, and the caller never sees a
+  placeholder. Cached values are therefore stored restored — which is exactly why
+  the cache key includes the user id (ADR-029).
+- **Consent is a token, not a boolean.** `ConsentGrant` is only minted by
+  `app.api.deps.require_ai_consent`, which returns it after `consent_records`
+  shows a live `ai_processing` grant (RLS-scoped, caller's JWT). `AIGateway.run`
+  *requires* the token, so a code path that skips the dependency cannot call a
+  provider. The store fails closed on network error, non-200 or unparseable JSON.
+  The bake-off uses `ConsentGrant.for_synthetic_data`, explicitly labelled
+  `synthetic_fixture`, because its corpus contains no real person's data.
+- **Claim validator v1 is deterministic (no LLM).** `app/ai/claims.py` checks each
+  claim against its cited evidence:
+  - **numbers/metrics** — currency, `%`, `k`/`m`/`bn` suffixes, thousands
+    separators; normalised before comparison;
+  - **technologies** — a curated canonical lexicon with aliases, so adjacent
+    skills stay distinct: `TypeScript` is not `JavaScript`, `Docker` is not
+    `Kubernetes`; `K8s`→`Kubernetes` and `Postgres`→`PostgreSQL` are aliases, not
+    substitutions;
+  - **organisations** — suffixed names (`Inc`, `LLC`, `Ltd`, `Corp`, `GmbH`,
+    `University`, …) plus declared `organizations` on the evidence;
+  - **titles** — capitalised title phrases including level modifiers, so
+    "Senior Software Engineer" is rejected when the evidence only says "Software
+    Engineer"; the reverse (claiming the subset) is allowed;
+  - **dates** — `19xx`/`20xx` years and month-year pairs;
+  - **evidence integrity** — unknown evidence ids and claims with no known
+    citation are rejected.
+  Violations carry a code and the offending *token only* (never the claim text,
+  which may include restored personal data). The gateway runs the validator on
+  every successful generation: `grounding="fail"` (default) raises
+  `AIGroundingError` and caches nothing; `grounding="report"` returns the report,
+  which is what the bake-off uses to count grounding errors without aborting.
+- **No task may add facts.** All four prompts (`parse_job_requirements`,
+  `rewrite_bullet`, `explain_gap`, `extract_resume_fields`) share the
+  `NO_NEW_FACTS` rule from `app/ai/prompts/base.py` and receive only supplied
+  evidence items, rendered with their ids. Every result model is a
+  `GroundedResult`: a list of claims, each with at least one evidence id.
+  `extract_resume_fields` refines the deterministic parser's text only — B2
+  discards the original document, so there is nothing else to read.
+
+Rejected alternatives:
+
+- **Irreversible redaction** (drop the PII). Simple, but then the generated bullet
+  can never mention the person's own name or contact line, which
+  `extract_resume_fields` needs. Placeholders keep the information in the user's
+  own request.
+- **A blocklist of "sensitive" words in the prompt** instead of redaction.
+  Cosmetic: the data still leaves the process.
+- **Checking consent with a boolean flag on the gateway.** Easy to flip anywhere
+  in the codebase; a token that only the dependency can mint keeps the check at
+  the boundary.
+- **An LLM-based grounding judge.** Non-deterministic, costs tokens, and cannot be
+  the thing that decides whether a metric was invented. Deterministic v1 first.
+- **Rejecting on any capitalised run.** Too many false positives (sentence starts,
+  product names). Titles are matched against a title-word list and organisations
+  against suffixes/declared fields.
+- **Auto-repairing ungrounded output.** Grounding failures are deterministic
+  evidence gaps; asking the model again invites it to "fix" the claim by
+  re-wording it into a different invention.
+
+Consequences (accepted limits, all covered by tests):
+
+- The lexicon is finite: a supported technology written as an unknown synonym
+  ("Postgres" is handled, "psql" is not) can be flagged. Fail-closed is the
+  intended direction — extend the lexicon or the evidence rather than publish an
+  invented qualification — but it will cost some false positives in the bake-off.
+- Organisations without a recognised suffix and not declared on the evidence
+  ("I worked at Initech") are not detected; declaring `organizations` on the
+  evidence is the reliable path.
+- Numbers are compared as tokens: "twelve thousand" in a claim versus `12,000` in
+  the evidence is a violation, and a claim that merely *repeats* a supported number
+  in the wrong context still passes. Context and negation are not modelled.
+- Redaction covers e-mail, phone, URL, street address and known profile fields.
+  Free-text PII (an unusual name form, a street address without a suffix, a
+  non-`example`-style domain) can survive; a NER pass or a stricter field list is
+  future work, and the consent gate plus the metrics-only logging limit the
+  blast radius meanwhile.
+- B3 exposes no public AI route, so consent, quota and grounding are exercised by
+  tests (mocked transports) and the bake-off, not by a user-facing endpoint.
+

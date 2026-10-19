@@ -19,7 +19,24 @@ class JsonFormatter(logging.Formatter):
             "request_id": request_id_ctx.get(),
         }
         # Only allow explicitly passed safe extras; bodies/headers/PII must never reach here.
-        for key in ("method", "path", "status", "duration_ms", "code"):
+        for key in (
+            "method",
+            "path",
+            "status",
+            "duration_ms",
+            "code",
+            # AI metrics (B3): provider, model, latency, token counts, validity.
+            # Never a prompt, a response body or a key (ADR-029).
+            "provider",
+            "model",
+            "latency_ms",
+            "prompt_tokens",
+            "completion_tokens",
+            "valid",
+            "task",
+            "attempt",
+            "cache_hit",
+        ):
             if hasattr(record, key):
                 payload[key] = getattr(record, key)
         return json.dumps(payload)

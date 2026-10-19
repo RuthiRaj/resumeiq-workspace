@@ -1,4 +1,4 @@
-# ResumeIQ backend (FastAPI) — B0 scaffold + B1 workspace API + B2 import parsing
+# ResumeIQ backend (FastAPI) — B0 scaffold + B1 workspace API + B2 import parsing + B3 AI gateway
 
 B0: app scaffold, Supabase JWT auth (`GET /api/v1/me`), `GET /health`, security
 defaults, Postgres schema + RLS, OpenAPI contract export, Docker, CI.
@@ -57,8 +57,10 @@ With plain pip instead of uv: `python -m venv .venv && .venv/bin/activate`
 
 `.env.example` lists every runtime variable (no real values committed), grouped
 as **App**, **CORS**, **Supabase**, **AI providers** and **Limits**, each with a
-comment. The runtime app only reads variables in that file; the **AI providers**
-group is intentionally empty because no provider key is read before B3.
+comment. The **AI providers** group is **optional**: the backend starts with no
+provider key, and an AI call then fails with the typed `ai_not_configured` error
+instead of reaching the network. Adding a key is all that is needed to enable
+live calls (see the AI gateway section below).
 
 - The app **fails fast at startup**: if a required variable is missing it exits
   with a message naming it (`SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`) — a value
@@ -164,6 +166,78 @@ attested/verified evidence rules. Both suites skip cleanly when the flag or the
 credentials are absent; the import suite also skips when `0004` is not applied,
 and prints which condition caused the skip. No key, password or token is ever
 printed.
+
+## AI gateway (B3)
+
+`app/ai/` is a provider-agnostic gateway over an OpenAI-compatible HTTP client.
+**There are no public AI endpoints in B3** — the gateway is infrastructure that B4
+(job analysis) and B5 (reports/generation) will call.
+
+- **Providers** are chosen by config (`AI_PRIMARY_PROVIDER=groq`,
+  `AI_SECONDARY_PROVIDER=nvidia`). Base URLs and model IDs come from settings and
+  are never hardcoded in request code; defaults live in `.env.example` comments.
+  Both providers' docs were read **and probed live** on 2026-10-19 — base URLs,
+  current model IDs (the NVIDIA docs still listed retired ones), structured-output
+  form, free-tier rate limits and data terms are recorded in `docs/DECISIONS.md`
+  ADR-029 and measured in `docs/ai-bakeoff.md`.
+- **Structured output**: each task is a Pydantic model. Both providers get
+  `response_format={"type":"json_schema", "strict":true}` (NVIDIA's hosted endpoint
+  rejected `nvext.guided_json` for a current model, so the OpenAI-compatible form
+  is the verified path). Every response is validated; a Groq
+  `json_validate_failed` 400 is treated as an invalid output, not a hard error.
+  On failure the gateway makes **one** repair attempt, then fails with the typed
+  `ai_invalid_output` error.
+- **Reliability**: per-request timeout, retry with exponential backoff, and
+  fallback to the secondary provider on 429, 5xx or timeout (an oversized
+  `Retry-After` falls back immediately instead of sleeping). Other 4xx fail fast.
+- **Cache**: in-memory, keyed by a SHA-256 of the request (task, redacted
+  messages, schema **and the user id**, so one person's restored result can never
+  be served to another), TTL from `AI_CACHE_TTL_SECONDS`. A cache hit makes no
+  provider call and consumes no quota.
+- **Quota**: `AI_DAILY_QUOTA` per user per UTC day, behind the `QuotaStore`
+  interface (`InMemoryDailyQuota` is the B3 implementation; a database-backed
+  store slots in later).
+- **Privacy**: before any external call, email, phone, URLs, street addresses and
+  the caller's known profile fields are replaced with reversible placeholders
+  (`[[EMAIL_1]]`, `[[FIELD_2]]`, …); generated text is restored before validation
+  and return. Logs carry provider, model, latency, token counts and validity only —
+  never a prompt, a response, or a key.
+- **Consent**: no AI call runs without a `ConsentGrant`, which only
+  `app.api.deps.require_ai_consent` mints after finding a live row in
+  `consent_records` (`purpose='ai_processing'`, not revoked). The dependency is
+  ready for B4/B5.
+- **Grounding**: `app/ai/claims.py` is a deterministic validator (no LLM) that
+  rejects claims whose numbers, technologies, organisations, titles or dates do
+  not appear in the cited evidence — including adjacent-skill substitution
+  (TypeScript for JavaScript, Docker for Kubernetes) and inflated titles.
+
+### Bake-off
+
+```bash
+cd backend
+uv run python scripts/ai_bakeoff.py                 # writes docs/ai-bakeoff.md (skipped without keys)
+uv run python scripts/ai_bakeoff.py --simulate      # offline self-check of the harness
+$env:RUN_AI_LIVE=1; uv run python scripts/ai_bakeoff.py   # live, only if a key is present
+```
+
+It runs the four typed tasks over the **synthetic** corpus in
+`backend/tests/golden/` (no real personal data) and reports JSON validity after
+retries, latency p50/p95 and grounding errors per provider and model. Live calls
+happen only with `RUN_AI_LIVE=1` and a key. Results: `docs/ai-bakeoff.md`.
+
+### AI environment variables
+
+| Variable | Meaning |
+|---|---|
+| `GROQ_API_KEY` / `NVIDIA_API_KEY` | provider keys (optional; empty = provider skipped) |
+| `GROQ_BASE_URL` / `NVIDIA_BASE_URL` | OpenAI-compatible base URL (defaults in `.env.example`) |
+| `GROQ_MODEL` / `NVIDIA_MODEL` | model ID (defaults in `.env.example`) |
+| `AI_PRIMARY_PROVIDER` / `AI_SECONDARY_PROVIDER` | fallback order |
+| `AI_TIMEOUT_SECONDS`, `AI_MAX_RETRIES`, `AI_BACKOFF_BASE_SECONDS`, `AI_RETRY_AFTER_CAP_SECONDS` | timeout/retry policy |
+| `AI_MAX_OUTPUT_TOKENS`, `AI_DAILY_QUOTA`, `AI_CACHE_TTL_SECONDS`, `AI_CACHE_MAX_ENTRIES` | generation, quota and cache limits |
+
+`scripts/check_env.py` reports these names as **optional** (they never affect
+`--strict`).
 
 ## Supabase JWT verification (what was verified)
 
