@@ -30,11 +30,14 @@ from jwt.types import Options
 
 from app.ai.consent import ConsentGrant, ConsentStore, SupabaseConsentStore
 from app.ai.gateway import AIGateway
+from app.analysis.enrichment import AnalysisEnricher
 from app.core.config import Settings
 from app.core.logging import get_logger
 from app.extraction.engine import DeterministicExtractionEngine, ExtractionEngine
 from app.repositories.imports import ImportRepository, SupabaseImportRepository
+from app.repositories.targets import SupabaseTargetRepository, TargetRepository
 from app.repositories.workspace import SupabaseWorkspaceRepository, WorkspaceRepository
+from app.services.analysis_service import AnalysisService
 from app.services.import_service import ImportService
 from app.services.workspace_service import WorkspaceService
 
@@ -294,3 +297,79 @@ def get_ai_gateway(request: Request) -> AIGateway:
     gateway = AIGateway.from_settings(request.app.state.settings)
     request.app.state.ai_gateway = gateway
     return gateway
+
+
+# --- Analysis (B4) ---------------------------------------------------------
+
+_UNSET = object()
+
+
+def get_target_repository(request: Request) -> TargetRepository:
+    """A target repository bound to the caller's JWT (RLS enforced in Postgres)."""
+    settings: Settings = request.app.state.settings
+    if not settings.data_api_configured:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "code": "data_api_not_configured",
+                "message": "Server data access is not configured.",
+            },
+        )
+    return SupabaseTargetRepository(
+        settings.rest_url,
+        settings.supabase_publishable_key,
+        get_bearer_token(request),
+    )
+
+
+def require_analysis_consent(
+    request: Request,
+    user: Annotated[UserClaims, Depends(get_current_user)],
+) -> ConsentGrant:
+    """Gate ``POST /targets/{id}/analysis`` on recorded AI-processing consent.
+
+    The contract (docs/api/contract-proposals.md §3.4) requires this even though
+    the engine itself is deterministic: the endpoint is where optional AI
+    enrichment may run, so a caller without a grant gets ``consent_required``.
+    The deterministic engine and every unit/parity test run without consent.
+    """
+    if not get_ai_consent_store(request).has_ai_consent(user.sub):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "code": "consent_required",
+                "message": "Record AI-processing consent before running an analysis.",
+            },
+        )
+    return ConsentGrant(user_id=user.sub)
+
+
+def get_analysis_enricher(request: Request) -> AnalysisEnricher | None:
+    """Optional AI enrichment: ``None`` when no provider is configured.
+
+    Tests can pin ``app.state.analysis_enricher`` to a fake or to ``None``.
+    """
+    override = getattr(request.app.state, "analysis_enricher", _UNSET)
+    if override is not _UNSET:
+        return cast(AnalysisEnricher | None, override)
+    settings: Settings = request.app.state.settings
+    if not settings.ai_configured:
+        return None
+    enricher = AnalysisEnricher(get_ai_gateway(request))
+    request.app.state.analysis_enricher = enricher
+    return enricher
+
+
+def get_analysis_service(
+    targets: Annotated[TargetRepository, Depends(get_target_repository)],
+    workspace: Annotated[WorkspaceRepository, Depends(get_workspace_repository)],
+    request: Request,
+) -> AnalysisService:
+    """FastAPI dependency: the analysis service over the request's repositories."""
+    settings: Settings = request.app.state.settings
+    return AnalysisService(
+        targets,
+        workspace,
+        stage_delay_seconds=settings.analysis_stage_delay_seconds,
+        enricher=get_analysis_enricher(request),
+    )

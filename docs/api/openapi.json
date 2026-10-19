@@ -731,10 +731,678 @@
           }
         }
       }
+    },
+    "/api/v1/targets": {
+      "get": {
+        "tags": [
+          "targets"
+        ],
+        "summary": "List the caller's job targets",
+        "operationId": "list_targets_api_v1_targets_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/JobTarget"
+                  },
+                  "type": "array",
+                  "title": "Response List Targets Api V1 Targets Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "targets"
+        ],
+        "summary": "Create a job target",
+        "operationId": "create_target_api_v1_targets_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TargetCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobTarget"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "target_invalid"
+          }
+        }
+      }
+    },
+    "/api/v1/targets/{target_id}": {
+      "get": {
+        "tags": [
+          "targets"
+        ],
+        "summary": "Read one job target",
+        "operationId": "get_target_api_v1_targets__target_id__get",
+        "parameters": [
+          {
+            "name": "target_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Target Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobTarget"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "target_not_found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/targets/{target_id}/analysis": {
+      "post": {
+        "tags": [
+          "targets"
+        ],
+        "summary": "Start (or restart) an analysis run",
+        "operationId": "start_analysis_api_v1_targets__target_id__analysis_post",
+        "parameters": [
+          {
+            "name": "target_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Target Id"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalysisRunResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "consent_required"
+          },
+          "404": {
+            "description": "target_not_found"
+          },
+          "409": {
+            "description": "analysis_already_running"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "targets"
+        ],
+        "summary": "Read the latest analysis report",
+        "operationId": "get_analysis_report_api_v1_targets__target_id__analysis_get",
+        "parameters": [
+          {
+            "name": "target_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Target Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalysisReport"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "target_not_found or report_not_ready"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/targets/{target_id}/analysis/run": {
+      "get": {
+        "tags": [
+          "targets"
+        ],
+        "summary": "Poll the latest analysis run",
+        "operationId": "get_analysis_run_api_v1_targets__target_id__analysis_run_get",
+        "parameters": [
+          {
+            "name": "target_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Target Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalysisRunResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "target_not_found or analysis_run_not_found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "AnalysisFailure": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "stage": {
+            "type": "string",
+            "enum": [
+              "reading",
+              "extracting",
+              "searching",
+              "matching",
+              "scoring",
+              "writing"
+            ],
+            "title": "Stage"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "message",
+          "stage"
+        ],
+        "title": "AnalysisFailure"
+      },
+      "AnalysisReport": {
+        "properties": {
+          "targetId": {
+            "type": "string",
+            "title": "Targetid"
+          },
+          "workspaceVersion": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Workspaceversion"
+          },
+          "generatedAt": {
+            "type": "string",
+            "title": "Generatedat"
+          },
+          "score": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Score"
+          },
+          "factors": {
+            "items": {
+              "$ref": "#/components/schemas/ScoreFactor"
+            },
+            "type": "array",
+            "title": "Factors"
+          },
+          "methodology": {
+            "$ref": "#/components/schemas/Methodology"
+          },
+          "requirements": {
+            "items": {
+              "$ref": "#/components/schemas/Requirement"
+            },
+            "type": "array",
+            "title": "Requirements"
+          },
+          "skills": {
+            "$ref": "#/components/schemas/SkillAnalysis"
+          },
+          "included": {
+            "items": {
+              "$ref": "#/components/schemas/ContentDecision"
+            },
+            "type": "array",
+            "title": "Included"
+          },
+          "excluded": {
+            "items": {
+              "$ref": "#/components/schemas/ContentDecision"
+            },
+            "type": "array",
+            "title": "Excluded"
+          },
+          "content": {
+            "$ref": "#/components/schemas/ContentReport"
+          },
+          "roadmap": {
+            "items": {
+              "$ref": "#/components/schemas/RoadmapStep"
+            },
+            "type": "array",
+            "title": "Roadmap"
+          },
+          "ats": {
+            "$ref": "#/components/schemas/AtsReport"
+          },
+          "aiUsed": {
+            "type": "boolean",
+            "title": "Aiused",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "targetId",
+          "workspaceVersion",
+          "generatedAt",
+          "score",
+          "methodology",
+          "skills",
+          "content",
+          "ats"
+        ],
+        "title": "AnalysisReport"
+      },
+      "AnalysisRun": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "targetId": {
+            "type": "string",
+            "title": "Targetid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "running",
+              "succeeded",
+              "failed"
+            ],
+            "title": "Status"
+          },
+          "stage": {
+            "type": "string",
+            "enum": [
+              "reading",
+              "extracting",
+              "searching",
+              "matching",
+              "scoring",
+              "writing"
+            ],
+            "title": "Stage"
+          },
+          "stageIndex": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Stageindex"
+          },
+          "stageCount": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Stagecount"
+          },
+          "progress": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Progress"
+          },
+          "workspaceVersion": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Workspaceversion"
+          },
+          "startedAt": {
+            "type": "string",
+            "title": "Startedat"
+          },
+          "updatedAt": {
+            "type": "string",
+            "title": "Updatedat"
+          },
+          "finishedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finishedat"
+          },
+          "failure": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AnalysisFailure"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "targetId",
+          "status",
+          "stage",
+          "stageIndex",
+          "stageCount",
+          "progress",
+          "workspaceVersion",
+          "startedAt",
+          "updatedAt"
+        ],
+        "title": "AnalysisRun"
+      },
+      "AnalysisRunResponse": {
+        "properties": {
+          "run": {
+            "$ref": "#/components/schemas/AnalysisRun"
+          },
+          "report": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AnalysisReport"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "run"
+        ],
+        "title": "AnalysisRunResponse"
+      },
+      "AtsCheck": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pass",
+              "issue",
+              "not_checked"
+            ],
+            "title": "Status"
+          },
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          },
+          "issueIds": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Issueids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "status",
+          "detail"
+        ],
+        "title": "AtsCheck"
+      },
+      "AtsExample": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "issueId": {
+            "type": "string",
+            "title": "Issueid"
+          },
+          "before": {
+            "type": "string",
+            "title": "Before"
+          },
+          "after": {
+            "type": "string",
+            "title": "After"
+          },
+          "note": {
+            "type": "string",
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "issueId",
+          "before",
+          "after",
+          "note"
+        ],
+        "title": "AtsExample"
+      },
+      "AtsIssue": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "low",
+              "med",
+              "high"
+            ],
+            "title": "Severity"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "fix": {
+            "type": "string",
+            "title": "Fix"
+          },
+          "check": {
+            "type": "string",
+            "title": "Check",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "severity",
+          "message",
+          "fix"
+        ],
+        "title": "AtsIssue"
+      },
+      "AtsKeyword": {
+        "properties": {
+          "keyword": {
+            "type": "string",
+            "title": "Keyword"
+          },
+          "present": {
+            "type": "boolean",
+            "title": "Present"
+          },
+          "requirementId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requirementid"
+          }
+        },
+        "type": "object",
+        "required": [
+          "keyword",
+          "present"
+        ],
+        "title": "AtsKeyword"
+      },
+      "AtsReport": {
+        "properties": {
+          "score": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Score"
+          },
+          "keywordCoverage": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Keywordcoverage"
+          },
+          "keywords": {
+            "items": {
+              "$ref": "#/components/schemas/AtsKeyword"
+            },
+            "type": "array",
+            "title": "Keywords"
+          },
+          "checks": {
+            "items": {
+              "$ref": "#/components/schemas/AtsCheck"
+            },
+            "type": "array",
+            "title": "Checks"
+          },
+          "issues": {
+            "items": {
+              "$ref": "#/components/schemas/AtsIssue"
+            },
+            "type": "array",
+            "title": "Issues"
+          },
+          "examples": {
+            "items": {
+              "$ref": "#/components/schemas/AtsExample"
+            },
+            "type": "array",
+            "title": "Examples"
+          }
+        },
+        "type": "object",
+        "required": [
+          "score",
+          "keywordCoverage"
+        ],
+        "title": "AtsReport"
+      },
       "Attachment": {
         "properties": {
           "id": {
@@ -853,6 +1521,51 @@
           "text"
         ],
         "title": "Claim"
+      },
+      "ContentDecision": {
+        "properties": {
+          "itemId": {
+            "type": "string",
+            "title": "Itemid"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "itemId",
+          "reason"
+        ],
+        "title": "ContentDecision"
+      },
+      "ContentReport": {
+        "properties": {
+          "supportedRequirementIds": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Supportedrequirementids"
+          },
+          "needsEvidenceRequirementIds": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Needsevidencerequirementids"
+          },
+          "sectionsToImprove": {
+            "items": {
+              "$ref": "#/components/schemas/SectionToImprove"
+            },
+            "type": "array",
+            "title": "Sectionstoimprove"
+          }
+        },
+        "type": "object",
+        "title": "ContentReport"
       },
       "ErrorDetail": {
         "properties": {
@@ -1407,6 +2120,116 @@
         "title": "ImportUploadResponse",
         "description": "``POST /imports`` body. ``import`` is a Python keyword, hence the alias."
       },
+      "JobTarget": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "role": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Role"
+          },
+          "company": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company"
+          },
+          "jobDescription": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Jobdescription"
+          },
+          "requiredSkills": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Requiredskills"
+          },
+          "template": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "precision",
+                  "classic",
+                  "compact"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Template"
+          },
+          "length": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "one_page",
+                  "two_page"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Length"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "analyzing",
+              "ready",
+              "failed"
+            ],
+            "title": "Status",
+            "default": "draft"
+          },
+          "analysis": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TargetAnalysisSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sample": {
+            "type": "boolean",
+            "title": "Sample",
+            "default": false
+          },
+          "createdAt": {
+            "type": "string",
+            "title": "Createdat"
+          },
+          "updatedAt": {
+            "type": "string",
+            "title": "Updatedat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "role",
+          "jobDescription",
+          "createdAt",
+          "updatedAt"
+        ],
+        "title": "JobTarget"
+      },
       "MeResponse": {
         "properties": {
           "id": {
@@ -1451,6 +2274,114 @@
         ],
         "title": "MeResponse",
         "description": "Authenticated caller identity. PII-minimal: only what the token asserts."
+      },
+      "Methodology": {
+        "properties": {
+          "note": {
+            "type": "string",
+            "title": "Note"
+          },
+          "scoreDisclaimer": {
+            "type": "string",
+            "title": "Scoredisclaimer"
+          },
+          "atsDisclaimer": {
+            "type": "string",
+            "title": "Atsdisclaimer"
+          },
+          "atsNote": {
+            "type": "string",
+            "title": "Atsnote"
+          }
+        },
+        "type": "object",
+        "required": [
+          "note",
+          "scoreDisclaimer",
+          "atsDisclaimer",
+          "atsNote"
+        ],
+        "title": "Methodology"
+      },
+      "Requirement": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "required",
+              "preferred"
+            ],
+            "title": "Kind"
+          },
+          "pattern": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "experience",
+                  "education",
+                  "seniority"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pattern"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "matched",
+              "partial",
+              "unsupported"
+            ],
+            "title": "Status"
+          },
+          "gapType": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "not_evidenced",
+                  "genuinely_missing"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gaptype"
+          },
+          "evidenceIds": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Evidenceids"
+          },
+          "explanation": {
+            "type": "string",
+            "title": "Explanation",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "text",
+          "kind",
+          "status"
+        ],
+        "title": "Requirement"
       },
       "ResumeResponse": {
         "properties": {
@@ -1531,6 +2462,255 @@
           "key"
         ],
         "title": "ResumeSection"
+      },
+      "RoadmapStep": {
+        "properties": {
+          "priority": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Priority"
+          },
+          "action": {
+            "type": "string",
+            "title": "Action"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "priority",
+          "action",
+          "reason"
+        ],
+        "title": "RoadmapStep"
+      },
+      "ScoreFactor": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "weight": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Weight"
+          },
+          "value": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Value"
+          },
+          "detail": {
+            "type": "string",
+            "title": "Detail",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "weight",
+          "value"
+        ],
+        "title": "ScoreFactor"
+      },
+      "SectionToImprove": {
+        "properties": {
+          "section": {
+            "type": "string",
+            "enum": [
+              "personal",
+              "education",
+              "experience",
+              "internship",
+              "project",
+              "skill",
+              "achievement",
+              "extracurricular",
+              "certificate",
+              "course",
+              "publication",
+              "training"
+            ],
+            "title": "Section"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "section",
+          "reason"
+        ],
+        "title": "SectionToImprove"
+      },
+      "SkillAnalysis": {
+        "properties": {
+          "documented": {
+            "items": {
+              "$ref": "#/components/schemas/SkillFinding"
+            },
+            "type": "array",
+            "title": "Documented"
+          },
+          "demonstrated": {
+            "items": {
+              "$ref": "#/components/schemas/SkillFinding"
+            },
+            "type": "array",
+            "title": "Demonstrated"
+          },
+          "notEvidenced": {
+            "items": {
+              "$ref": "#/components/schemas/SkillGap"
+            },
+            "type": "array",
+            "title": "Notevidenced"
+          },
+          "toDevelop": {
+            "items": {
+              "$ref": "#/components/schemas/SkillGap"
+            },
+            "type": "array",
+            "title": "Todevelop"
+          }
+        },
+        "type": "object",
+        "title": "SkillAnalysis"
+      },
+      "SkillFinding": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "itemIds": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Itemids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "SkillFinding"
+      },
+      "SkillGap": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "reason"
+        ],
+        "title": "SkillGap"
+      },
+      "TargetAnalysisSummary": {
+        "properties": {
+          "score": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Score"
+          },
+          "analysedAt": {
+            "type": "string",
+            "title": "Analysedat"
+          },
+          "workspaceVersion": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Workspaceversion"
+          },
+          "stale": {
+            "type": "boolean",
+            "title": "Stale",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "score",
+          "analysedAt",
+          "workspaceVersion"
+        ],
+        "title": "TargetAnalysisSummary"
+      },
+      "TargetCreate": {
+        "properties": {
+          "role": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 2,
+            "title": "Role"
+          },
+          "company": {
+            "type": "string",
+            "maxLength": 120,
+            "title": "Company",
+            "default": ""
+          },
+          "jobDescription": {
+            "type": "string",
+            "maxLength": 20000,
+            "minLength": 40,
+            "title": "Jobdescription"
+          },
+          "requiredSkills": {
+            "items": {
+              "type": "string",
+              "maxLength": 40,
+              "minLength": 1
+            },
+            "type": "array",
+            "maxItems": 25,
+            "title": "Requiredskills"
+          },
+          "template": {
+            "type": "string",
+            "enum": [
+              "precision",
+              "classic",
+              "compact"
+            ],
+            "title": "Template",
+            "default": "precision"
+          },
+          "length": {
+            "type": "string",
+            "enum": [
+              "one_page",
+              "two_page"
+            ],
+            "title": "Length",
+            "default": "one_page"
+          }
+        },
+        "type": "object",
+        "required": [
+          "role",
+          "jobDescription"
+        ],
+        "title": "TargetCreate",
+        "description": "``POST /targets`` body (contract \u00a73.3)."
       },
       "ValidationError": {
         "properties": {

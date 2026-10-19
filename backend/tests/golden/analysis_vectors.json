@@ -1,0 +1,5441 @@
+{
+  "version": 1,
+  "source": "frontend/src/lib/analysis (F4 reference engine)",
+  "generatedFor": "B4 parity",
+  "cases": [
+    {
+      "id": "fixture-strong",
+      "target": {
+        "id": "tgt-sample-strong",
+        "role": "Senior Frontend Engineer",
+        "company": "Halcyon Systems",
+        "jobDescription": "Senior Frontend Engineer — Halcyon Systems\n\nResponsibilities\n• Build and maintain our customer dashboard in TypeScript and React.\n• Work with our PostgreSQL data layer and keep the queries fast.\n• Write integration tests for the flows you ship.\n\nRequirements\n• 3+ years of professional frontend experience.\n• Strong TypeScript and React skills.\n• Comfortable with PostgreSQL and SQL.\n• Bachelor's degree in Computer Science or a related field.",
+        "requiredSkills": [
+          "TypeScript",
+          "React"
+        ],
+        "template": "precision",
+        "length": "one_page",
+        "status": "draft",
+        "analysis": null,
+        "sample": false,
+        "createdAt": "2026-10-17T09:00:00.000Z",
+        "updatedAt": "2026-10-17T09:00:00.000Z"
+      },
+      "items": [
+        {
+          "id": "mid-personal",
+          "section": "personal",
+          "title": "Ravi Menon",
+          "location": "Example City",
+          "bullets": [],
+          "tags": [
+            "backend",
+            "platform"
+          ],
+          "links": [
+            "https://example.com/ravi"
+          ],
+          "attachments": [],
+          "evidence": "attested",
+          "order": 0
+        },
+        {
+          "id": "mid-experience-northwind",
+          "section": "experience",
+          "title": "Software Engineer",
+          "organization": "Northwind Labs",
+          "startDate": "2023-02",
+          "location": "Remote",
+          "bullets": [
+            "Owned the billing service's read path and cut p95 latency from 480ms to 120ms.",
+            "Introduced integration tests that caught a data-migration regression before release."
+          ],
+          "tags": [
+            "typescript",
+            "postgres",
+            "observability"
+          ],
+          "links": [],
+          "attachments": [
+            {
+              "id": "att-northwind-letter",
+              "name": "northwind-offer-letter.pdf",
+              "url": "mock://att-northwind-letter"
+            }
+          ],
+          "evidence": "verified",
+          "order": 0
+        },
+        {
+          "id": "mid-experience-acme",
+          "section": "experience",
+          "title": "Junior Developer",
+          "organization": "Acme Corp",
+          "startDate": "2021-06",
+          "endDate": "2023-01",
+          "location": "Example City",
+          "bullets": [
+            "Maintained the internal admin dashboard used by the support team."
+          ],
+          "tags": [
+            "javascript",
+            "react"
+          ],
+          "links": [],
+          "attachments": [],
+          "evidence": "attested",
+          "order": 1
+        },
+        {
+          "id": "mid-project-pdf",
+          "section": "project",
+          "title": "Open-source PDF exporter",
+          "organization": "Personal project",
+          "startDate": "2024-03",
+          "bullets": [
+            "Published a small library that renders structured documents to ATS-safe PDFs.",
+            "Handled the layout and pagination so exported text stays selectable."
+          ],
+          "tags": [
+            "typescript",
+            "pdf"
+          ],
+          "links": [
+            "https://github.com/example/pdf-exporter"
+          ],
+          "attachments": [],
+          "evidence": "verified",
+          "order": 0
+        },
+        {
+          "id": "mid-skill-ts",
+          "section": "skill",
+          "title": "TypeScript",
+          "bullets": [],
+          "tags": [
+            "language"
+          ],
+          "links": [],
+          "attachments": [],
+          "evidence": "attested",
+          "order": 0
+        },
+        {
+          "id": "mid-skill-postgres",
+          "section": "skill",
+          "title": "PostgreSQL",
+          "bullets": [],
+          "tags": [
+            "database"
+          ],
+          "links": [],
+          "attachments": [],
+          "evidence": "attested",
+          "order": 1
+        },
+        {
+          "id": "mid-skill-k8s",
+          "section": "skill",
+          "title": "Kubernetes (learning)",
+          "bullets": [],
+          "tags": [
+            "devops"
+          ],
+          "links": [],
+          "attachments": [],
+          "evidence": "related",
+          "order": 2
+        },
+        {
+          "id": "mid-education",
+          "section": "education",
+          "title": "B.Eng. Computer Engineering",
+          "organization": "Example Institute of Technology",
+          "startDate": "2017-08",
+          "endDate": "2021-05",
+          "bullets": [],
+          "tags": [],
+          "links": [],
+          "attachments": [],
+          "evidence": "attested",
+          "order": 0
+        },
+        {
+          "id": "mid-cert-aws",
+          "section": "certificate",
+          "title": "AWS Certified Cloud Practitioner",
+          "organization": "Amazon Web Services",
+          "endDate": "2024-11",
+          "bullets": [],
+          "tags": [
+            "cloud"
+          ],
+          "links": [],
+          "attachments": [
+            {
+              "id": "att-aws-cert",
+              "name": "aws-cloud-practitioner.pdf",
+              "url": "mock://att-aws-cert"
+            }
+          ],
+          "evidence": "verified",
+          "order": 0
+        },
+        {
+          "id": "mid-publication",
+          "section": "publication",
+          "title": "Parsing resumes without inventing facts",
+          "organization": "Example Tech Blog",
+          "endDate": "2025-09",
+          "bullets": [
+            "Explained an evidence-first approach to resume extraction."
+          ],
+          "tags": [
+            "nlp"
+          ],
+          "links": [
+            "https://example.com/blog/evidence-first-extraction"
+          ],
+          "attachments": [],
+          "evidence": "verified",
+          "order": 0
+        },
+        {
+          "id": "mid-training",
+          "section": "training",
+          "title": "Advanced React Patterns workshop",
+          "organization": "Example Workshops",
+          "endDate": "2024-06",
+          "bullets": [],
+          "tags": [
+            "react"
+          ],
+          "links": [],
+          "attachments": [],
+          "evidence": "attested",
+          "order": 0
+        },
+        {
+          "id": "mid-achievement-latency",
+          "section": "achievement",
+          "title": "Cut billing read-path latency 75%",
+          "organization": "Northwind Labs",
+          "endDate": "2025-05",
+          "bullets": [
+            "Replaced an N+1 query pattern and added covering indexes."
+          ],
+          "tags": [
+            "performance"
+          ],
+          "links": [],
+          "attachments": [],
+          "evidence": "attested",
+          "order": 0
+        }
+      ],
+      "workspaceVersion": 9,
+      "workspaceUpdatedAt": "2026-10-16T09:12:00.000Z",
+      "generatedAt": "2026-10-17T09:00:00.000Z",
+      "expected": {
+        "targetId": "tgt-sample-strong",
+        "workspaceVersion": 9,
+        "generatedAt": "2026-10-17T09:00:00.000Z",
+        "score": 91,
+        "factors": [
+          {
+            "name": "Required skills",
+            "weight": 0.4706,
+            "value": 100,
+            "detail": "5 matched, 0 partially matched, 0 unsupported of 5 required skill requirement(s)."
+          },
+          {
+            "name": "Relevant experience",
+            "weight": 0.2353,
+            "value": 75,
+            "detail": "1 matched, 1 partially matched, 0 unsupported of 2 experience requirement(s)."
+          },
+          {
+            "name": "Education",
+            "weight": 0.1176,
+            "value": 100,
+            "detail": "1 matched, 0 partially matched, 0 unsupported of 1 education requirement(s)."
+          },
+          {
+            "name": "Projects & achievements",
+            "weight": 0.1765,
+            "value": 80,
+            "detail": "Your workspace has 2 project/achievement item(s); the value reflects how well they are evidenced."
+          }
+        ],
+        "methodology": {
+          "note": "Weighted average of the factors below. For each factor we count how much of that job's requirements your workspace evidence supports — matched counts fully, partially matched counts half, unsupported counts zero. A factor with no matching requirements instead reflects how deep your workspace is in that area. Weights are fixed for every job, factors with nothing to compare are dropped, and the remaining weights are renormalised.",
+          "scoreDisclaimer": "This is not a probability of being hired.",
+          "atsDisclaimer": "Based on defined checks. Not a guarantee for any employer's ATS.",
+          "atsNote": "Deterministic checks only — no LLM scored this. The score starts at 100 and each issue subtracts 12 (high), 7 (medium) or 3 (low) points. Every issue lists what was found and how to fix it."
+        },
+        "requirements": [
+          {
+            "id": "req-skill-typescript",
+            "text": "TypeScript",
+            "kind": "required",
+            "status": "matched",
+            "gapType": null,
+            "evidenceIds": [
+              "mid-experience-northwind",
+              "mid-project-pdf",
+              "mid-skill-ts"
+            ],
+            "explanation": "TypeScript appears with attached evidence in 3 workspace items."
+          },
+          {
+            "id": "req-skill-react",
+            "text": "React",
+            "kind": "required",
+            "status": "matched",
+            "gapType": null,
+            "evidenceIds": [
+              "mid-experience-acme",
+              "mid-training"
+            ],
+            "explanation": "React appears with attached evidence in 2 workspace items."
+          },
+          {
+            "id": "req-skill-postgresql",
+            "text": "PostgreSQL",
+            "kind": "required",
+            "status": "matched",
+            "gapType": null,
+            "evidenceIds": [
+              "mid-experience-northwind",
+              "mid-skill-postgres"
+            ],
+            "explanation": "PostgreSQL appears with attached evidence in 2 workspace items."
+          },
+          {
+            "id": "req-skill-testing",
+            "text": "Automated testing",
+            "kind": "required",
+            "status": "matched",
+            "gapType": null,
+            "evidenceIds": [
+              "mid-experience-northwind"
+            ],
+            "explanation": "Automated testing appears with attached evidence in 1 workspace item."
+          },
+          {
+            "id": "req-skill-sql",
+            "text": "SQL",
+            "kind": "required",
+            "status": "matched",
+            "gapType": null,
+            "evidenceIds": [
+              "mid-experience-northwind",
+              "mid-skill-postgres"
+            ],
+            "explanation": "Your PostgreSQL evidence covers SQL: PostgreSQL is a SQL implementation."
+          },
+          {
+            "id": "req-experience",
+            "text": "3+ years of professional frontend experience",
+            "kind": "required",
+            "pattern": "experience",
+            "status": "matched",
+            "gapType": null,
+            "evidenceIds": [
+              "mid-experience-northwind",
+              "mid-experience-acme"
+            ],
+            "explanation": "Your dated experience totals about 5 year(s), which covers this."
+          },
+          {
+            "id": "req-education",
+            "text": "Bachelor's degree in Computer Science or a related field.",
+            "kind": "required",
+            "pattern": "education",
+            "status": "matched",
+            "gapType": null,
+            "evidenceIds": [
+              "mid-education"
+            ],
+            "explanation": "Your education section covers this with attested or verified entries."
+          },
+          {
+            "id": "req-seniority",
+            "text": "Senior Frontend Engineer — Halcyon Systems",
+            "kind": "required",
+            "pattern": "seniority",
+            "status": "partial",
+            "gapType": null,
+            "evidenceIds": [
+              "mid-experience-northwind",
+              "mid-experience-acme"
+            ],
+            "explanation": "You have experience, but no role title matches “senior”."
+          }
+        ],
+        "skills": {
+          "documented": [
+            {
+              "name": "Kubernetes (learning)",
+              "itemIds": [
+                "mid-skill-k8s"
+              ]
+            },
+            {
+              "name": "PostgreSQL",
+              "itemIds": [
+                "mid-skill-postgres"
+              ]
+            },
+            {
+              "name": "TypeScript",
+              "itemIds": [
+                "mid-skill-ts"
+              ]
+            }
+          ],
+          "demonstrated": [
+            {
+              "name": "Automated testing",
+              "itemIds": [
+                "mid-experience-northwind"
+              ]
+            },
+            {
+              "name": "AWS",
+              "itemIds": [
+                "mid-cert-aws"
+              ]
+            },
+            {
+              "name": "JavaScript",
+              "itemIds": [
+                "mid-experience-acme"
+              ]
+            },
+            {
+              "name": "NLP",
+              "itemIds": [
+                "mid-publication"
+              ]
+            },
+            {
+              "name": "Observability",
+              "itemIds": [
+                "mid-experience-northwind"
+              ]
+            },
+            {
+              "name": "Performance optimisation",
+              "itemIds": [
+                "mid-experience-northwind",
+                "mid-achievement-latency"
+              ]
+            },
+            {
+              "name": "PostgreSQL",
+              "itemIds": [
+                "mid-experience-northwind"
+              ]
+            },
+            {
+              "name": "React",
+              "itemIds": [
+                "mid-experience-acme",
+                "mid-training"
+              ]
+            },
+            {
+              "name": "TypeScript",
+              "itemIds": [
+                "mid-experience-northwind",
+                "mid-project-pdf"
+              ]
+            }
+          ],
+          "notEvidenced": [],
+          "toDevelop": [
+            {
+              "name": "Senior Frontend Engineer — Halcyon Systems",
+              "reason": "You have experience, but no role title matches “senior”."
+            }
+          ]
+        },
+        "included": [
+          {
+            "itemId": "mid-experience-northwind",
+            "reason": "Evidence for TypeScript, PostgreSQL, Automated testing and more."
+          },
+          {
+            "itemId": "mid-experience-acme",
+            "reason": "Evidence for React, 3+ years of professional frontend experience, Senior Frontend Engineer — Halcyon Systems."
+          },
+          {
+            "itemId": "mid-project-pdf",
+            "reason": "Evidence for TypeScript."
+          },
+          {
+            "itemId": "mid-skill-ts",
+            "reason": "Evidence for TypeScript."
+          },
+          {
+            "itemId": "mid-skill-postgres",
+            "reason": "Evidence for PostgreSQL, SQL."
+          },
+          {
+            "itemId": "mid-education",
+            "reason": "Evidence for Bachelor's degree in Computer Science or a related field.."
+          },
+          {
+            "itemId": "mid-training",
+            "reason": "Evidence for React."
+          }
+        ],
+        "excluded": [
+          {
+            "itemId": "mid-personal",
+            "reason": "Not used as evidence for any requirement in this posting."
+          },
+          {
+            "itemId": "mid-skill-k8s",
+            "reason": "No requirement in this posting mentions this skill."
+          },
+          {
+            "itemId": "mid-cert-aws",
+            "reason": "Not used as evidence for any requirement in this posting."
+          },
+          {
+            "itemId": "mid-publication",
+            "reason": "Not used as evidence for any requirement in this posting."
+          },
+          {
+            "itemId": "mid-achievement-latency",
+            "reason": "Not used as evidence for any requirement in this posting."
+          }
+        ],
+        "content": {
+          "supportedRequirementIds": [
+            "req-skill-typescript",
+            "req-skill-react",
+            "req-skill-postgresql",
+            "req-skill-testing",
+            "req-skill-sql",
+            "req-experience",
+            "req-education",
+            "req-seniority"
+          ],
+          "needsEvidenceRequirementIds": [],
+          "sectionsToImprove": [
+            {
+              "section": "experience",
+              "reason": "1 experience requirement(s) from this job aren't backed yet: Senior Frontend Engineer."
+            },
+            {
+              "section": "skill",
+              "reason": "1 skill item(s) are marked related or missing, so they can't support a claim yet."
+            }
+          ]
+        },
+        "roadmap": [
+          {
+            "priority": 1,
+            "action": "Make the level visible in your role titles and the scope you owned",
+            "reason": "You have experience, but no role title matches “senior”. The posting asks: “Senior Frontend Engineer — Halcyon Systems”."
+          }
+        ],
+        "ats": {
+          "score": 100,
+          "keywordCoverage": 80,
+          "keywords": [
+            {
+              "keyword": "TypeScript",
+              "present": true,
+              "requirementId": "req-skill-typescript"
+            },
+            {
+              "keyword": "React",
+              "present": true,
+              "requirementId": "req-skill-react"
+            },
+            {
+              "keyword": "PostgreSQL",
+              "present": true,
+              "requirementId": "req-skill-postgresql"
+            },
+            {
+              "keyword": "Automated testing",
+              "present": true,
+              "requirementId": "req-skill-testing"
+            },
+            {
+              "keyword": "SQL",
+              "present": false,
+              "requirementId": "req-skill-sql"
+            }
+          ],
+          "checks": [
+            {
+              "id": "headings",
+              "label": "Standard section headings",
+              "status": "pass",
+              "detail": "Education, experience, projects and skills all have content.",
+              "issueIds": []
+            },
+            {
+              "id": "dates",
+              "label": "Month-precision dates",
+              "status": "pass",
+              "detail": "Every role and qualification carries a start date.",
+              "issueIds": []
+            },
+            {
+              "id": "bullets",
+              "label": "Detail lines on roles and projects",
+              "status": "pass",
+              "detail": "Every role and project has at least one detail line.",
+              "issueIds": []
+            },
+            {
+              "id": "line-length",
+              "label": "Scannable line length",
+              "status": "pass",
+              "detail": "No detail line is over 200 characters.",
+              "issueIds": []
+            },
+            {
+              "id": "keywords",
+              "label": "Job keywords present",
+              "status": "pass",
+              "detail": "80% coverage (4 of 5 terms).",
+              "issueIds": []
+            },
+            {
+              "id": "contact",
+              "label": "Contact block present",
+              "status": "pass",
+              "detail": "Personal details item found.",
+              "issueIds": []
+            },
+            {
+              "id": "layout",
+              "label": "Single-column layout",
+              "status": "not_checked",
+              "detail": "Layout checks run on the rendered PDF, which lands with export in F5. Nothing is claimed about it yet.",
+              "issueIds": []
+            }
+          ],
+          "issues": [],
+          "examples": [
+            {
+              "id": "example-dates",
+              "issueId": "ats-format",
+              "before": "Junior Developer · Acme Corp · 2021-06 – 2023-01",
+              "after": "Junior Developer · Acme Corp · Jun 2021 – Jan 2023",
+              "note": "Formatting only — the same dates, rendered the way people read them. No detail was invented."
+            }
+          ]
+        },
+        "aiUsed": false
+      }
+    },
+    {
+      "id": "fixture-partial",
+      "target": {
+        "id": "tgt-sample-partial",
+        "role": "Full-Stack Engineer",
+        "company": "Blue Harbour Retail",
+        "jobDescription": "Full-Stack Engineer — Blue Harbour Retail\n\nResponsibilities\n• Ship features across a React and Node.js codebase.\n• Design and consume GraphQL APIs.\n• Package services with Docker and deploy them to Kubernetes.\n• Improve the observability and performance of the order pipeline.\n\nRequirements\n• 5+ years of software engineering experience.\n• Strong TypeScript, React and PostgreSQL skills.\n• Cloud experience, for example AWS or Google Cloud.\n• Nice to have: Kafka or another event streaming platform.",
+        "requiredSkills": [
+          "TypeScript",
+          "React",
+          "PostgreSQL"
+        ],
+        "template": "precision",
+        "length": "one_page",
+        "status": "draft",
+        "analysis": null,
+        "sample": false,
+        "createdAt": "2026-10-17T09:00:00.000Z",
+        "updatedAt": "2026-10-17T09:00:00.000Z"
+      },
+      "items": [
+        {
+          "id": "mid-personal",
+          "section": "personal",
+          "title": "Ravi Menon",
+          "location": "Example City",
+          "bullets": [],
+          "tags": [
+            "backend",
+            "platform"
+          ],
+          "links": [
+            "https://example.com/ravi"
+          ],
+          "attachments": [],
+          "evidence": "attested",
+          "order": 0
+        },
+        {
+          "id": "mid-experience-northwind",
+          "section": "experience",
+          "title": "Software Engineer",
+          "organization": "Northwind Labs",
+          "startDate": "2023-02",
+          "location": "Remote",
+          "bullets": [
+            "Owned the billing service's read path and cut p95 latency from 480ms to 120ms.",
+            "Introduced integration tests that caught a data-migration regression before release."
+          ],
+          "tags": [
+            "typescript",
+            "postgres",
+            "observability"
+          ],
+          "links": [],
+          "attachments": [
+            {
+              "id": "att-northwind-letter",
+              "name": "northwind-offer-letter.pdf",
+              "url": "mock://att-northwind-letter"
+            }
+          ],
+          "evidence": "verified",
+          "order": 0
+        },
+        {
+          "id": "mid-experience-acme",
+          "section": "experience",
+          "title": "Junior Developer",
+          "organization": "Acme Corp",
+          "startDate": "2021-06",
+          "endDate": "2023-01",
+          "location": "Example City",
+          "bullets": [
+            "Maintained the internal admin dashboard used by the support team."
+          ],
+          "tags": [
+            "javascript",
+            "react"
+          ],
+          "links": [],
+          "attachments": [],
+          "evidence": "attested",
+          "order": 1
+        },
+        {
+          "id": "mid-project-pdf",
+          "section": "project",
+          "title": "Open-source PDF exporter",
+          "organization": "Personal project",
+          "startDate": "2024-03",
+          "bullets": [
+            "Published a small library that renders structured documents to ATS-safe PDFs.",
+            "Handled the layout and pagination so exported text stays selectable."
+          ],
+          "tags": [
+            "typescript",
+            "pdf"
+          ],
+          "links": [
+            "https://github.com/example/pdf-exporter"
+          ],
+          "attachments": [],
+          "evidence": "verified",
+          "order": 0
+        },
+        {
+          "id": "mid-skill-ts",
+          "section": "skill",
+          "title": "TypeScript",
+          "bullets": [],
+          "tags": [
+            "language"
+          ],
+          "links": [],
+          "attachments": [],
+          "evidence": "attested",
+          "order": 0
+        },
+        {
+          "id": "mid-skill-postgres",
+          "section": "skill",
+          "title": "PostgreSQL",
+          "bullets": [],
+          "tags": [
+            "database"
+          ],
+          "links": [],
+          "attachments": [],
+          "evidence": "attested",
+          "order": 1
+        },
+        {
+          "id": "mid-skill-k8s",
+          "section": "skill",
+          "title": "Kubernetes (learning)",
+          "bullets": [],
+          "tags": [
+            "devops"
+          ],
+          "links": [],
+          "attachments": [],
+          "evidence": "related",
+          "order": 2
+        },
+        {
+          "id": "mid-education",
+          "section": "education",
+          "title": "B.Eng. Computer Engineering",
+          "organization": "Example Institute of Technology",
+          "startDate": "2017-08",
+          "endDate": "2021-05",
+          "bullets": [],
+          "tags": [],
+          "links": [],
+          "attachments": [],
+          "evidence": "attested",
+          "order": 0
+        },
+        {
+          "id": "mid-cert-aws",
+          "section": "certificate",
+          "title": "AWS Certified Cloud Practitioner",
+          "organization": "Amazon Web Services",
+          "endDate": "2024-11",
+          "bullets": [],
+          "tags": [
+            "cloud"
+          ],
+          "links": [],
+          "attachments": [
+            {
+              "id": "att-aws-cert",
+              "name": "aws-cloud-practitioner.pdf",
+              "url": "mock://att-aws-cert"
+            }
+          ],
+          "evidence": "verified",
+          "order": 0
+        },
+        {
+          "id": "mid-publication",
+          "section": "publication",
+          "title": "Parsing resumes without inventing facts",
+          "organization": "Example Tech Blog",
+          "endDate": "2025-09",
+          "bullets": [
+            "Explained an evidence-first approach to resume extraction."
+          ],
+          "tags": [
+            "nlp"
+          ],
+          "links": [
+            "https://example.com/blog/evidence-first-extraction"
+          ],
+          "attachments": [],
+          "evidence": "verified",
+          "order": 0
+        },
+        {
+          "id": "mid-training",
+          "section": "training",
+          "title": "Advanced React Patterns workshop",
+          "organization": "Example Workshops",
+          "endDate": "2024-06",
+          "bullets": [],
+          "tags": [
+            "react"
+          ],
+          "links": [],
+          "attachments": [],
+          "evidence": "attested",
+          "order": 0
+        },
+        {
+          "id": "mid-achievement-latency",
+          "section": "achievement",
+          "title": "Cut billing read-path latency 75%",
+          "organization": "Northwind Labs",
+          "endDate": "2025-05",
+          "bullets": [
+            "Replaced an N+1 query pattern and added covering indexes."
+          ],
+          "tags": [
+            "performance"
+          ],
+          "links": [],
+          "attachments": [],
+          "evidence": "attested",
+          "order": 0
+        }
+      ],
+      "workspaceVersion": 9,
+      "workspaceUpdatedAt": "2026-10-16T09:12:00.000Z",
+      "generatedAt": "2026-10-17T09:00:00.000Z",
+      "expected": {
+        "targetId": "tgt-sample-partial",
+        "workspaceVersion": 9,
+        "generatedAt": "2026-10-17T09:00:00.000Z",
+        "score": 60,
+        "factors": [
+          {
+            "name": "Required skills",
+            "weight": 0.4,
+            "value": 55,
+            "detail": "5 matched, 1 partially matched, 4 unsupported of 10 required skill requirement(s)."
+          },
+          {
+            "name": "Preferred skills",
+            "weight": 0.15,
+            "value": 0,
+            "detail": "0 matched, 0 partially matched, 1 unsupported of 1 preferred skill requirement(s)."
+          },
+          {
+            "name": "Relevant experience",
+            "weight": 0.2,
+            "value": 100,
+            "detail": "1 matched, 0 partially matched, 0 unsupported of 1 experience requirement(s)."
+          },
+          {
+            "name": "Education",
+            "weight": 0.1,
+            "value": 60,
+            "detail": "This posting doesn't require a qualification, so this reflects your workspace: 1 education item(s)."
+          },
+          {
+            "name": "Projects & achievements",
+            "weight": 0.15,
+            "value": 80,
+            "detail": "Your workspace has 2 project/achievement item(s); the value reflects how well they are evidenced."
+          }
+        ],
+        "methodology": {
+          "note": "Weighted average of the factors below. For each factor we count how much of that job's requirements your workspace evidence supports — matched counts fully, partially matched counts half, unsupported counts zero. A factor with no matching requirements instead reflects how deep your workspace is in that area. Weights are fixed for every job, factors with nothing to compare are dropped, and the remaining weights are renormalised.",
+          "scoreDisclaimer": "This is not a probability of being hired.",
+          "atsDisclaimer": "Based on defined checks. Not a guarantee for any employer's ATS.",
+          "atsNote": "Deterministic checks only — no LLM scored this. The score starts at 100 and each issue subtracts 12 (high), 7 (medium) or 3 (low) points. Every issue lists what was found and how to fix it."
+        },
+        "requirements": [
+          {
+            "id": "req-skill-typescript",
+            "text": "TypeScript",
+            "kind": "required",
+            "status": "matched",
+            "gapType": null,
+            "evidenceIds": [
+              "mid-experience-northwind",
+              "mid-project-pdf",
+              "mid-skill-ts"
+            ],
+            "explanation": "TypeScript appears with attached evidence in 3 workspace items."
+          },
+          {
+            "id": "req-skill-react",
+            "text": "React",
+            "kind": "required",
+            "status": "matched",
+            "gapType": null,
+            "evidenceIds": [
+              "mid-experience-acme",
+              "mid-training"
+            ],
+            "explanation": "React appears with attached evidence in 2 workspace items."
+          },
+          {
+            "id": "req-skill-postgresql",
+            "text": "PostgreSQL",
+            "kind": "required",
+            "status": "matched",
+            "gapType": null,
+            "evidenceIds": [
+              "mid-experience-northwind",
+              "mid-skill-postgres"
+            ],
+            "explanation": "PostgreSQL appears with attached evidence in 2 workspace items."
+          },
+          {
+            "id": "req-skill-nodejs",
+            "text": "Node.js",
+            "kind": "required",
+            "status": "unsupported",
+            "gapType": "not_evidenced",
+            "evidenceIds": [
+              "mid-experience-acme"
+            ],
+            "explanation": "No Node.js found. You evidence JavaScript, which is adjacent but not equivalent — Node.js may just be undocumented."
+          },
+          {
+            "id": "req-skill-graphql",
+            "text": "GraphQL",
+            "kind": "required",
+            "status": "unsupported",
+            "gapType": "genuinely_missing",
+            "evidenceIds": [],
+            "explanation": "Nothing in your workspace mentions GraphQL or anything adjacent to it."
+          },
+          {
+            "id": "req-skill-docker",
+            "text": "Docker",
+            "kind": "required",
+            "status": "unsupported",
+            "gapType": "not_evidenced",
+            "evidenceIds": [
+              "mid-skill-k8s"
+            ],
+            "explanation": "No Docker found. You evidence Kubernetes, which is adjacent but not equivalent — Docker may just be undocumented."
+          },
+          {
+            "id": "req-skill-kubernetes",
+            "text": "Kubernetes",
+            "kind": "required",
+            "status": "partial",
+            "gapType": null,
+            "evidenceIds": [
+              "mid-skill-k8s"
+            ],
+            "explanation": "Kubernetes is mentioned, but the evidence on those items is related or missing — it can't be claimed until you verify it."
+          },
+          {
+            "id": "req-skill-observability",
+            "text": "Observability",
+            "kind": "required",
+            "status": "matched",
+            "gapType": null,
+            "evidenceIds": [
+              "mid-experience-northwind"
+            ],
+            "explanation": "Observability appears with attached evidence in 1 workspace item."
+          },
+          {
+            "id": "req-skill-aws",
+            "text": "AWS",
+            "kind": "required",
+            "status": "matched",
+            "gapType": null,
+            "evidenceIds": [
+              "mid-cert-aws"
+            ],
+            "explanation": "AWS appears with attached evidence in 1 workspace item."
+          },
+          {
+            "id": "req-skill-gcp",
+            "text": "Google Cloud",
+            "kind": "required",
+            "status": "unsupported",
+            "gapType": "not_evidenced",
+            "evidenceIds": [
+              "mid-cert-aws"
+            ],
+            "explanation": "No Google Cloud found. You evidence AWS, which is adjacent but not equivalent — Google Cloud may just be undocumented."
+          },
+          {
+            "id": "req-experience",
+            "text": "5+ years of software engineering experience",
+            "kind": "required",
+            "pattern": "experience",
+            "status": "matched",
+            "gapType": null,
+            "evidenceIds": [
+              "mid-experience-northwind",
+              "mid-experience-acme"
+            ],
+            "explanation": "Your dated experience totals about 5 year(s), which covers this."
+          },
+          {
+            "id": "req-skill-kafka",
+            "text": "Kafka",
+            "kind": "preferred",
+            "status": "unsupported",
+            "gapType": "not_evidenced",
+            "evidenceIds": [
+              "mid-skill-k8s"
+            ],
+            "explanation": "No Kafka found, but you work with other infrastructure tooling (Kubernetes) — this may just be undocumented."
+          }
+        ],
+        "skills": {
+          "documented": [
+            {
+              "name": "Kubernetes (learning)",
+              "itemIds": [
+                "mid-skill-k8s"
+              ]
+            },
+            {
+              "name": "PostgreSQL",
+              "itemIds": [
+                "mid-skill-postgres"
+              ]
+            },
+            {
+              "name": "TypeScript",
+              "itemIds": [
+                "mid-skill-ts"
+              ]
+            }
+          ],
+          "demonstrated": [
+            {
+              "name": "Automated testing",
+              "itemIds": [
+                "mid-experience-northwind"
+              ]
+            },
+            {
+              "name": "AWS",
+              "itemIds": [
+                "mid-cert-aws"
+              ]
+            },
+            {
+              "name": "JavaScript",
+              "itemIds": [
+                "mid-experience-acme"
+              ]
+            },
+            {
+              "name": "NLP",
+              "itemIds": [
+                "mid-publication"
+              ]
+            },
+            {
+              "name": "Observability",
+              "itemIds": [
+                "mid-experience-northwind"
+              ]
+            },
+            {
+              "name": "Performance optimisation",
+              "itemIds": [
+                "mid-experience-northwind",
+                "mid-achievement-latency"
+              ]
+            },
+            {
+              "name": "PostgreSQL",
+              "itemIds": [
+                "mid-experience-northwind"
+              ]
+            },
+            {
+              "name": "React",
+              "itemIds": [
+                "mid-experience-acme",
+                "mid-training"
+              ]
+            },
+            {
+              "name": "TypeScript",
+              "itemIds": [
+                "mid-experience-northwind",
+                "mid-project-pdf"
+              ]
+            }
+          ],
+          "notEvidenced": [
+            {
+              "name": "Node.js",
+              "reason": "No Node.js found. You evidence JavaScript, which is adjacent but not equivalent — Node.js may just be undocumented."
+            },
+            {
+              "name": "Docker",
+              "reason": "No Docker found. You evidence Kubernetes, which is adjacent but not equivalent — Docker may just be undocumented."
+            },
+            {
+              "name": "Google Cloud",
+              "reason": "No Google Cloud found. You evidence AWS, which is adjacent but not equivalent — Google Cloud may just be undocumented."
+            },
+            {
+              "name": "Kafka",
+              "reason": "No Kafka found, but you work with other infrastructure tooling (Kubernetes) — this may just be undocumented."
+            }
+          ],
+          "toDevelop": [
+            {
+              "name": "GraphQL",
+              "reason": "Nothing in your workspace mentions GraphQL or anything adjacent to it."
+            },
+            {
+              "name": "Node.js",
+              "reason": "No Node.js found. You evidence JavaScript, which is adjacent but not equivalent — Node.js may just be undocumented."
+            },
+            {
+              "name": "Docker",
+              "reason": "No Docker found. You evidence Kubernetes, which is adjacent but not equivalent — Docker may just be undocumented."
+            },
+            {
+              "name": "Google Cloud",
+              "reason": "No Google Cloud found. You evidence AWS, which is adjacent but not equivalent — Google Cloud may just be undocumented."
+            },
+            {
+              "name": "Kafka",
+              "reason": "No Kafka found, but you work with other infrastructure tooling (Kubernetes) — this may just be undocumented."
+            },
+            {
+              "name": "Kubernetes",
+              "reason": "Kubernetes is mentioned, but the evidence on those items is related or missing — it can't be claimed until you verify it."
+            }
+          ]
+        },
+        "included": [
+          {
+            "itemId": "mid-experience-northwind",
+            "reason": "Evidence for TypeScript, PostgreSQL, Observability and more."
+          },
+          {
+            "itemId": "mid-experience-acme",
+            "reason": "Evidence for React, 5+ years of software engineering experience."
+          },
+          {
+            "itemId": "mid-project-pdf",
+            "reason": "Evidence for TypeScript."
+          },
+          {
+            "itemId": "mid-skill-ts",
+            "reason": "Evidence for TypeScript."
+          },
+          {
+            "itemId": "mid-skill-postgres",
+            "reason": "Evidence for PostgreSQL."
+          },
+          {
+            "itemId": "mid-skill-k8s",
+            "reason": "Evidence for Kubernetes."
+          },
+          {
+            "itemId": "mid-cert-aws",
+            "reason": "Evidence for AWS."
+          },
+          {
+            "itemId": "mid-training",
+            "reason": "Evidence for React."
+          }
+        ],
+        "excluded": [
+          {
+            "itemId": "mid-personal",
+            "reason": "Not used as evidence for any requirement in this posting."
+          },
+          {
+            "itemId": "mid-education",
+            "reason": "Not used as evidence for any requirement in this posting."
+          },
+          {
+            "itemId": "mid-publication",
+            "reason": "Not used as evidence for any requirement in this posting."
+          },
+          {
+            "itemId": "mid-achievement-latency",
+            "reason": "Not used as evidence for any requirement in this posting."
+          }
+        ],
+        "content": {
+          "supportedRequirementIds": [
+            "req-skill-typescript",
+            "req-skill-react",
+            "req-skill-postgresql",
+            "req-skill-kubernetes",
+            "req-skill-observability",
+            "req-skill-aws",
+            "req-experience"
+          ],
+          "needsEvidenceRequirementIds": [
+            "req-skill-nodejs",
+            "req-skill-graphql",
+            "req-skill-docker",
+            "req-skill-gcp",
+            "req-skill-kafka"
+          ],
+          "sectionsToImprove": [
+            {
+              "section": "project",
+              "reason": "2 project requirement(s) from this job aren't backed yet: GraphQL, Kubernetes."
+            },
+            {
+              "section": "skill",
+              "reason": "4 skill requirement(s) from this job aren't backed yet: Node.js, Docker, Google Cloud. 1 skill item(s) are marked related or missing, so they can't support a claim yet."
+            }
+          ]
+        },
+        "roadmap": [
+          {
+            "priority": 1,
+            "action": "Learn GraphQL and build a small project that proves it",
+            "reason": "Nothing in your workspace mentions GraphQL or anything adjacent to it."
+          },
+          {
+            "priority": 2,
+            "action": "Document where you used Node.js",
+            "reason": "No Node.js found. You evidence JavaScript, which is adjacent but not equivalent — Node.js may just be undocumented."
+          },
+          {
+            "priority": 3,
+            "action": "Document where you used Docker",
+            "reason": "No Docker found. You evidence Kubernetes, which is adjacent but not equivalent — Docker may just be undocumented."
+          },
+          {
+            "priority": 4,
+            "action": "Document where you used Google Cloud",
+            "reason": "No Google Cloud found. You evidence AWS, which is adjacent but not equivalent — Google Cloud may just be undocumented."
+          },
+          {
+            "priority": 5,
+            "action": "Attach a certificate or link that backs up Kubernetes",
+            "reason": "Kubernetes is mentioned, but the evidence on those items is related or missing — it can't be claimed until you verify it."
+          },
+          {
+            "priority": 6,
+            "action": "Optional: strengthen Kafka",
+            "reason": "Listed as a nice-to-have for Full-Stack Engineer at Blue Harbour Retail. No Kafka found, but you work with other infrastructure tooling (Kubernetes) — this may just be undocumented."
+          }
+        ],
+        "ats": {
+          "score": 93,
+          "keywordCoverage": 55,
+          "keywords": [
+            {
+              "keyword": "TypeScript",
+              "present": true,
+              "requirementId": "req-skill-typescript"
+            },
+            {
+              "keyword": "React",
+              "present": true,
+              "requirementId": "req-skill-react"
+            },
+            {
+              "keyword": "PostgreSQL",
+              "present": true,
+              "requirementId": "req-skill-postgresql"
+            },
+            {
+              "keyword": "Node.js",
+              "present": false,
+              "requirementId": "req-skill-nodejs"
+            },
+            {
+              "keyword": "GraphQL",
+              "present": false,
+              "requirementId": "req-skill-graphql"
+            },
+            {
+              "keyword": "Docker",
+              "present": false,
+              "requirementId": "req-skill-docker"
+            },
+            {
+              "keyword": "Kubernetes",
+              "present": true,
+              "requirementId": "req-skill-kubernetes"
+            },
+            {
+              "keyword": "Observability",
+              "present": true,
+              "requirementId": "req-skill-observability"
+            },
+            {
+              "keyword": "AWS",
+              "present": true,
+              "requirementId": "req-skill-aws"
+            },
+            {
+              "keyword": "Google Cloud",
+              "present": false,
+              "requirementId": "req-skill-gcp"
+            },
+            {
+              "keyword": "Kafka",
+              "present": false,
+              "requirementId": "req-skill-kafka"
+            }
+          ],
+          "checks": [
+            {
+              "id": "headings",
+              "label": "Standard section headings",
+              "status": "pass",
+              "detail": "Education, experience, projects and skills all have content.",
+              "issueIds": []
+            },
+            {
+              "id": "dates",
+              "label": "Month-precision dates",
+              "status": "pass",
+              "detail": "Every role and qualification carries a start date.",
+              "issueIds": []
+            },
+            {
+              "id": "bullets",
+              "label": "Detail lines on roles and projects",
+              "status": "pass",
+              "detail": "Every role and project has at least one detail line.",
+              "issueIds": []
+            },
+            {
+              "id": "line-length",
+              "label": "Scannable line length",
+              "status": "pass",
+              "detail": "No detail line is over 200 characters.",
+              "issueIds": []
+            },
+            {
+              "id": "keywords",
+              "label": "Job keywords present",
+              "status": "issue",
+              "detail": "55% coverage — missing Node.js, GraphQL, Docker, Google Cloud, Kafka.",
+              "issueIds": [
+                "ats-keywords"
+              ]
+            },
+            {
+              "id": "contact",
+              "label": "Contact block present",
+              "status": "pass",
+              "detail": "Personal details item found.",
+              "issueIds": []
+            },
+            {
+              "id": "layout",
+              "label": "Single-column layout",
+              "status": "not_checked",
+              "detail": "Layout checks run on the rendered PDF, which lands with export in F5. Nothing is claimed about it yet.",
+              "issueIds": []
+            }
+          ],
+          "issues": [
+            {
+              "id": "ats-keywords",
+              "severity": "med",
+              "message": "Only 55% of this job's keywords appear in the text of your resume (6 of 11).",
+              "fix": "Add the keywords you can honestly back with evidence; the gaps list below shows which ones need a new project or course first.",
+              "check": "Keyword coverage"
+            }
+          ],
+          "examples": [
+            {
+              "id": "example-dates",
+              "issueId": "ats-format",
+              "before": "Junior Developer · Acme Corp · 2021-06 – 2023-01",
+              "after": "Junior Developer · Acme Corp · Jun 2021 – Jan 2023",
+              "note": "Formatting only — the same dates, rendered the way people read them. No detail was invented."
+            }
+          ]
+        },
+        "aiUsed": false
+      }
+    },
+    {
+      "id": "fixture-poor",
+      "target": {
+        "id": "tgt-sample-poor",
+        "role": "Machine Learning Engineer",
+        "company": "Northwind Analytics",
+        "jobDescription": "Machine Learning Engineer — Northwind Analytics\n\nWhat you will do\n• Train and evaluate deep learning models in PyTorch.\n• Build data pipelines with pandas and NumPy.\n• Apply statistics to experiment design.\n• Own model deployment on Kubernetes with Docker.\n\nRequirements\n• 4+ years building machine learning systems in Python.\n• Experience with NLP and transformer models.\n• Master's degree or PhD in a quantitative field.",
+        "requiredSkills": [
+          "Python",
+          "PyTorch"
+        ],
+        "template": "precision",
+        "length": "one_page",
+        "status": "draft",
+        "analysis": null,
+        "sample": false,
+        "createdAt": "2026-10-17T09:00:00.000Z",
+        "updatedAt": "2026-10-17T09:00:00.000Z"
+      },
+      "items": [
+        {
+          "id": "mid-personal",
+          "section": "personal",
+          "title": "Ravi Menon",
+          "location": "Example City",
+          "bullets": [],
+          "tags": [
+            "backend",
+            "platform"
+          ],
+          "links": [
+            "https://example.com/ravi"
+          ],
+          "attachments": [],
+          "evidence": "attested",
+          "order": 0
+        },
+        {
+          "id": "mid-experience-northwind",
+          "section": "experience",
+          "title": "Software Engineer",
+          "organization": "Northwind Labs",
+          "startDate": "2023-02",
+          "location": "Remote",
+          "bullets": [
+            "Owned the billing service's read path and cut p95 latency from 480ms to 120ms.",
+            "Introduced integration tests that caught a data-migration regression before release."
+          ],
+          "tags": [
+            "typescript",
+            "postgres",
+            "observability"
+          ],
+          "links": [],
+          "attachments": [
+            {
+              "id": "att-northwind-letter",
+              "name": "northwind-offer-letter.pdf",
+              "url": "mock://att-northwind-letter"
+            }
+          ],
+          "evidence": "verified",
+          "order": 0
+        },
+        {
+          "id": "mid-experience-acme",
+          "section": "experience",
+          "title": "Junior Developer",
+          "organization": "Acme Corp",
+          "startDate": "2021-06",
+          "endDate": "2023-01",
+          "location": "Example City",
+          "bullets": [
+            "Maintained the internal admin dashboard used by the support team."
+          ],
+          "tags": [
+            "javascript",
+            "react"
+          ],
+          "links": [],
+          "attachments": [],
+          "evidence": "attested",
+          "order": 1
+        },
+        {
+          "id": "mid-project-pdf",
+          "section": "project",
+          "title": "Open-source PDF exporter",
+          "organization": "Personal project",
+          "startDate": "2024-03",
+          "bullets": [
+            "Published a small library that renders structured documents to ATS-safe PDFs.",
+            "Handled the layout and pagination so exported text stays selectable."
+          ],
+          "tags": [
+            "typescript",
+            "pdf"
+          ],
+          "links": [
+            "https://github.com/example/pdf-exporter"
+          ],
+          "attachments": [],
+          "evidence": "verified",
+          "order": 0
+        },
+        {
+          "id": "mid-skill-ts",
+          "section": "skill",
+          "title": "TypeScript",
+          "bullets": [],
+          "tags": [
+            "language"
+          ],
+          "links": [],
+          "attachments": [],
+          "evidence": "attested",
+          "order": 0
+        },
+        {
+          "id": "mid-skill-postgres",
+          "section": "skill",
+          "title": "PostgreSQL",
+          "bullets": [],
+          "tags": [
+            "database"
+          ],
+          "links": [],
+          "attachments": [],
+          "evidence": "attested",
+          "order": 1
+        },
+        {
+          "id": "mid-skill-k8s",
+          "section": "skill",
+          "title": "Kubernetes (learning)",
+          "bullets": [],
+          "tags": [
+            "devops"
+          ],
+          "links": [],
+          "attachments": [],
+          "evidence": "related",
+          "order": 2
+        },
+        {
+          "id": "mid-education",
+          "section": "education",
+          "title": "B.Eng. Computer Engineering",
+          "organization": "Example Institute of Technology",
+          "startDate": "2017-08",
+          "endDate": "2021-05",
+          "bullets": [],
+          "tags": [],
+          "links": [],
+          "attachments": [],
+          "evidence": "attested",
+          "order": 0
+        },
+        {
+          "id": "mid-cert-aws",
+          "section": "certificate",
+          "title": "AWS Certified Cloud Practitioner",
+          "organization": "Amazon Web Services",
+          "endDate": "2024-11",
+          "bullets": [],
+          "tags": [
+            "cloud"
+          ],
+          "links": [],
+          "attachments": [
+            {
+              "id": "att-aws-cert",
+              "name": "aws-cloud-practitioner.pdf",
+              "url": "mock://att-aws-cert"
+            }
+          ],
+          "evidence": "verified",
+          "order": 0
+        },
+        {
+          "id": "mid-publication",
+          "section": "publication",
+          "title": "Parsing resumes without inventing facts",
+          "organization": "Example Tech Blog",
+          "endDate": "2025-09",
+          "bullets": [
+            "Explained an evidence-first approach to resume extraction."
+          ],
+          "tags": [
+            "nlp"
+          ],
+          "links": [
+            "https://example.com/blog/evidence-first-extraction"
+          ],
+          "attachments": [],
+          "evidence": "verified",
+          "order": 0
+        },
+        {
+          "id": "mid-training",
+          "section": "training",
+          "title": "Advanced React Patterns workshop",
+          "organization": "Example Workshops",
+          "endDate": "2024-06",
+          "bullets": [],
+          "tags": [
+            "react"
+          ],
+          "links": [],
+          "attachments": [],
+          "evidence": "attested",
+          "order": 0
+        },
+        {
+          "id": "mid-achievement-latency",
+          "section": "achievement",
+          "title": "Cut billing read-path latency 75%",
+          "organization": "Northwind Labs",
+          "endDate": "2025-05",
+          "bullets": [
+            "Replaced an N+1 query pattern and added covering indexes."
+          ],
+          "tags": [
+            "performance"
+          ],
+          "links": [],
+          "attachments": [],
+          "evidence": "attested",
+          "order": 0
+        }
+      ],
+      "workspaceVersion": 9,
+      "workspaceUpdatedAt": "2026-10-16T09:12:00.000Z",
+      "generatedAt": "2026-10-17T09:00:00.000Z",
+      "expected": {
+        "targetId": "tgt-sample-poor",
+        "workspaceVersion": 9,
+        "generatedAt": "2026-10-17T09:00:00.000Z",
+        "score": 39,
+        "factors": [
+          {
+            "name": "Required skills",
+            "weight": 0.4706,
+            "value": 15,
+            "detail": "1 matched, 1 partially matched, 8 unsupported of 10 required skill requirement(s)."
+          },
+          {
+            "name": "Relevant experience",
+            "weight": 0.2353,
+            "value": 50,
+            "detail": "0 matched, 1 partially matched, 0 unsupported of 1 experience requirement(s)."
+          },
+          {
+            "name": "Education",
+            "weight": 0.1176,
+            "value": 50,
+            "detail": "0 matched, 1 partially matched, 0 unsupported of 1 education requirement(s)."
+          },
+          {
+            "name": "Projects & achievements",
+            "weight": 0.1765,
+            "value": 80,
+            "detail": "Your workspace has 2 project/achievement item(s); the value reflects how well they are evidenced."
+          }
+        ],
+        "methodology": {
+          "note": "Weighted average of the factors below. For each factor we count how much of that job's requirements your workspace evidence supports — matched counts fully, partially matched counts half, unsupported counts zero. A factor with no matching requirements instead reflects how deep your workspace is in that area. Weights are fixed for every job, factors with nothing to compare are dropped, and the remaining weights are renormalised.",
+          "scoreDisclaimer": "This is not a probability of being hired.",
+          "atsDisclaimer": "Based on defined checks. Not a guarantee for any employer's ATS.",
+          "atsNote": "Deterministic checks only — no LLM scored this. The score starts at 100 and each issue subtracts 12 (high), 7 (medium) or 3 (low) points. Every issue lists what was found and how to fix it."
+        },
+        "requirements": [
+          {
+            "id": "req-skill-python",
+            "text": "Python",
+            "kind": "required",
+            "status": "unsupported",
+            "gapType": "genuinely_missing",
+            "evidenceIds": [],
+            "explanation": "Nothing in your workspace mentions Python or anything adjacent to it."
+          },
+          {
+            "id": "req-skill-pytorch",
+            "text": "PyTorch",
+            "kind": "required",
+            "status": "unsupported",
+            "gapType": "not_evidenced",
+            "evidenceIds": [
+              "mid-publication"
+            ],
+            "explanation": "No PyTorch found, but you work with other ml tooling (NLP) — this may just be undocumented."
+          },
+          {
+            "id": "req-skill-machine-learning",
+            "text": "Machine learning",
+            "kind": "required",
+            "status": "unsupported",
+            "gapType": "not_evidenced",
+            "evidenceIds": [
+              "mid-publication"
+            ],
+            "explanation": "No Machine learning found, but you work with other ml tooling (NLP) — this may just be undocumented."
+          },
+          {
+            "id": "req-skill-deep-learning",
+            "text": "Deep learning",
+            "kind": "required",
+            "status": "unsupported",
+            "gapType": "not_evidenced",
+            "evidenceIds": [
+              "mid-publication"
+            ],
+            "explanation": "No Deep learning found, but you work with other ml tooling (NLP) — this may just be undocumented."
+          },
+          {
+            "id": "req-skill-pandas",
+            "text": "pandas",
+            "kind": "required",
+            "status": "unsupported",
+            "gapType": "genuinely_missing",
+            "evidenceIds": [],
+            "explanation": "Nothing in your workspace mentions pandas or anything adjacent to it."
+          },
+          {
+            "id": "req-skill-numpy",
+            "text": "NumPy",
+            "kind": "required",
+            "status": "unsupported",
+            "gapType": "genuinely_missing",
+            "evidenceIds": [],
+            "explanation": "Nothing in your workspace mentions NumPy or anything adjacent to it."
+          },
+          {
+            "id": "req-skill-statistics",
+            "text": "Statistics",
+            "kind": "required",
+            "status": "unsupported",
+            "gapType": "genuinely_missing",
+            "evidenceIds": [],
+            "explanation": "Nothing in your workspace mentions Statistics or anything adjacent to it."
+          },
+          {
+            "id": "req-skill-docker",
+            "text": "Docker",
+            "kind": "required",
+            "status": "unsupported",
+            "gapType": "not_evidenced",
+            "evidenceIds": [
+              "mid-skill-k8s"
+            ],
+            "explanation": "No Docker found. You evidence Kubernetes, which is adjacent but not equivalent — Docker may just be undocumented."
+          },
+          {
+            "id": "req-skill-kubernetes",
+            "text": "Kubernetes",
+            "kind": "required",
+            "status": "partial",
+            "gapType": null,
+            "evidenceIds": [
+              "mid-skill-k8s"
+            ],
+            "explanation": "Kubernetes is mentioned, but the evidence on those items is related or missing — it can't be claimed until you verify it."
+          },
+          {
+            "id": "req-skill-nlp",
+            "text": "NLP",
+            "kind": "required",
+            "status": "matched",
+            "gapType": null,
+            "evidenceIds": [
+              "mid-publication"
+            ],
+            "explanation": "NLP appears with attached evidence in 1 workspace item."
+          },
+          {
+            "id": "req-experience",
+            "text": "4+ years building machine learning systems in Python",
+            "kind": "required",
+            "pattern": "experience",
+            "status": "partial",
+            "gapType": null,
+            "evidenceIds": [
+              "mid-experience-northwind",
+              "mid-experience-acme"
+            ],
+            "explanation": "Your dated experience totals about 5 year(s), but it is in other areas — this line asks for Python, Machine learning."
+          },
+          {
+            "id": "req-education",
+            "text": "Master's degree or PhD in a quantitative field.",
+            "kind": "required",
+            "pattern": "education",
+            "status": "partial",
+            "gapType": null,
+            "evidenceIds": [
+              "mid-education"
+            ],
+            "explanation": "Your highest recorded qualification is a bachelor's, below the doctorate this posting asks for."
+          }
+        ],
+        "skills": {
+          "documented": [
+            {
+              "name": "Kubernetes (learning)",
+              "itemIds": [
+                "mid-skill-k8s"
+              ]
+            },
+            {
+              "name": "PostgreSQL",
+              "itemIds": [
+                "mid-skill-postgres"
+              ]
+            },
+            {
+              "name": "TypeScript",
+              "itemIds": [
+                "mid-skill-ts"
+              ]
+            }
+          ],
+          "demonstrated": [
+            {
+              "name": "Automated testing",
+              "itemIds": [
+                "mid-experience-northwind"
+              ]
+            },
+            {
+              "name": "AWS",
+              "itemIds": [
+                "mid-cert-aws"
+              ]
+            },
+            {
+              "name": "JavaScript",
+              "itemIds": [
+                "mid-experience-acme"
+              ]
+            },
+            {
+              "name": "NLP",
+              "itemIds": [
+                "mid-publication"
+              ]
+            },
+            {
+              "name": "Observability",
+              "itemIds": [
+                "mid-experience-northwind"
+              ]
+            },
+            {
+              "name": "Performance optimisation",
+              "itemIds": [
+                "mid-experience-northwind",
+                "mid-achievement-latency"
+              ]
+            },
+            {
+              "name": "PostgreSQL",
+              "itemIds": [
+                "mid-experience-northwind"
+              ]
+            },
+            {
+              "name": "React",
+              "itemIds": [
+                "mid-experience-acme",
+                "mid-training"
+              ]
+            },
+            {
+              "name": "TypeScript",
+              "itemIds": [
+                "mid-experience-northwind",
+                "mid-project-pdf"
+              ]
+            }
+          ],
+          "notEvidenced": [
+            {
+              "name": "PyTorch",
+              "reason": "No PyTorch found, but you work with other ml tooling (NLP) — this may just be undocumented."
+            },
+            {
+              "name": "Machine learning",
+              "reason": "No Machine learning found, but you work with other ml tooling (NLP) — this may just be undocumented."
+            },
+            {
+              "name": "Deep learning",
+              "reason": "No Deep learning found, but you work with other ml tooling (NLP) — this may just be undocumented."
+            },
+            {
+              "name": "Docker",
+              "reason": "No Docker found. You evidence Kubernetes, which is adjacent but not equivalent — Docker may just be undocumented."
+            }
+          ],
+          "toDevelop": [
+            {
+              "name": "Python",
+              "reason": "Nothing in your workspace mentions Python or anything adjacent to it."
+            },
+            {
+              "name": "pandas",
+              "reason": "Nothing in your workspace mentions pandas or anything adjacent to it."
+            },
+            {
+              "name": "NumPy",
+              "reason": "Nothing in your workspace mentions NumPy or anything adjacent to it."
+            },
+            {
+              "name": "Statistics",
+              "reason": "Nothing in your workspace mentions Statistics or anything adjacent to it."
+            },
+            {
+              "name": "PyTorch",
+              "reason": "No PyTorch found, but you work with other ml tooling (NLP) — this may just be undocumented."
+            },
+            {
+              "name": "Machine learning",
+              "reason": "No Machine learning found, but you work with other ml tooling (NLP) — this may just be undocumented."
+            },
+            {
+              "name": "Deep learning",
+              "reason": "No Deep learning found, but you work with other ml tooling (NLP) — this may just be undocumented."
+            },
+            {
+              "name": "Docker",
+              "reason": "No Docker found. You evidence Kubernetes, which is adjacent but not equivalent — Docker may just be undocumented."
+            }
+          ]
+        },
+        "included": [
+          {
+            "itemId": "mid-experience-northwind",
+            "reason": "Evidence for 4+ years building machine learning systems in Python."
+          },
+          {
+            "itemId": "mid-experience-acme",
+            "reason": "Evidence for 4+ years building machine learning systems in Python."
+          },
+          {
+            "itemId": "mid-skill-k8s",
+            "reason": "Evidence for Kubernetes."
+          },
+          {
+            "itemId": "mid-education",
+            "reason": "Evidence for Master's degree or PhD in a quantitative field.."
+          },
+          {
+            "itemId": "mid-publication",
+            "reason": "Evidence for NLP."
+          }
+        ],
+        "excluded": [
+          {
+            "itemId": "mid-personal",
+            "reason": "Not used as evidence for any requirement in this posting."
+          },
+          {
+            "itemId": "mid-project-pdf",
+            "reason": "Not used as evidence for any requirement in this posting."
+          },
+          {
+            "itemId": "mid-skill-ts",
+            "reason": "No requirement in this posting mentions this skill."
+          },
+          {
+            "itemId": "mid-skill-postgres",
+            "reason": "No requirement in this posting mentions this skill."
+          },
+          {
+            "itemId": "mid-cert-aws",
+            "reason": "Not used as evidence for any requirement in this posting."
+          },
+          {
+            "itemId": "mid-training",
+            "reason": "Not used as evidence for any requirement in this posting."
+          },
+          {
+            "itemId": "mid-achievement-latency",
+            "reason": "Not used as evidence for any requirement in this posting."
+          }
+        ],
+        "content": {
+          "supportedRequirementIds": [
+            "req-skill-kubernetes",
+            "req-skill-nlp",
+            "req-experience",
+            "req-education"
+          ],
+          "needsEvidenceRequirementIds": [
+            "req-skill-python",
+            "req-skill-pytorch",
+            "req-skill-machine-learning",
+            "req-skill-deep-learning",
+            "req-skill-pandas",
+            "req-skill-numpy",
+            "req-skill-statistics",
+            "req-skill-docker"
+          ],
+          "sectionsToImprove": [
+            {
+              "section": "experience",
+              "reason": "1 experience requirement(s) from this job aren't backed yet: 4+ years building machine learning systems in Python."
+            },
+            {
+              "section": "education",
+              "reason": "1 education requirement(s) from this job aren't backed yet: Master's degree or PhD in a quantitative field.."
+            },
+            {
+              "section": "project",
+              "reason": "5 project requirement(s) from this job aren't backed yet: Python, pandas, NumPy."
+            },
+            {
+              "section": "skill",
+              "reason": "4 skill requirement(s) from this job aren't backed yet: PyTorch, Machine learning, Deep learning. 1 skill item(s) are marked related or missing, so they can't support a claim yet."
+            }
+          ]
+        },
+        "roadmap": [
+          {
+            "priority": 1,
+            "action": "Learn Python and build a small project that proves it",
+            "reason": "Nothing in your workspace mentions Python or anything adjacent to it."
+          },
+          {
+            "priority": 2,
+            "action": "Learn pandas and build a small project that proves it",
+            "reason": "Nothing in your workspace mentions pandas or anything adjacent to it."
+          },
+          {
+            "priority": 3,
+            "action": "Learn NumPy and build a small project that proves it",
+            "reason": "Nothing in your workspace mentions NumPy or anything adjacent to it."
+          },
+          {
+            "priority": 4,
+            "action": "Learn Statistics and build a small project that proves it",
+            "reason": "Nothing in your workspace mentions Statistics or anything adjacent to it."
+          },
+          {
+            "priority": 5,
+            "action": "Document where you used PyTorch",
+            "reason": "No PyTorch found, but you work with other ml tooling (NLP) — this may just be undocumented."
+          },
+          {
+            "priority": 6,
+            "action": "Document where you used Machine learning",
+            "reason": "No Machine learning found, but you work with other ml tooling (NLP) — this may just be undocumented."
+          }
+        ],
+        "ats": {
+          "score": 88,
+          "keywordCoverage": 20,
+          "keywords": [
+            {
+              "keyword": "Python",
+              "present": false,
+              "requirementId": "req-skill-python"
+            },
+            {
+              "keyword": "PyTorch",
+              "present": false,
+              "requirementId": "req-skill-pytorch"
+            },
+            {
+              "keyword": "Machine learning",
+              "present": false,
+              "requirementId": "req-skill-machine-learning"
+            },
+            {
+              "keyword": "Deep learning",
+              "present": false,
+              "requirementId": "req-skill-deep-learning"
+            },
+            {
+              "keyword": "pandas",
+              "present": false,
+              "requirementId": "req-skill-pandas"
+            },
+            {
+              "keyword": "NumPy",
+              "present": false,
+              "requirementId": "req-skill-numpy"
+            },
+            {
+              "keyword": "Statistics",
+              "present": false,
+              "requirementId": "req-skill-statistics"
+            },
+            {
+              "keyword": "Docker",
+              "present": false,
+              "requirementId": "req-skill-docker"
+            },
+            {
+              "keyword": "Kubernetes",
+              "present": true,
+              "requirementId": "req-skill-kubernetes"
+            },
+            {
+              "keyword": "NLP",
+              "present": true,
+              "requirementId": "req-skill-nlp"
+            }
+          ],
+          "checks": [
+            {
+              "id": "headings",
+              "label": "Standard section headings",
+              "status": "pass",
+              "detail": "Education, experience, projects and skills all have content.",
+              "issueIds": []
+            },
+            {
+              "id": "dates",
+              "label": "Month-precision dates",
+              "status": "pass",
+              "detail": "Every role and qualification carries a start date.",
+              "issueIds": []
+            },
+            {
+              "id": "bullets",
+              "label": "Detail lines on roles and projects",
+              "status": "pass",
+              "detail": "Every role and project has at least one detail line.",
+              "issueIds": []
+            },
+            {
+              "id": "line-length",
+              "label": "Scannable line length",
+              "status": "pass",
+              "detail": "No detail line is over 200 characters.",
+              "issueIds": []
+            },
+            {
+              "id": "keywords",
+              "label": "Job keywords present",
+              "status": "issue",
+              "detail": "20% coverage — missing Python, PyTorch, Machine learning, Deep learning, pandas, NumPy, Statistics, Docker.",
+              "issueIds": [
+                "ats-keywords"
+              ]
+            },
+            {
+              "id": "contact",
+              "label": "Contact block present",
+              "status": "pass",
+              "detail": "Personal details item found.",
+              "issueIds": []
+            },
+            {
+              "id": "layout",
+              "label": "Single-column layout",
+              "status": "not_checked",
+              "detail": "Layout checks run on the rendered PDF, which lands with export in F5. Nothing is claimed about it yet.",
+              "issueIds": []
+            }
+          ],
+          "issues": [
+            {
+              "id": "ats-keywords",
+              "severity": "high",
+              "message": "Only 20% of this job's keywords appear in the text of your resume (2 of 10).",
+              "fix": "Add the keywords you can honestly back with evidence; the gaps list below shows which ones need a new project or course first.",
+              "check": "Keyword coverage"
+            }
+          ],
+          "examples": [
+            {
+              "id": "example-dates",
+              "issueId": "ats-format",
+              "before": "Junior Developer · Acme Corp · 2021-06 – 2023-01",
+              "after": "Junior Developer · Acme Corp · Jun 2021 – Jan 2023",
+              "note": "Formatting only — the same dates, rendered the way people read them. No detail was invented."
+            }
+          ]
+        },
+        "aiUsed": false
+      }
+    },
+    {
+      "id": "edge-skill-matched",
+      "target": {
+        "id": "tgt-edge-1",
+        "role": "Test Role",
+        "company": null,
+        "jobDescription": "Requirements\n• Strong TypeScript skills.",
+        "requiredSkills": [],
+        "template": "precision",
+        "length": "one_page",
+        "status": "draft",
+        "analysis": null,
+        "sample": false,
+        "createdAt": "2026-10-17T09:00:00.000Z",
+        "updatedAt": "2026-10-17T09:00:00.000Z"
+      },
+      "items": [
+        {
+          "bullets": [],
+          "tags": [],
+          "links": [],
+          "attachments": [],
+          "evidence": "verified",
+          "order": 0,
+          "id": "s1",
+          "section": "skill",
+          "title": "TypeScript"
+        }
+      ],
+      "workspaceVersion": 1,
+      "workspaceUpdatedAt": "2026-10-16T09:12:00.000Z",
+      "generatedAt": "2026-10-16T09:12:00.000Z",
+      "expected": {
+        "targetId": "tgt-edge-1",
+        "workspaceVersion": 1,
+        "generatedAt": "2026-10-16T09:12:00.000Z",
+        "score": 57,
+        "factors": [
+          {
+            "name": "Required skills",
+            "weight": 0.5714,
+            "value": 100,
+            "detail": "1 matched, 0 partially matched, 0 unsupported of 1 required skill requirement(s)."
+          },
+          {
+            "name": "Relevant experience",
+            "weight": 0.2857,
+            "value": 0,
+            "detail": "This posting doesn't set an experience bar, and your workspace has no experience or internship items yet."
+          },
+          {
+            "name": "Education",
+            "weight": 0.1429,
+            "value": 0,
+            "detail": "This posting doesn't require a qualification, and your workspace has no education items yet."
+          }
+        ],
+        "methodology": {
+          "note": "Weighted average of the factors below. For each factor we count how much of that job's requirements your workspace evidence supports — matched counts fully, partially matched counts half, unsupported counts zero. A factor with no matching requirements instead reflects how deep your workspace is in that area. Weights are fixed for every job, factors with nothing to compare are dropped, and the remaining weights are renormalised.",
+          "scoreDisclaimer": "This is not a probability of being hired.",
+          "atsDisclaimer": "Based on defined checks. Not a guarantee for any employer's ATS.",
+          "atsNote": "Deterministic checks only — no LLM scored this. The score starts at 100 and each issue subtracts 12 (high), 7 (medium) or 3 (low) points. Every issue lists what was found and how to fix it."
+        },
+        "requirements": [
+          {
+            "id": "req-skill-typescript",
+            "text": "TypeScript",
+            "kind": "required",
+            "status": "matched",
+            "gapType": null,
+            "evidenceIds": [
+              "s1"
+            ],
+            "explanation": "TypeScript appears with attached evidence in 1 workspace item."
+          }
+        ],
+        "skills": {
+          "documented": [
+            {
+              "name": "TypeScript",
+              "itemIds": [
+                "s1"
+              ]
+            }
+          ],
+          "demonstrated": [],
+          "notEvidenced": [],
+          "toDevelop": []
+        },
+        "included": [
+          {
+            "itemId": "s1",
+            "reason": "Evidence for TypeScript."
+          }
+        ],
+        "excluded": [],
+        "content": {
+          "supportedRequirementIds": [
+            "req-skill-typescript"
+          ],
+          "needsEvidenceRequirementIds": [],
+          "sectionsToImprove": []
+        },
+        "roadmap": [],
+        "ats": {
+          "score": 90,
+          "keywordCoverage": 100,
+          "keywords": [
+            {
+              "keyword": "TypeScript",
+              "present": true,
+              "requirementId": "req-skill-typescript"
+            }
+          ],
+          "checks": [
+            {
+              "id": "headings",
+              "label": "Standard section headings",
+              "status": "issue",
+              "detail": "Missing: Education, Experience, Projects.",
+              "issueIds": [
+                "ats-headings"
+              ]
+            },
+            {
+              "id": "dates",
+              "label": "Month-precision dates",
+              "status": "pass",
+              "detail": "Every role and qualification carries a start date.",
+              "issueIds": []
+            },
+            {
+              "id": "keywords",
+              "label": "Job keywords present",
+              "status": "pass",
+              "detail": "100% coverage (1 of 1 terms).",
+              "issueIds": []
+            },
+            {
+              "id": "contact",
+              "label": "Contact block present",
+              "status": "issue",
+              "detail": "No personal details item.",
+              "issueIds": [
+                "ats-contact"
+              ]
+            },
+            {
+              "id": "layout",
+              "label": "Single-column layout",
+              "status": "not_checked",
+              "detail": "Layout checks run on the rendered PDF, which lands with export in F5. Nothing is claimed about it yet.",
+              "issueIds": []
+            }
+          ],
+          "issues": [
+            {
+              "id": "ats-headings",
+              "severity": "med",
+              "message": "No Education, Experience, Projects content to place under a standard heading.",
+              "fix": "Add education, experience, projects items in your workspace — parsers look for those headings.",
+              "check": "Standard headings"
+            },
+            {
+              "id": "ats-contact",
+              "severity": "low",
+              "message": "No personal details item, so the resume has no header block.",
+              "fix": "Add a personal details item with the name and links you want shown.",
+              "check": "Contact block"
+            }
+          ],
+          "examples": []
+        },
+        "aiUsed": false
+      }
+    },
+    {
+      "id": "edge-related-not-equivalent",
+      "target": {
+        "id": "tgt-edge-2",
+        "role": "Test Role",
+        "company": null,
+        "jobDescription": "Requirements\n• Strong Docker skills.",
+        "requiredSkills": [],
+        "template": "precision",
+        "length": "one_page",
+        "status": "draft",
+        "analysis": null,
+        "sample": false,
+        "createdAt": "2026-10-17T09:00:00.000Z",
+        "updatedAt": "2026-10-17T09:00:00.000Z"
+      },
+      "items": [
+        {
+          "bullets": [],
+          "tags": [],
+          "links": [],
+          "attachments": [],
+          "evidence": "related",
+          "order": 0,
+          "id": "s1",
+          "section": "skill",
+          "title": "Kubernetes"
+        }
+      ],
+      "workspaceVersion": 1,
+      "workspaceUpdatedAt": "2026-10-16T09:12:00.000Z",
+      "generatedAt": "2026-10-16T09:12:00.000Z",
+      "expected": {
+        "targetId": "tgt-edge-2",
+        "workspaceVersion": 1,
+        "generatedAt": "2026-10-16T09:12:00.000Z",
+        "score": 0,
+        "factors": [
+          {
+            "name": "Required skills",
+            "weight": 0.5714,
+            "value": 0,
+            "detail": "0 matched, 0 partially matched, 1 unsupported of 1 required skill requirement(s)."
+          },
+          {
+            "name": "Relevant experience",
+            "weight": 0.2857,
+            "value": 0,
+            "detail": "This posting doesn't set an experience bar, and your workspace has no experience or internship items yet."
+          },
+          {
+            "name": "Education",
+            "weight": 0.1429,
+            "value": 0,
+            "detail": "This posting doesn't require a qualification, and your workspace has no education items yet."
+          }
+        ],
+        "methodology": {
+          "note": "Weighted average of the factors below. For each factor we count how much of that job's requirements your workspace evidence supports — matched counts fully, partially matched counts half, unsupported counts zero. A factor with no matching requirements instead reflects how deep your workspace is in that area. Weights are fixed for every job, factors with nothing to compare are dropped, and the remaining weights are renormalised.",
+          "scoreDisclaimer": "This is not a probability of being hired.",
+          "atsDisclaimer": "Based on defined checks. Not a guarantee for any employer's ATS.",
+          "atsNote": "Deterministic checks only — no LLM scored this. The score starts at 100 and each issue subtracts 12 (high), 7 (medium) or 3 (low) points. Every issue lists what was found and how to fix it."
+        },
+        "requirements": [
+          {
+            "id": "req-skill-docker",
+            "text": "Docker",
+            "kind": "required",
+            "status": "unsupported",
+            "gapType": "not_evidenced",
+            "evidenceIds": [
+              "s1"
+            ],
+            "explanation": "No Docker found. You evidence Kubernetes, which is adjacent but not equivalent — Docker may just be undocumented."
+          }
+        ],
+        "skills": {
+          "documented": [
+            {
+              "name": "Kubernetes",
+              "itemIds": [
+                "s1"
+              ]
+            }
+          ],
+          "demonstrated": [],
+          "notEvidenced": [
+            {
+              "name": "Docker",
+              "reason": "No Docker found. You evidence Kubernetes, which is adjacent but not equivalent — Docker may just be undocumented."
+            }
+          ],
+          "toDevelop": [
+            {
+              "name": "Docker",
+              "reason": "No Docker found. You evidence Kubernetes, which is adjacent but not equivalent — Docker may just be undocumented."
+            }
+          ]
+        },
+        "included": [],
+        "excluded": [
+          {
+            "itemId": "s1",
+            "reason": "No requirement in this posting mentions this skill."
+          }
+        ],
+        "content": {
+          "supportedRequirementIds": [],
+          "needsEvidenceRequirementIds": [
+            "req-skill-docker"
+          ],
+          "sectionsToImprove": [
+            {
+              "section": "skill",
+              "reason": "1 skill requirement(s) from this job aren't backed yet: Docker. 1 skill item(s) are marked related or missing, so they can't support a claim yet."
+            }
+          ]
+        },
+        "roadmap": [
+          {
+            "priority": 1,
+            "action": "Document where you used Docker",
+            "reason": "No Docker found. You evidence Kubernetes, which is adjacent but not equivalent — Docker may just be undocumented."
+          }
+        ],
+        "ats": {
+          "score": 78,
+          "keywordCoverage": 0,
+          "keywords": [
+            {
+              "keyword": "Docker",
+              "present": false,
+              "requirementId": "req-skill-docker"
+            }
+          ],
+          "checks": [
+            {
+              "id": "headings",
+              "label": "Standard section headings",
+              "status": "issue",
+              "detail": "Missing: Education, Experience, Projects.",
+              "issueIds": [
+                "ats-headings"
+              ]
+            },
+            {
+              "id": "dates",
+              "label": "Month-precision dates",
+              "status": "pass",
+              "detail": "Every role and qualification carries a start date.",
+              "issueIds": []
+            },
+            {
+              "id": "keywords",
+              "label": "Job keywords present",
+              "status": "issue",
+              "detail": "0% coverage — missing Docker.",
+              "issueIds": [
+                "ats-keywords"
+              ]
+            },
+            {
+              "id": "contact",
+              "label": "Contact block present",
+              "status": "issue",
+              "detail": "No personal details item.",
+              "issueIds": [
+                "ats-contact"
+              ]
+            },
+            {
+              "id": "layout",
+              "label": "Single-column layout",
+              "status": "not_checked",
+              "detail": "Layout checks run on the rendered PDF, which lands with export in F5. Nothing is claimed about it yet.",
+              "issueIds": []
+            }
+          ],
+          "issues": [
+            {
+              "id": "ats-headings",
+              "severity": "med",
+              "message": "No Education, Experience, Projects content to place under a standard heading.",
+              "fix": "Add education, experience, projects items in your workspace — parsers look for those headings.",
+              "check": "Standard headings"
+            },
+            {
+              "id": "ats-keywords",
+              "severity": "high",
+              "message": "Only 0% of this job's keywords appear in the text of your resume (0 of 1).",
+              "fix": "Add the keywords you can honestly back with evidence; the gaps list below shows which ones need a new project or course first.",
+              "check": "Keyword coverage"
+            },
+            {
+              "id": "ats-contact",
+              "severity": "low",
+              "message": "No personal details item, so the resume has no header block.",
+              "fix": "Add a personal details item with the name and links you want shown.",
+              "check": "Contact block"
+            }
+          ],
+          "examples": []
+        },
+        "aiUsed": false
+      }
+    },
+    {
+      "id": "edge-weak-mention",
+      "target": {
+        "id": "tgt-edge-3",
+        "role": "Test Role",
+        "company": null,
+        "jobDescription": "Requirements\n• Kubernetes experience.",
+        "requiredSkills": [],
+        "template": "precision",
+        "length": "one_page",
+        "status": "draft",
+        "analysis": null,
+        "sample": false,
+        "createdAt": "2026-10-17T09:00:00.000Z",
+        "updatedAt": "2026-10-17T09:00:00.000Z"
+      },
+      "items": [
+        {
+          "bullets": [],
+          "tags": [],
+          "links": [],
+          "attachments": [],
+          "evidence": "related",
+          "order": 0,
+          "id": "s1",
+          "section": "skill",
+          "title": "Kubernetes"
+        }
+      ],
+      "workspaceVersion": 1,
+      "workspaceUpdatedAt": "2026-10-16T09:12:00.000Z",
+      "generatedAt": "2026-10-16T09:12:00.000Z",
+      "expected": {
+        "targetId": "tgt-edge-3",
+        "workspaceVersion": 1,
+        "generatedAt": "2026-10-16T09:12:00.000Z",
+        "score": 29,
+        "factors": [
+          {
+            "name": "Required skills",
+            "weight": 0.5714,
+            "value": 50,
+            "detail": "0 matched, 1 partially matched, 0 unsupported of 1 required skill requirement(s)."
+          },
+          {
+            "name": "Relevant experience",
+            "weight": 0.2857,
+            "value": 0,
+            "detail": "This posting doesn't set an experience bar, and your workspace has no experience or internship items yet."
+          },
+          {
+            "name": "Education",
+            "weight": 0.1429,
+            "value": 0,
+            "detail": "This posting doesn't require a qualification, and your workspace has no education items yet."
+          }
+        ],
+        "methodology": {
+          "note": "Weighted average of the factors below. For each factor we count how much of that job's requirements your workspace evidence supports — matched counts fully, partially matched counts half, unsupported counts zero. A factor with no matching requirements instead reflects how deep your workspace is in that area. Weights are fixed for every job, factors with nothing to compare are dropped, and the remaining weights are renormalised.",
+          "scoreDisclaimer": "This is not a probability of being hired.",
+          "atsDisclaimer": "Based on defined checks. Not a guarantee for any employer's ATS.",
+          "atsNote": "Deterministic checks only — no LLM scored this. The score starts at 100 and each issue subtracts 12 (high), 7 (medium) or 3 (low) points. Every issue lists what was found and how to fix it."
+        },
+        "requirements": [
+          {
+            "id": "req-skill-kubernetes",
+            "text": "Kubernetes",
+            "kind": "required",
+            "status": "partial",
+            "gapType": null,
+            "evidenceIds": [
+              "s1"
+            ],
+            "explanation": "Kubernetes is mentioned, but the evidence on those items is related or missing — it can't be claimed until you verify it."
+          }
+        ],
+        "skills": {
+          "documented": [
+            {
+              "name": "Kubernetes",
+              "itemIds": [
+                "s1"
+              ]
+            }
+          ],
+          "demonstrated": [],
+          "notEvidenced": [],
+          "toDevelop": [
+            {
+              "name": "Kubernetes",
+              "reason": "Kubernetes is mentioned, but the evidence on those items is related or missing — it can't be claimed until you verify it."
+            }
+          ]
+        },
+        "included": [
+          {
+            "itemId": "s1",
+            "reason": "Evidence for Kubernetes."
+          }
+        ],
+        "excluded": [],
+        "content": {
+          "supportedRequirementIds": [
+            "req-skill-kubernetes"
+          ],
+          "needsEvidenceRequirementIds": [],
+          "sectionsToImprove": [
+            {
+              "section": "project",
+              "reason": "1 project requirement(s) from this job aren't backed yet: Kubernetes."
+            },
+            {
+              "section": "skill",
+              "reason": "1 skill item(s) are marked related or missing, so they can't support a claim yet."
+            }
+          ]
+        },
+        "roadmap": [
+          {
+            "priority": 1,
+            "action": "Attach a certificate or link that backs up Kubernetes",
+            "reason": "Kubernetes is mentioned, but the evidence on those items is related or missing — it can't be claimed until you verify it."
+          }
+        ],
+        "ats": {
+          "score": 90,
+          "keywordCoverage": 100,
+          "keywords": [
+            {
+              "keyword": "Kubernetes",
+              "present": true,
+              "requirementId": "req-skill-kubernetes"
+            }
+          ],
+          "checks": [
+            {
+              "id": "headings",
+              "label": "Standard section headings",
+              "status": "issue",
+              "detail": "Missing: Education, Experience, Projects.",
+              "issueIds": [
+                "ats-headings"
+              ]
+            },
+            {
+              "id": "dates",
+              "label": "Month-precision dates",
+              "status": "pass",
+              "detail": "Every role and qualification carries a start date.",
+              "issueIds": []
+            },
+            {
+              "id": "keywords",
+              "label": "Job keywords present",
+              "status": "pass",
+              "detail": "100% coverage (1 of 1 terms).",
+              "issueIds": []
+            },
+            {
+              "id": "contact",
+              "label": "Contact block present",
+              "status": "issue",
+              "detail": "No personal details item.",
+              "issueIds": [
+                "ats-contact"
+              ]
+            },
+            {
+              "id": "layout",
+              "label": "Single-column layout",
+              "status": "not_checked",
+              "detail": "Layout checks run on the rendered PDF, which lands with export in F5. Nothing is claimed about it yet.",
+              "issueIds": []
+            }
+          ],
+          "issues": [
+            {
+              "id": "ats-headings",
+              "severity": "med",
+              "message": "No Education, Experience, Projects content to place under a standard heading.",
+              "fix": "Add education, experience, projects items in your workspace — parsers look for those headings.",
+              "check": "Standard headings"
+            },
+            {
+              "id": "ats-contact",
+              "severity": "low",
+              "message": "No personal details item, so the resume has no header block.",
+              "fix": "Add a personal details item with the name and links you want shown.",
+              "check": "Contact block"
+            }
+          ],
+          "examples": []
+        },
+        "aiUsed": false
+      }
+    },
+    {
+      "id": "edge-gap-split",
+      "target": {
+        "id": "tgt-edge-4",
+        "role": "Test Role",
+        "company": null,
+        "jobDescription": "Requirements\n• Node.js services.\n• Python services.",
+        "requiredSkills": [],
+        "template": "precision",
+        "length": "one_page",
+        "status": "draft",
+        "analysis": null,
+        "sample": false,
+        "createdAt": "2026-10-17T09:00:00.000Z",
+        "updatedAt": "2026-10-17T09:00:00.000Z"
+      },
+      "items": [
+        {
+          "bullets": [],
+          "tags": [
+            "javascript"
+          ],
+          "links": [],
+          "attachments": [],
+          "evidence": "attested",
+          "order": 0,
+          "id": "e1",
+          "section": "experience",
+          "title": "Developer"
+        }
+      ],
+      "workspaceVersion": 1,
+      "workspaceUpdatedAt": "2026-10-16T09:12:00.000Z",
+      "generatedAt": "2026-10-16T09:12:00.000Z",
+      "expected": {
+        "targetId": "tgt-edge-4",
+        "workspaceVersion": 1,
+        "generatedAt": "2026-10-16T09:12:00.000Z",
+        "score": 9,
+        "factors": [
+          {
+            "name": "Required skills",
+            "weight": 0.5714,
+            "value": 0,
+            "detail": "0 matched, 0 partially matched, 2 unsupported of 2 required skill requirement(s)."
+          },
+          {
+            "name": "Relevant experience",
+            "weight": 0.2857,
+            "value": 30,
+            "detail": "This posting doesn't set an experience bar, so this reflects your workspace: 1 experience/internship item(s)."
+          },
+          {
+            "name": "Education",
+            "weight": 0.1429,
+            "value": 0,
+            "detail": "This posting doesn't require a qualification, and your workspace has no education items yet."
+          }
+        ],
+        "methodology": {
+          "note": "Weighted average of the factors below. For each factor we count how much of that job's requirements your workspace evidence supports — matched counts fully, partially matched counts half, unsupported counts zero. A factor with no matching requirements instead reflects how deep your workspace is in that area. Weights are fixed for every job, factors with nothing to compare are dropped, and the remaining weights are renormalised.",
+          "scoreDisclaimer": "This is not a probability of being hired.",
+          "atsDisclaimer": "Based on defined checks. Not a guarantee for any employer's ATS.",
+          "atsNote": "Deterministic checks only — no LLM scored this. The score starts at 100 and each issue subtracts 12 (high), 7 (medium) or 3 (low) points. Every issue lists what was found and how to fix it."
+        },
+        "requirements": [
+          {
+            "id": "req-skill-nodejs",
+            "text": "Node.js",
+            "kind": "required",
+            "status": "unsupported",
+            "gapType": "not_evidenced",
+            "evidenceIds": [
+              "e1"
+            ],
+            "explanation": "No Node.js found. You evidence JavaScript, which is adjacent but not equivalent — Node.js may just be undocumented."
+          },
+          {
+            "id": "req-skill-python",
+            "text": "Python",
+            "kind": "required",
+            "status": "unsupported",
+            "gapType": "genuinely_missing",
+            "evidenceIds": [],
+            "explanation": "Nothing in your workspace mentions Python or anything adjacent to it."
+          }
+        ],
+        "skills": {
+          "documented": [],
+          "demonstrated": [
+            {
+              "name": "JavaScript",
+              "itemIds": [
+                "e1"
+              ]
+            }
+          ],
+          "notEvidenced": [
+            {
+              "name": "Node.js",
+              "reason": "No Node.js found. You evidence JavaScript, which is adjacent but not equivalent — Node.js may just be undocumented."
+            }
+          ],
+          "toDevelop": [
+            {
+              "name": "Python",
+              "reason": "Nothing in your workspace mentions Python or anything adjacent to it."
+            },
+            {
+              "name": "Node.js",
+              "reason": "No Node.js found. You evidence JavaScript, which is adjacent but not equivalent — Node.js may just be undocumented."
+            }
+          ]
+        },
+        "included": [],
+        "excluded": [
+          {
+            "itemId": "e1",
+            "reason": "Not used as evidence for any requirement in this posting."
+          }
+        ],
+        "content": {
+          "supportedRequirementIds": [],
+          "needsEvidenceRequirementIds": [
+            "req-skill-nodejs",
+            "req-skill-python"
+          ],
+          "sectionsToImprove": [
+            {
+              "section": "project",
+              "reason": "1 project requirement(s) from this job aren't backed yet: Python."
+            },
+            {
+              "section": "skill",
+              "reason": "1 skill requirement(s) from this job aren't backed yet: Node.js."
+            }
+          ]
+        },
+        "roadmap": [
+          {
+            "priority": 1,
+            "action": "Learn Python and build a small project that proves it",
+            "reason": "Nothing in your workspace mentions Python or anything adjacent to it."
+          },
+          {
+            "priority": 2,
+            "action": "Document where you used Node.js",
+            "reason": "No Node.js found. You evidence JavaScript, which is adjacent but not equivalent — Node.js may just be undocumented."
+          },
+          {
+            "priority": 3,
+            "action": "Add one detail line to Developer",
+            "reason": "Job-specific reports read better when every role and project says what changed. Use numbers you can defend."
+          }
+        ],
+        "ats": {
+          "score": 64,
+          "keywordCoverage": 0,
+          "keywords": [
+            {
+              "keyword": "Node.js",
+              "present": false,
+              "requirementId": "req-skill-nodejs"
+            },
+            {
+              "keyword": "Python",
+              "present": false,
+              "requirementId": "req-skill-python"
+            }
+          ],
+          "checks": [
+            {
+              "id": "headings",
+              "label": "Standard section headings",
+              "status": "issue",
+              "detail": "Missing: Education, Projects, Skills.",
+              "issueIds": [
+                "ats-headings"
+              ]
+            },
+            {
+              "id": "dates",
+              "label": "Month-precision dates",
+              "status": "issue",
+              "detail": "Developer",
+              "issueIds": [
+                "ats-dates"
+              ]
+            },
+            {
+              "id": "bullets",
+              "label": "Detail lines on roles and projects",
+              "status": "issue",
+              "detail": "Developer",
+              "issueIds": [
+                "ats-bullets"
+              ]
+            },
+            {
+              "id": "line-length",
+              "label": "Scannable line length",
+              "status": "pass",
+              "detail": "No detail line is over 200 characters.",
+              "issueIds": []
+            },
+            {
+              "id": "keywords",
+              "label": "Job keywords present",
+              "status": "issue",
+              "detail": "0% coverage — missing Node.js, Python.",
+              "issueIds": [
+                "ats-keywords"
+              ]
+            },
+            {
+              "id": "contact",
+              "label": "Contact block present",
+              "status": "issue",
+              "detail": "No personal details item.",
+              "issueIds": [
+                "ats-contact"
+              ]
+            },
+            {
+              "id": "layout",
+              "label": "Single-column layout",
+              "status": "not_checked",
+              "detail": "Layout checks run on the rendered PDF, which lands with export in F5. Nothing is claimed about it yet.",
+              "issueIds": []
+            }
+          ],
+          "issues": [
+            {
+              "id": "ats-headings",
+              "severity": "med",
+              "message": "No Education, Projects, Skills content to place under a standard heading.",
+              "fix": "Add education, projects, skills items in your workspace — parsers look for those headings.",
+              "check": "Standard headings"
+            },
+            {
+              "id": "ats-dates",
+              "severity": "med",
+              "message": "1 dated section item has no start date.",
+              "fix": "Add a month-precision start date (YYYY-MM) to each role and qualification.",
+              "check": "Dates present"
+            },
+            {
+              "id": "ats-bullets",
+              "severity": "med",
+              "message": "1 entry has no detail lines.",
+              "fix": "Add one or two lines describing what you did and what changed, using numbers you can defend.",
+              "check": "Detail lines"
+            },
+            {
+              "id": "ats-keywords",
+              "severity": "high",
+              "message": "Only 0% of this job's keywords appear in the text of your resume (0 of 2).",
+              "fix": "Add the keywords you can honestly back with evidence; the gaps list below shows which ones need a new project or course first.",
+              "check": "Keyword coverage"
+            },
+            {
+              "id": "ats-contact",
+              "severity": "low",
+              "message": "No personal details item, so the resume has no header block.",
+              "fix": "Add a personal details item with the name and links you want shown.",
+              "check": "Contact block"
+            }
+          ],
+          "examples": []
+        },
+        "aiUsed": false
+      }
+    },
+    {
+      "id": "edge-preferred",
+      "target": {
+        "id": "tgt-edge-5",
+        "role": "Test Role",
+        "company": null,
+        "jobDescription": "Requirements\n• TypeScript.\nNice to have: Kafka.",
+        "requiredSkills": [],
+        "template": "precision",
+        "length": "one_page",
+        "status": "draft",
+        "analysis": null,
+        "sample": false,
+        "createdAt": "2026-10-17T09:00:00.000Z",
+        "updatedAt": "2026-10-17T09:00:00.000Z"
+      },
+      "items": [
+        {
+          "bullets": [],
+          "tags": [],
+          "links": [],
+          "attachments": [],
+          "evidence": "attested",
+          "order": 0,
+          "id": "s1",
+          "section": "skill",
+          "title": "TypeScript"
+        }
+      ],
+      "workspaceVersion": 1,
+      "workspaceUpdatedAt": "2026-10-16T09:12:00.000Z",
+      "generatedAt": "2026-10-16T09:12:00.000Z",
+      "expected": {
+        "targetId": "tgt-edge-5",
+        "workspaceVersion": 1,
+        "generatedAt": "2026-10-16T09:12:00.000Z",
+        "score": 47,
+        "factors": [
+          {
+            "name": "Required skills",
+            "weight": 0.4706,
+            "value": 100,
+            "detail": "1 matched, 0 partially matched, 0 unsupported of 1 required skill requirement(s)."
+          },
+          {
+            "name": "Preferred skills",
+            "weight": 0.1765,
+            "value": 0,
+            "detail": "0 matched, 0 partially matched, 1 unsupported of 1 preferred skill requirement(s)."
+          },
+          {
+            "name": "Relevant experience",
+            "weight": 0.2353,
+            "value": 0,
+            "detail": "This posting doesn't set an experience bar, and your workspace has no experience or internship items yet."
+          },
+          {
+            "name": "Education",
+            "weight": 0.1176,
+            "value": 0,
+            "detail": "This posting doesn't require a qualification, and your workspace has no education items yet."
+          }
+        ],
+        "methodology": {
+          "note": "Weighted average of the factors below. For each factor we count how much of that job's requirements your workspace evidence supports — matched counts fully, partially matched counts half, unsupported counts zero. A factor with no matching requirements instead reflects how deep your workspace is in that area. Weights are fixed for every job, factors with nothing to compare are dropped, and the remaining weights are renormalised.",
+          "scoreDisclaimer": "This is not a probability of being hired.",
+          "atsDisclaimer": "Based on defined checks. Not a guarantee for any employer's ATS.",
+          "atsNote": "Deterministic checks only — no LLM scored this. The score starts at 100 and each issue subtracts 12 (high), 7 (medium) or 3 (low) points. Every issue lists what was found and how to fix it."
+        },
+        "requirements": [
+          {
+            "id": "req-skill-typescript",
+            "text": "TypeScript",
+            "kind": "required",
+            "status": "matched",
+            "gapType": null,
+            "evidenceIds": [
+              "s1"
+            ],
+            "explanation": "TypeScript appears with attached evidence in 1 workspace item."
+          },
+          {
+            "id": "req-skill-kafka",
+            "text": "Kafka",
+            "kind": "preferred",
+            "status": "unsupported",
+            "gapType": "genuinely_missing",
+            "evidenceIds": [],
+            "explanation": "Nothing in your workspace mentions Kafka or anything adjacent to it."
+          }
+        ],
+        "skills": {
+          "documented": [
+            {
+              "name": "TypeScript",
+              "itemIds": [
+                "s1"
+              ]
+            }
+          ],
+          "demonstrated": [],
+          "notEvidenced": [],
+          "toDevelop": [
+            {
+              "name": "Kafka",
+              "reason": "Nothing in your workspace mentions Kafka or anything adjacent to it."
+            }
+          ]
+        },
+        "included": [
+          {
+            "itemId": "s1",
+            "reason": "Evidence for TypeScript."
+          }
+        ],
+        "excluded": [],
+        "content": {
+          "supportedRequirementIds": [
+            "req-skill-typescript"
+          ],
+          "needsEvidenceRequirementIds": [
+            "req-skill-kafka"
+          ],
+          "sectionsToImprove": [
+            {
+              "section": "project",
+              "reason": "1 project requirement(s) from this job aren't backed yet: Kafka."
+            }
+          ]
+        },
+        "roadmap": [
+          {
+            "priority": 1,
+            "action": "Optional: strengthen Kafka",
+            "reason": "Listed as a nice-to-have for Test Role. Nothing in your workspace mentions Kafka or anything adjacent to it."
+          }
+        ],
+        "ats": {
+          "score": 83,
+          "keywordCoverage": 50,
+          "keywords": [
+            {
+              "keyword": "TypeScript",
+              "present": true,
+              "requirementId": "req-skill-typescript"
+            },
+            {
+              "keyword": "Kafka",
+              "present": false,
+              "requirementId": "req-skill-kafka"
+            }
+          ],
+          "checks": [
+            {
+              "id": "headings",
+              "label": "Standard section headings",
+              "status": "issue",
+              "detail": "Missing: Education, Experience, Projects.",
+              "issueIds": [
+                "ats-headings"
+              ]
+            },
+            {
+              "id": "dates",
+              "label": "Month-precision dates",
+              "status": "pass",
+              "detail": "Every role and qualification carries a start date.",
+              "issueIds": []
+            },
+            {
+              "id": "keywords",
+              "label": "Job keywords present",
+              "status": "issue",
+              "detail": "50% coverage — missing Kafka.",
+              "issueIds": [
+                "ats-keywords"
+              ]
+            },
+            {
+              "id": "contact",
+              "label": "Contact block present",
+              "status": "issue",
+              "detail": "No personal details item.",
+              "issueIds": [
+                "ats-contact"
+              ]
+            },
+            {
+              "id": "layout",
+              "label": "Single-column layout",
+              "status": "not_checked",
+              "detail": "Layout checks run on the rendered PDF, which lands with export in F5. Nothing is claimed about it yet.",
+              "issueIds": []
+            }
+          ],
+          "issues": [
+            {
+              "id": "ats-headings",
+              "severity": "med",
+              "message": "No Education, Experience, Projects content to place under a standard heading.",
+              "fix": "Add education, experience, projects items in your workspace — parsers look for those headings.",
+              "check": "Standard headings"
+            },
+            {
+              "id": "ats-keywords",
+              "severity": "med",
+              "message": "Only 50% of this job's keywords appear in the text of your resume (1 of 2).",
+              "fix": "Add the keywords you can honestly back with evidence; the gaps list below shows which ones need a new project or course first.",
+              "check": "Keyword coverage"
+            },
+            {
+              "id": "ats-contact",
+              "severity": "low",
+              "message": "No personal details item, so the resume has no header block.",
+              "fix": "Add a personal details item with the name and links you want shown.",
+              "check": "Contact block"
+            }
+          ],
+          "examples": []
+        },
+        "aiUsed": false
+      }
+    },
+    {
+      "id": "edge-experience-short",
+      "target": {
+        "id": "tgt-edge-6",
+        "role": "Test Role",
+        "company": null,
+        "jobDescription": "Requirements\n• 10+ years of software engineering experience.",
+        "requiredSkills": [],
+        "template": "precision",
+        "length": "one_page",
+        "status": "draft",
+        "analysis": null,
+        "sample": false,
+        "createdAt": "2026-10-17T09:00:00.000Z",
+        "updatedAt": "2026-10-17T09:00:00.000Z"
+      },
+      "items": [
+        {
+          "bullets": [],
+          "tags": [],
+          "links": [],
+          "attachments": [],
+          "evidence": "attested",
+          "order": 0,
+          "id": "e1",
+          "section": "experience",
+          "title": "Developer",
+          "startDate": "2023-02"
+        }
+      ],
+      "workspaceVersion": 1,
+      "workspaceUpdatedAt": "2026-10-16T09:12:00.000Z",
+      "generatedAt": "2026-10-16T09:12:00.000Z",
+      "expected": {
+        "targetId": "tgt-edge-6",
+        "workspaceVersion": 1,
+        "generatedAt": "2026-10-16T09:12:00.000Z",
+        "score": 33,
+        "factors": [
+          {
+            "name": "Relevant experience",
+            "weight": 0.6667,
+            "value": 50,
+            "detail": "0 matched, 1 partially matched, 0 unsupported of 1 experience requirement(s)."
+          },
+          {
+            "name": "Education",
+            "weight": 0.3333,
+            "value": 0,
+            "detail": "This posting doesn't require a qualification, and your workspace has no education items yet."
+          }
+        ],
+        "methodology": {
+          "note": "Weighted average of the factors below. For each factor we count how much of that job's requirements your workspace evidence supports — matched counts fully, partially matched counts half, unsupported counts zero. A factor with no matching requirements instead reflects how deep your workspace is in that area. Weights are fixed for every job, factors with nothing to compare are dropped, and the remaining weights are renormalised.",
+          "scoreDisclaimer": "This is not a probability of being hired.",
+          "atsDisclaimer": "Based on defined checks. Not a guarantee for any employer's ATS.",
+          "atsNote": "Deterministic checks only — no LLM scored this. The score starts at 100 and each issue subtracts 12 (high), 7 (medium) or 3 (low) points. Every issue lists what was found and how to fix it."
+        },
+        "requirements": [
+          {
+            "id": "req-experience",
+            "text": "10+ years of software engineering experience.",
+            "kind": "required",
+            "pattern": "experience",
+            "status": "partial",
+            "gapType": null,
+            "evidenceIds": [
+              "e1"
+            ],
+            "explanation": "Your dated experience totals about 4 year(s), less than the 10 asked for."
+          }
+        ],
+        "skills": {
+          "documented": [],
+          "demonstrated": [],
+          "notEvidenced": [],
+          "toDevelop": [
+            {
+              "name": "10+ years of software engineering experience.",
+              "reason": "Your dated experience totals about 4 year(s), less than the 10 asked for."
+            }
+          ]
+        },
+        "included": [
+          {
+            "itemId": "e1",
+            "reason": "Evidence for 10+ years of software engineering experience.."
+          }
+        ],
+        "excluded": [],
+        "content": {
+          "supportedRequirementIds": [
+            "req-experience"
+          ],
+          "needsEvidenceRequirementIds": [],
+          "sectionsToImprove": [
+            {
+              "section": "experience",
+              "reason": "1 experience requirement(s) from this job aren't backed yet: 10+ years of software engineering experience.."
+            }
+          ]
+        },
+        "roadmap": [
+          {
+            "priority": 1,
+            "action": "Record any earlier roles you haven't added yet, and show how the months you have overlap this one",
+            "reason": "Your dated experience totals about 4 year(s), less than the 10 asked for. The posting asks: “10+ years of software engineering experience.”."
+          },
+          {
+            "priority": 2,
+            "action": "Add one detail line to Developer",
+            "reason": "Job-specific reports read better when every role and project says what changed. Use numbers you can defend."
+          }
+        ],
+        "ats": {
+          "score": 83,
+          "keywordCoverage": 0,
+          "keywords": [],
+          "checks": [
+            {
+              "id": "headings",
+              "label": "Standard section headings",
+              "status": "issue",
+              "detail": "Missing: Education, Projects, Skills.",
+              "issueIds": [
+                "ats-headings"
+              ]
+            },
+            {
+              "id": "dates",
+              "label": "Month-precision dates",
+              "status": "pass",
+              "detail": "Every role and qualification carries a start date.",
+              "issueIds": []
+            },
+            {
+              "id": "bullets",
+              "label": "Detail lines on roles and projects",
+              "status": "issue",
+              "detail": "Developer",
+              "issueIds": [
+                "ats-bullets"
+              ]
+            },
+            {
+              "id": "line-length",
+              "label": "Scannable line length",
+              "status": "pass",
+              "detail": "No detail line is over 200 characters.",
+              "issueIds": []
+            },
+            {
+              "id": "contact",
+              "label": "Contact block present",
+              "status": "issue",
+              "detail": "No personal details item.",
+              "issueIds": [
+                "ats-contact"
+              ]
+            },
+            {
+              "id": "layout",
+              "label": "Single-column layout",
+              "status": "not_checked",
+              "detail": "Layout checks run on the rendered PDF, which lands with export in F5. Nothing is claimed about it yet.",
+              "issueIds": []
+            }
+          ],
+          "issues": [
+            {
+              "id": "ats-headings",
+              "severity": "med",
+              "message": "No Education, Projects, Skills content to place under a standard heading.",
+              "fix": "Add education, projects, skills items in your workspace — parsers look for those headings.",
+              "check": "Standard headings"
+            },
+            {
+              "id": "ats-bullets",
+              "severity": "med",
+              "message": "1 entry has no detail lines.",
+              "fix": "Add one or two lines describing what you did and what changed, using numbers you can defend.",
+              "check": "Detail lines"
+            },
+            {
+              "id": "ats-contact",
+              "severity": "low",
+              "message": "No personal details item, so the resume has no header block.",
+              "fix": "Add a personal details item with the name and links you want shown.",
+              "check": "Contact block"
+            }
+          ],
+          "examples": []
+        },
+        "aiUsed": false
+      }
+    },
+    {
+      "id": "edge-implements-general",
+      "target": {
+        "id": "tgt-edge-7",
+        "role": "Test Role",
+        "company": null,
+        "jobDescription": "Requirements\n• Comfortable with PostgreSQL and SQL.",
+        "requiredSkills": [],
+        "template": "precision",
+        "length": "one_page",
+        "status": "draft",
+        "analysis": null,
+        "sample": false,
+        "createdAt": "2026-10-17T09:00:00.000Z",
+        "updatedAt": "2026-10-17T09:00:00.000Z"
+      },
+      "items": [
+        {
+          "bullets": [],
+          "tags": [],
+          "links": [],
+          "attachments": [],
+          "evidence": "attested",
+          "order": 0,
+          "id": "s1",
+          "section": "skill",
+          "title": "PostgreSQL"
+        }
+      ],
+      "workspaceVersion": 1,
+      "workspaceUpdatedAt": "2026-10-16T09:12:00.000Z",
+      "generatedAt": "2026-10-16T09:12:00.000Z",
+      "expected": {
+        "targetId": "tgt-edge-7",
+        "workspaceVersion": 1,
+        "generatedAt": "2026-10-16T09:12:00.000Z",
+        "score": 57,
+        "factors": [
+          {
+            "name": "Required skills",
+            "weight": 0.5714,
+            "value": 100,
+            "detail": "2 matched, 0 partially matched, 0 unsupported of 2 required skill requirement(s)."
+          },
+          {
+            "name": "Relevant experience",
+            "weight": 0.2857,
+            "value": 0,
+            "detail": "This posting doesn't set an experience bar, and your workspace has no experience or internship items yet."
+          },
+          {
+            "name": "Education",
+            "weight": 0.1429,
+            "value": 0,
+            "detail": "This posting doesn't require a qualification, and your workspace has no education items yet."
+          }
+        ],
+        "methodology": {
+          "note": "Weighted average of the factors below. For each factor we count how much of that job's requirements your workspace evidence supports — matched counts fully, partially matched counts half, unsupported counts zero. A factor with no matching requirements instead reflects how deep your workspace is in that area. Weights are fixed for every job, factors with nothing to compare are dropped, and the remaining weights are renormalised.",
+          "scoreDisclaimer": "This is not a probability of being hired.",
+          "atsDisclaimer": "Based on defined checks. Not a guarantee for any employer's ATS.",
+          "atsNote": "Deterministic checks only — no LLM scored this. The score starts at 100 and each issue subtracts 12 (high), 7 (medium) or 3 (low) points. Every issue lists what was found and how to fix it."
+        },
+        "requirements": [
+          {
+            "id": "req-skill-sql",
+            "text": "SQL",
+            "kind": "required",
+            "status": "matched",
+            "gapType": null,
+            "evidenceIds": [
+              "s1"
+            ],
+            "explanation": "Your PostgreSQL evidence covers SQL: PostgreSQL is a SQL implementation."
+          },
+          {
+            "id": "req-skill-postgresql",
+            "text": "PostgreSQL",
+            "kind": "required",
+            "status": "matched",
+            "gapType": null,
+            "evidenceIds": [
+              "s1"
+            ],
+            "explanation": "PostgreSQL appears with attached evidence in 1 workspace item."
+          }
+        ],
+        "skills": {
+          "documented": [
+            {
+              "name": "PostgreSQL",
+              "itemIds": [
+                "s1"
+              ]
+            }
+          ],
+          "demonstrated": [],
+          "notEvidenced": [],
+          "toDevelop": []
+        },
+        "included": [
+          {
+            "itemId": "s1",
+            "reason": "Evidence for SQL, PostgreSQL."
+          }
+        ],
+        "excluded": [],
+        "content": {
+          "supportedRequirementIds": [
+            "req-skill-sql",
+            "req-skill-postgresql"
+          ],
+          "needsEvidenceRequirementIds": [],
+          "sectionsToImprove": []
+        },
+        "roadmap": [],
+        "ats": {
+          "score": 83,
+          "keywordCoverage": 50,
+          "keywords": [
+            {
+              "keyword": "SQL",
+              "present": false,
+              "requirementId": "req-skill-sql"
+            },
+            {
+              "keyword": "PostgreSQL",
+              "present": true,
+              "requirementId": "req-skill-postgresql"
+            }
+          ],
+          "checks": [
+            {
+              "id": "headings",
+              "label": "Standard section headings",
+              "status": "issue",
+              "detail": "Missing: Education, Experience, Projects.",
+              "issueIds": [
+                "ats-headings"
+              ]
+            },
+            {
+              "id": "dates",
+              "label": "Month-precision dates",
+              "status": "pass",
+              "detail": "Every role and qualification carries a start date.",
+              "issueIds": []
+            },
+            {
+              "id": "keywords",
+              "label": "Job keywords present",
+              "status": "issue",
+              "detail": "50% coverage — missing SQL.",
+              "issueIds": [
+                "ats-keywords"
+              ]
+            },
+            {
+              "id": "contact",
+              "label": "Contact block present",
+              "status": "issue",
+              "detail": "No personal details item.",
+              "issueIds": [
+                "ats-contact"
+              ]
+            },
+            {
+              "id": "layout",
+              "label": "Single-column layout",
+              "status": "not_checked",
+              "detail": "Layout checks run on the rendered PDF, which lands with export in F5. Nothing is claimed about it yet.",
+              "issueIds": []
+            }
+          ],
+          "issues": [
+            {
+              "id": "ats-headings",
+              "severity": "med",
+              "message": "No Education, Experience, Projects content to place under a standard heading.",
+              "fix": "Add education, experience, projects items in your workspace — parsers look for those headings.",
+              "check": "Standard headings"
+            },
+            {
+              "id": "ats-keywords",
+              "severity": "med",
+              "message": "Only 50% of this job's keywords appear in the text of your resume (1 of 2).",
+              "fix": "Add the keywords you can honestly back with evidence; the gaps list below shows which ones need a new project or course first.",
+              "check": "Keyword coverage"
+            },
+            {
+              "id": "ats-contact",
+              "severity": "low",
+              "message": "No personal details item, so the resume has no header block.",
+              "fix": "Add a personal details item with the name and links you want shown.",
+              "check": "Contact block"
+            }
+          ],
+          "examples": []
+        },
+        "aiUsed": false
+      }
+    },
+    {
+      "id": "edge-reverse-not-match",
+      "target": {
+        "id": "tgt-edge-8",
+        "role": "Test Role",
+        "company": null,
+        "jobDescription": "Requirements\n• MySQL experience.",
+        "requiredSkills": [],
+        "template": "precision",
+        "length": "one_page",
+        "status": "draft",
+        "analysis": null,
+        "sample": false,
+        "createdAt": "2026-10-17T09:00:00.000Z",
+        "updatedAt": "2026-10-17T09:00:00.000Z"
+      },
+      "items": [
+        {
+          "bullets": [],
+          "tags": [],
+          "links": [],
+          "attachments": [],
+          "evidence": "verified",
+          "order": 0,
+          "id": "s1",
+          "section": "skill",
+          "title": "SQL"
+        }
+      ],
+      "workspaceVersion": 1,
+      "workspaceUpdatedAt": "2026-10-16T09:12:00.000Z",
+      "generatedAt": "2026-10-16T09:12:00.000Z",
+      "expected": {
+        "targetId": "tgt-edge-8",
+        "workspaceVersion": 1,
+        "generatedAt": "2026-10-16T09:12:00.000Z",
+        "score": 0,
+        "factors": [
+          {
+            "name": "Required skills",
+            "weight": 0.5714,
+            "value": 0,
+            "detail": "0 matched, 0 partially matched, 1 unsupported of 1 required skill requirement(s)."
+          },
+          {
+            "name": "Relevant experience",
+            "weight": 0.2857,
+            "value": 0,
+            "detail": "This posting doesn't set an experience bar, and your workspace has no experience or internship items yet."
+          },
+          {
+            "name": "Education",
+            "weight": 0.1429,
+            "value": 0,
+            "detail": "This posting doesn't require a qualification, and your workspace has no education items yet."
+          }
+        ],
+        "methodology": {
+          "note": "Weighted average of the factors below. For each factor we count how much of that job's requirements your workspace evidence supports — matched counts fully, partially matched counts half, unsupported counts zero. A factor with no matching requirements instead reflects how deep your workspace is in that area. Weights are fixed for every job, factors with nothing to compare are dropped, and the remaining weights are renormalised.",
+          "scoreDisclaimer": "This is not a probability of being hired.",
+          "atsDisclaimer": "Based on defined checks. Not a guarantee for any employer's ATS.",
+          "atsNote": "Deterministic checks only — no LLM scored this. The score starts at 100 and each issue subtracts 12 (high), 7 (medium) or 3 (low) points. Every issue lists what was found and how to fix it."
+        },
+        "requirements": [
+          {
+            "id": "req-skill-mysql",
+            "text": "MySQL",
+            "kind": "required",
+            "status": "unsupported",
+            "gapType": "not_evidenced",
+            "evidenceIds": [
+              "s1"
+            ],
+            "explanation": "No MySQL found. You evidence SQL, which is adjacent but not equivalent — MySQL may just be undocumented."
+          }
+        ],
+        "skills": {
+          "documented": [
+            {
+              "name": "SQL",
+              "itemIds": [
+                "s1"
+              ]
+            }
+          ],
+          "demonstrated": [],
+          "notEvidenced": [
+            {
+              "name": "MySQL",
+              "reason": "No MySQL found. You evidence SQL, which is adjacent but not equivalent — MySQL may just be undocumented."
+            }
+          ],
+          "toDevelop": [
+            {
+              "name": "MySQL",
+              "reason": "No MySQL found. You evidence SQL, which is adjacent but not equivalent — MySQL may just be undocumented."
+            }
+          ]
+        },
+        "included": [],
+        "excluded": [
+          {
+            "itemId": "s1",
+            "reason": "No requirement in this posting mentions this skill."
+          }
+        ],
+        "content": {
+          "supportedRequirementIds": [],
+          "needsEvidenceRequirementIds": [
+            "req-skill-mysql"
+          ],
+          "sectionsToImprove": [
+            {
+              "section": "skill",
+              "reason": "1 skill requirement(s) from this job aren't backed yet: MySQL."
+            }
+          ]
+        },
+        "roadmap": [
+          {
+            "priority": 1,
+            "action": "Document where you used MySQL",
+            "reason": "No MySQL found. You evidence SQL, which is adjacent but not equivalent — MySQL may just be undocumented."
+          }
+        ],
+        "ats": {
+          "score": 78,
+          "keywordCoverage": 0,
+          "keywords": [
+            {
+              "keyword": "MySQL",
+              "present": false,
+              "requirementId": "req-skill-mysql"
+            }
+          ],
+          "checks": [
+            {
+              "id": "headings",
+              "label": "Standard section headings",
+              "status": "issue",
+              "detail": "Missing: Education, Experience, Projects.",
+              "issueIds": [
+                "ats-headings"
+              ]
+            },
+            {
+              "id": "dates",
+              "label": "Month-precision dates",
+              "status": "pass",
+              "detail": "Every role and qualification carries a start date.",
+              "issueIds": []
+            },
+            {
+              "id": "keywords",
+              "label": "Job keywords present",
+              "status": "issue",
+              "detail": "0% coverage — missing MySQL.",
+              "issueIds": [
+                "ats-keywords"
+              ]
+            },
+            {
+              "id": "contact",
+              "label": "Contact block present",
+              "status": "issue",
+              "detail": "No personal details item.",
+              "issueIds": [
+                "ats-contact"
+              ]
+            },
+            {
+              "id": "layout",
+              "label": "Single-column layout",
+              "status": "not_checked",
+              "detail": "Layout checks run on the rendered PDF, which lands with export in F5. Nothing is claimed about it yet.",
+              "issueIds": []
+            }
+          ],
+          "issues": [
+            {
+              "id": "ats-headings",
+              "severity": "med",
+              "message": "No Education, Experience, Projects content to place under a standard heading.",
+              "fix": "Add education, experience, projects items in your workspace — parsers look for those headings.",
+              "check": "Standard headings"
+            },
+            {
+              "id": "ats-keywords",
+              "severity": "high",
+              "message": "Only 0% of this job's keywords appear in the text of your resume (0 of 1).",
+              "fix": "Add the keywords you can honestly back with evidence; the gaps list below shows which ones need a new project or course first.",
+              "check": "Keyword coverage"
+            },
+            {
+              "id": "ats-contact",
+              "severity": "low",
+              "message": "No personal details item, so the resume has no header block.",
+              "fix": "Add a personal details item with the name and links you want shown.",
+              "check": "Contact block"
+            }
+          ],
+          "examples": []
+        },
+        "aiUsed": false
+      }
+    },
+    {
+      "id": "edge-experience-domain",
+      "target": {
+        "id": "tgt-edge-9",
+        "role": "Test Role",
+        "company": null,
+        "jobDescription": "Requirements\n• 4+ years building machine learning systems in Python.",
+        "requiredSkills": [],
+        "template": "precision",
+        "length": "one_page",
+        "status": "draft",
+        "analysis": null,
+        "sample": false,
+        "createdAt": "2026-10-17T09:00:00.000Z",
+        "updatedAt": "2026-10-17T09:00:00.000Z"
+      },
+      "items": [
+        {
+          "bullets": [],
+          "tags": [
+            "javascript"
+          ],
+          "links": [],
+          "attachments": [],
+          "evidence": "attested",
+          "order": 0,
+          "id": "e1",
+          "section": "experience",
+          "title": "Web Developer",
+          "startDate": "2019-01"
+        }
+      ],
+      "workspaceVersion": 1,
+      "workspaceUpdatedAt": "2026-10-16T09:12:00.000Z",
+      "generatedAt": "2026-10-16T09:12:00.000Z",
+      "expected": {
+        "targetId": "tgt-edge-9",
+        "workspaceVersion": 1,
+        "generatedAt": "2026-10-16T09:12:00.000Z",
+        "score": 14,
+        "factors": [
+          {
+            "name": "Required skills",
+            "weight": 0.5714,
+            "value": 0,
+            "detail": "0 matched, 0 partially matched, 2 unsupported of 2 required skill requirement(s)."
+          },
+          {
+            "name": "Relevant experience",
+            "weight": 0.2857,
+            "value": 50,
+            "detail": "0 matched, 1 partially matched, 0 unsupported of 1 experience requirement(s)."
+          },
+          {
+            "name": "Education",
+            "weight": 0.1429,
+            "value": 0,
+            "detail": "This posting doesn't require a qualification, and your workspace has no education items yet."
+          }
+        ],
+        "methodology": {
+          "note": "Weighted average of the factors below. For each factor we count how much of that job's requirements your workspace evidence supports — matched counts fully, partially matched counts half, unsupported counts zero. A factor with no matching requirements instead reflects how deep your workspace is in that area. Weights are fixed for every job, factors with nothing to compare are dropped, and the remaining weights are renormalised.",
+          "scoreDisclaimer": "This is not a probability of being hired.",
+          "atsDisclaimer": "Based on defined checks. Not a guarantee for any employer's ATS.",
+          "atsNote": "Deterministic checks only — no LLM scored this. The score starts at 100 and each issue subtracts 12 (high), 7 (medium) or 3 (low) points. Every issue lists what was found and how to fix it."
+        },
+        "requirements": [
+          {
+            "id": "req-skill-python",
+            "text": "Python",
+            "kind": "required",
+            "status": "unsupported",
+            "gapType": "genuinely_missing",
+            "evidenceIds": [],
+            "explanation": "Nothing in your workspace mentions Python or anything adjacent to it."
+          },
+          {
+            "id": "req-skill-machine-learning",
+            "text": "Machine learning",
+            "kind": "required",
+            "status": "unsupported",
+            "gapType": "genuinely_missing",
+            "evidenceIds": [],
+            "explanation": "Nothing in your workspace mentions Machine learning or anything adjacent to it."
+          },
+          {
+            "id": "req-experience",
+            "text": "4+ years building machine learning systems in Python.",
+            "kind": "required",
+            "pattern": "experience",
+            "status": "partial",
+            "gapType": null,
+            "evidenceIds": [
+              "e1"
+            ],
+            "explanation": "Your dated experience totals about 8 year(s), but it is in other areas — this line asks for Python, Machine learning."
+          }
+        ],
+        "skills": {
+          "documented": [],
+          "demonstrated": [
+            {
+              "name": "JavaScript",
+              "itemIds": [
+                "e1"
+              ]
+            }
+          ],
+          "notEvidenced": [],
+          "toDevelop": [
+            {
+              "name": "Python",
+              "reason": "Nothing in your workspace mentions Python or anything adjacent to it."
+            },
+            {
+              "name": "Machine learning",
+              "reason": "Nothing in your workspace mentions Machine learning or anything adjacent to it."
+            },
+            {
+              "name": "4+ years building machine learning systems in Python.",
+              "reason": "Your dated experience totals about 8 year(s), but it is in other areas — this line asks for Python, Machine learning."
+            }
+          ]
+        },
+        "included": [
+          {
+            "itemId": "e1",
+            "reason": "Evidence for 4+ years building machine learning systems in Python.."
+          }
+        ],
+        "excluded": [],
+        "content": {
+          "supportedRequirementIds": [
+            "req-experience"
+          ],
+          "needsEvidenceRequirementIds": [
+            "req-skill-python",
+            "req-skill-machine-learning"
+          ],
+          "sectionsToImprove": [
+            {
+              "section": "experience",
+              "reason": "1 experience requirement(s) from this job aren't backed yet: 4+ years building machine learning systems in Python.."
+            },
+            {
+              "section": "project",
+              "reason": "2 project requirement(s) from this job aren't backed yet: Python, Machine learning."
+            }
+          ]
+        },
+        "roadmap": [
+          {
+            "priority": 1,
+            "action": "Learn Python and build a small project that proves it",
+            "reason": "Nothing in your workspace mentions Python or anything adjacent to it."
+          },
+          {
+            "priority": 2,
+            "action": "Learn Machine learning and build a small project that proves it",
+            "reason": "Nothing in your workspace mentions Machine learning or anything adjacent to it."
+          },
+          {
+            "priority": 3,
+            "action": "Record any earlier roles you haven't added yet, and show how the months you have overlap this one",
+            "reason": "Your dated experience totals about 8 year(s), but it is in other areas — this line asks for Python, Machine learning. The posting asks: “4+ years building machine learning systems in Python.”."
+          },
+          {
+            "priority": 4,
+            "action": "Add one detail line to Web Developer",
+            "reason": "Job-specific reports read better when every role and project says what changed. Use numbers you can defend."
+          }
+        ],
+        "ats": {
+          "score": 71,
+          "keywordCoverage": 0,
+          "keywords": [
+            {
+              "keyword": "Python",
+              "present": false,
+              "requirementId": "req-skill-python"
+            },
+            {
+              "keyword": "Machine learning",
+              "present": false,
+              "requirementId": "req-skill-machine-learning"
+            }
+          ],
+          "checks": [
+            {
+              "id": "headings",
+              "label": "Standard section headings",
+              "status": "issue",
+              "detail": "Missing: Education, Projects, Skills.",
+              "issueIds": [
+                "ats-headings"
+              ]
+            },
+            {
+              "id": "dates",
+              "label": "Month-precision dates",
+              "status": "pass",
+              "detail": "Every role and qualification carries a start date.",
+              "issueIds": []
+            },
+            {
+              "id": "bullets",
+              "label": "Detail lines on roles and projects",
+              "status": "issue",
+              "detail": "Web Developer",
+              "issueIds": [
+                "ats-bullets"
+              ]
+            },
+            {
+              "id": "line-length",
+              "label": "Scannable line length",
+              "status": "pass",
+              "detail": "No detail line is over 200 characters.",
+              "issueIds": []
+            },
+            {
+              "id": "keywords",
+              "label": "Job keywords present",
+              "status": "issue",
+              "detail": "0% coverage — missing Python, Machine learning.",
+              "issueIds": [
+                "ats-keywords"
+              ]
+            },
+            {
+              "id": "contact",
+              "label": "Contact block present",
+              "status": "issue",
+              "detail": "No personal details item.",
+              "issueIds": [
+                "ats-contact"
+              ]
+            },
+            {
+              "id": "layout",
+              "label": "Single-column layout",
+              "status": "not_checked",
+              "detail": "Layout checks run on the rendered PDF, which lands with export in F5. Nothing is claimed about it yet.",
+              "issueIds": []
+            }
+          ],
+          "issues": [
+            {
+              "id": "ats-headings",
+              "severity": "med",
+              "message": "No Education, Projects, Skills content to place under a standard heading.",
+              "fix": "Add education, projects, skills items in your workspace — parsers look for those headings.",
+              "check": "Standard headings"
+            },
+            {
+              "id": "ats-bullets",
+              "severity": "med",
+              "message": "1 entry has no detail lines.",
+              "fix": "Add one or two lines describing what you did and what changed, using numbers you can defend.",
+              "check": "Detail lines"
+            },
+            {
+              "id": "ats-keywords",
+              "severity": "high",
+              "message": "Only 0% of this job's keywords appear in the text of your resume (0 of 2).",
+              "fix": "Add the keywords you can honestly back with evidence; the gaps list below shows which ones need a new project or course first.",
+              "check": "Keyword coverage"
+            },
+            {
+              "id": "ats-contact",
+              "severity": "low",
+              "message": "No personal details item, so the resume has no header block.",
+              "fix": "Add a personal details item with the name and links you want shown.",
+              "check": "Contact block"
+            }
+          ],
+          "examples": []
+        },
+        "aiUsed": false
+      }
+    },
+    {
+      "id": "edge-education-below",
+      "target": {
+        "id": "tgt-edge-10",
+        "role": "Test Role",
+        "company": null,
+        "jobDescription": "Requirements\n• Master's degree in Computer Science.",
+        "requiredSkills": [],
+        "template": "precision",
+        "length": "one_page",
+        "status": "draft",
+        "analysis": null,
+        "sample": false,
+        "createdAt": "2026-10-17T09:00:00.000Z",
+        "updatedAt": "2026-10-17T09:00:00.000Z"
+      },
+      "items": [
+        {
+          "bullets": [],
+          "tags": [],
+          "links": [],
+          "attachments": [],
+          "evidence": "attested",
+          "order": 0,
+          "id": "ed1",
+          "section": "education",
+          "title": "B.Sc. Computer Science"
+        }
+      ],
+      "workspaceVersion": 1,
+      "workspaceUpdatedAt": "2026-10-16T09:12:00.000Z",
+      "generatedAt": "2026-10-16T09:12:00.000Z",
+      "expected": {
+        "targetId": "tgt-edge-10",
+        "workspaceVersion": 1,
+        "generatedAt": "2026-10-16T09:12:00.000Z",
+        "score": 17,
+        "factors": [
+          {
+            "name": "Relevant experience",
+            "weight": 0.6667,
+            "value": 0,
+            "detail": "This posting doesn't set an experience bar, and your workspace has no experience or internship items yet."
+          },
+          {
+            "name": "Education",
+            "weight": 0.3333,
+            "value": 50,
+            "detail": "0 matched, 1 partially matched, 0 unsupported of 1 education requirement(s)."
+          }
+        ],
+        "methodology": {
+          "note": "Weighted average of the factors below. For each factor we count how much of that job's requirements your workspace evidence supports — matched counts fully, partially matched counts half, unsupported counts zero. A factor with no matching requirements instead reflects how deep your workspace is in that area. Weights are fixed for every job, factors with nothing to compare are dropped, and the remaining weights are renormalised.",
+          "scoreDisclaimer": "This is not a probability of being hired.",
+          "atsDisclaimer": "Based on defined checks. Not a guarantee for any employer's ATS.",
+          "atsNote": "Deterministic checks only — no LLM scored this. The score starts at 100 and each issue subtracts 12 (high), 7 (medium) or 3 (low) points. Every issue lists what was found and how to fix it."
+        },
+        "requirements": [
+          {
+            "id": "req-education",
+            "text": "Master's degree in Computer Science.",
+            "kind": "required",
+            "pattern": "education",
+            "status": "partial",
+            "gapType": null,
+            "evidenceIds": [
+              "ed1"
+            ],
+            "explanation": "Your highest recorded qualification is a bachelor's, below the master's this posting asks for."
+          }
+        ],
+        "skills": {
+          "documented": [],
+          "demonstrated": [],
+          "notEvidenced": [],
+          "toDevelop": [
+            {
+              "name": "Master's degree in Computer Science.",
+              "reason": "Your highest recorded qualification is a bachelor's, below the master's this posting asks for."
+            }
+          ]
+        },
+        "included": [
+          {
+            "itemId": "ed1",
+            "reason": "Evidence for Master's degree in Computer Science.."
+          }
+        ],
+        "excluded": [],
+        "content": {
+          "supportedRequirementIds": [
+            "req-education"
+          ],
+          "needsEvidenceRequirementIds": [],
+          "sectionsToImprove": [
+            {
+              "section": "education",
+              "reason": "1 education requirement(s) from this job aren't backed yet: Master's degree in Computer Science.."
+            }
+          ]
+        },
+        "roadmap": [
+          {
+            "priority": 1,
+            "action": "Record the qualification you hold, or the one you're studying for",
+            "reason": "Your highest recorded qualification is a bachelor's, below the master's this posting asks for. The posting asks: “Master's degree in Computer Science.”."
+          }
+        ],
+        "ats": {
+          "score": 83,
+          "keywordCoverage": 0,
+          "keywords": [],
+          "checks": [
+            {
+              "id": "headings",
+              "label": "Standard section headings",
+              "status": "issue",
+              "detail": "Missing: Experience, Projects, Skills.",
+              "issueIds": [
+                "ats-headings"
+              ]
+            },
+            {
+              "id": "dates",
+              "label": "Month-precision dates",
+              "status": "issue",
+              "detail": "B.Sc. Computer Science",
+              "issueIds": [
+                "ats-dates"
+              ]
+            },
+            {
+              "id": "contact",
+              "label": "Contact block present",
+              "status": "issue",
+              "detail": "No personal details item.",
+              "issueIds": [
+                "ats-contact"
+              ]
+            },
+            {
+              "id": "layout",
+              "label": "Single-column layout",
+              "status": "not_checked",
+              "detail": "Layout checks run on the rendered PDF, which lands with export in F5. Nothing is claimed about it yet.",
+              "issueIds": []
+            }
+          ],
+          "issues": [
+            {
+              "id": "ats-headings",
+              "severity": "med",
+              "message": "No Experience, Projects, Skills content to place under a standard heading.",
+              "fix": "Add experience, projects, skills items in your workspace — parsers look for those headings.",
+              "check": "Standard headings"
+            },
+            {
+              "id": "ats-dates",
+              "severity": "med",
+              "message": "1 dated section item has no start date.",
+              "fix": "Add a month-precision start date (YYYY-MM) to each role and qualification.",
+              "check": "Dates present"
+            },
+            {
+              "id": "ats-contact",
+              "severity": "low",
+              "message": "No personal details item, so the resume has no header block.",
+              "fix": "Add a personal details item with the name and links you want shown.",
+              "check": "Contact block"
+            }
+          ],
+          "examples": []
+        },
+        "aiUsed": false
+      }
+    },
+    {
+      "id": "edge-education-higher",
+      "target": {
+        "id": "tgt-edge-11",
+        "role": "Test Role",
+        "company": null,
+        "jobDescription": "Requirements\n• Bachelor's degree in Computer Science.",
+        "requiredSkills": [],
+        "template": "precision",
+        "length": "one_page",
+        "status": "draft",
+        "analysis": null,
+        "sample": false,
+        "createdAt": "2026-10-17T09:00:00.000Z",
+        "updatedAt": "2026-10-17T09:00:00.000Z"
+      },
+      "items": [
+        {
+          "bullets": [],
+          "tags": [],
+          "links": [],
+          "attachments": [],
+          "evidence": "attested",
+          "order": 0,
+          "id": "ed1",
+          "section": "education",
+          "title": "M.Sc. Computer Science"
+        }
+      ],
+      "workspaceVersion": 1,
+      "workspaceUpdatedAt": "2026-10-16T09:12:00.000Z",
+      "generatedAt": "2026-10-16T09:12:00.000Z",
+      "expected": {
+        "targetId": "tgt-edge-11",
+        "workspaceVersion": 1,
+        "generatedAt": "2026-10-16T09:12:00.000Z",
+        "score": 33,
+        "factors": [
+          {
+            "name": "Relevant experience",
+            "weight": 0.6667,
+            "value": 0,
+            "detail": "This posting doesn't set an experience bar, and your workspace has no experience or internship items yet."
+          },
+          {
+            "name": "Education",
+            "weight": 0.3333,
+            "value": 100,
+            "detail": "1 matched, 0 partially matched, 0 unsupported of 1 education requirement(s)."
+          }
+        ],
+        "methodology": {
+          "note": "Weighted average of the factors below. For each factor we count how much of that job's requirements your workspace evidence supports — matched counts fully, partially matched counts half, unsupported counts zero. A factor with no matching requirements instead reflects how deep your workspace is in that area. Weights are fixed for every job, factors with nothing to compare are dropped, and the remaining weights are renormalised.",
+          "scoreDisclaimer": "This is not a probability of being hired.",
+          "atsDisclaimer": "Based on defined checks. Not a guarantee for any employer's ATS.",
+          "atsNote": "Deterministic checks only — no LLM scored this. The score starts at 100 and each issue subtracts 12 (high), 7 (medium) or 3 (low) points. Every issue lists what was found and how to fix it."
+        },
+        "requirements": [
+          {
+            "id": "req-education",
+            "text": "Bachelor's degree in Computer Science.",
+            "kind": "required",
+            "pattern": "education",
+            "status": "matched",
+            "gapType": null,
+            "evidenceIds": [
+              "ed1"
+            ],
+            "explanation": "Your education section covers this with attested or verified entries."
+          }
+        ],
+        "skills": {
+          "documented": [],
+          "demonstrated": [],
+          "notEvidenced": [],
+          "toDevelop": []
+        },
+        "included": [
+          {
+            "itemId": "ed1",
+            "reason": "Evidence for Bachelor's degree in Computer Science.."
+          }
+        ],
+        "excluded": [],
+        "content": {
+          "supportedRequirementIds": [
+            "req-education"
+          ],
+          "needsEvidenceRequirementIds": [],
+          "sectionsToImprove": []
+        },
+        "roadmap": [],
+        "ats": {
+          "score": 83,
+          "keywordCoverage": 0,
+          "keywords": [],
+          "checks": [
+            {
+              "id": "headings",
+              "label": "Standard section headings",
+              "status": "issue",
+              "detail": "Missing: Experience, Projects, Skills.",
+              "issueIds": [
+                "ats-headings"
+              ]
+            },
+            {
+              "id": "dates",
+              "label": "Month-precision dates",
+              "status": "issue",
+              "detail": "M.Sc. Computer Science",
+              "issueIds": [
+                "ats-dates"
+              ]
+            },
+            {
+              "id": "contact",
+              "label": "Contact block present",
+              "status": "issue",
+              "detail": "No personal details item.",
+              "issueIds": [
+                "ats-contact"
+              ]
+            },
+            {
+              "id": "layout",
+              "label": "Single-column layout",
+              "status": "not_checked",
+              "detail": "Layout checks run on the rendered PDF, which lands with export in F5. Nothing is claimed about it yet.",
+              "issueIds": []
+            }
+          ],
+          "issues": [
+            {
+              "id": "ats-headings",
+              "severity": "med",
+              "message": "No Experience, Projects, Skills content to place under a standard heading.",
+              "fix": "Add experience, projects, skills items in your workspace — parsers look for those headings.",
+              "check": "Standard headings"
+            },
+            {
+              "id": "ats-dates",
+              "severity": "med",
+              "message": "1 dated section item has no start date.",
+              "fix": "Add a month-precision start date (YYYY-MM) to each role and qualification.",
+              "check": "Dates present"
+            },
+            {
+              "id": "ats-contact",
+              "severity": "low",
+              "message": "No personal details item, so the resume has no header block.",
+              "fix": "Add a personal details item with the name and links you want shown.",
+              "check": "Contact block"
+            }
+          ],
+          "examples": []
+        },
+        "aiUsed": false
+      }
+    },
+    {
+      "id": "edge-seniority",
+      "target": {
+        "id": "tgt-edge-12",
+        "role": "Test Role",
+        "company": null,
+        "jobDescription": "Requirements\n• Senior Frontend Engineer — Halcyon Systems",
+        "requiredSkills": [],
+        "template": "precision",
+        "length": "one_page",
+        "status": "draft",
+        "analysis": null,
+        "sample": false,
+        "createdAt": "2026-10-17T09:00:00.000Z",
+        "updatedAt": "2026-10-17T09:00:00.000Z"
+      },
+      "items": [
+        {
+          "bullets": [],
+          "tags": [],
+          "links": [],
+          "attachments": [],
+          "evidence": "attested",
+          "order": 0,
+          "id": "e1",
+          "section": "experience",
+          "title": "Software Engineer"
+        }
+      ],
+      "workspaceVersion": 1,
+      "workspaceUpdatedAt": "2026-10-16T09:12:00.000Z",
+      "generatedAt": "2026-10-16T09:12:00.000Z",
+      "expected": {
+        "targetId": "tgt-edge-12",
+        "workspaceVersion": 1,
+        "generatedAt": "2026-10-16T09:12:00.000Z",
+        "score": 33,
+        "factors": [
+          {
+            "name": "Relevant experience",
+            "weight": 0.6667,
+            "value": 50,
+            "detail": "0 matched, 1 partially matched, 0 unsupported of 1 experience requirement(s)."
+          },
+          {
+            "name": "Education",
+            "weight": 0.3333,
+            "value": 0,
+            "detail": "This posting doesn't require a qualification, and your workspace has no education items yet."
+          }
+        ],
+        "methodology": {
+          "note": "Weighted average of the factors below. For each factor we count how much of that job's requirements your workspace evidence supports — matched counts fully, partially matched counts half, unsupported counts zero. A factor with no matching requirements instead reflects how deep your workspace is in that area. Weights are fixed for every job, factors with nothing to compare are dropped, and the remaining weights are renormalised.",
+          "scoreDisclaimer": "This is not a probability of being hired.",
+          "atsDisclaimer": "Based on defined checks. Not a guarantee for any employer's ATS.",
+          "atsNote": "Deterministic checks only — no LLM scored this. The score starts at 100 and each issue subtracts 12 (high), 7 (medium) or 3 (low) points. Every issue lists what was found and how to fix it."
+        },
+        "requirements": [
+          {
+            "id": "req-seniority",
+            "text": "Senior Frontend Engineer — Halcyon Systems",
+            "kind": "required",
+            "pattern": "seniority",
+            "status": "partial",
+            "gapType": null,
+            "evidenceIds": [
+              "e1"
+            ],
+            "explanation": "You have experience, but no role title matches “senior”."
+          }
+        ],
+        "skills": {
+          "documented": [],
+          "demonstrated": [],
+          "notEvidenced": [],
+          "toDevelop": [
+            {
+              "name": "Senior Frontend Engineer — Halcyon Systems",
+              "reason": "You have experience, but no role title matches “senior”."
+            }
+          ]
+        },
+        "included": [
+          {
+            "itemId": "e1",
+            "reason": "Evidence for Senior Frontend Engineer — Halcyon Systems."
+          }
+        ],
+        "excluded": [],
+        "content": {
+          "supportedRequirementIds": [
+            "req-seniority"
+          ],
+          "needsEvidenceRequirementIds": [],
+          "sectionsToImprove": [
+            {
+              "section": "experience",
+              "reason": "1 experience requirement(s) from this job aren't backed yet: Senior Frontend Engineer."
+            }
+          ]
+        },
+        "roadmap": [
+          {
+            "priority": 1,
+            "action": "Make the level visible in your role titles and the scope you owned",
+            "reason": "You have experience, but no role title matches “senior”. The posting asks: “Senior Frontend Engineer — Halcyon Systems”."
+          },
+          {
+            "priority": 2,
+            "action": "Add one detail line to Software Engineer",
+            "reason": "Job-specific reports read better when every role and project says what changed. Use numbers you can defend."
+          }
+        ],
+        "ats": {
+          "score": 76,
+          "keywordCoverage": 0,
+          "keywords": [],
+          "checks": [
+            {
+              "id": "headings",
+              "label": "Standard section headings",
+              "status": "issue",
+              "detail": "Missing: Education, Projects, Skills.",
+              "issueIds": [
+                "ats-headings"
+              ]
+            },
+            {
+              "id": "dates",
+              "label": "Month-precision dates",
+              "status": "issue",
+              "detail": "Software Engineer",
+              "issueIds": [
+                "ats-dates"
+              ]
+            },
+            {
+              "id": "bullets",
+              "label": "Detail lines on roles and projects",
+              "status": "issue",
+              "detail": "Software Engineer",
+              "issueIds": [
+                "ats-bullets"
+              ]
+            },
+            {
+              "id": "line-length",
+              "label": "Scannable line length",
+              "status": "pass",
+              "detail": "No detail line is over 200 characters.",
+              "issueIds": []
+            },
+            {
+              "id": "contact",
+              "label": "Contact block present",
+              "status": "issue",
+              "detail": "No personal details item.",
+              "issueIds": [
+                "ats-contact"
+              ]
+            },
+            {
+              "id": "layout",
+              "label": "Single-column layout",
+              "status": "not_checked",
+              "detail": "Layout checks run on the rendered PDF, which lands with export in F5. Nothing is claimed about it yet.",
+              "issueIds": []
+            }
+          ],
+          "issues": [
+            {
+              "id": "ats-headings",
+              "severity": "med",
+              "message": "No Education, Projects, Skills content to place under a standard heading.",
+              "fix": "Add education, projects, skills items in your workspace — parsers look for those headings.",
+              "check": "Standard headings"
+            },
+            {
+              "id": "ats-dates",
+              "severity": "med",
+              "message": "1 dated section item has no start date.",
+              "fix": "Add a month-precision start date (YYYY-MM) to each role and qualification.",
+              "check": "Dates present"
+            },
+            {
+              "id": "ats-bullets",
+              "severity": "med",
+              "message": "1 entry has no detail lines.",
+              "fix": "Add one or two lines describing what you did and what changed, using numbers you can defend.",
+              "check": "Detail lines"
+            },
+            {
+              "id": "ats-contact",
+              "severity": "low",
+              "message": "No personal details item, so the resume has no header block.",
+              "fix": "Add a personal details item with the name and links you want shown.",
+              "check": "Contact block"
+            }
+          ],
+          "examples": []
+        },
+        "aiUsed": false
+      }
+    },
+    {
+      "id": "edge-ats-long-line",
+      "target": {
+        "id": "tgt-edge-13",
+        "role": "Test Role",
+        "company": null,
+        "jobDescription": "Requirements\n• Strong TypeScript skills.",
+        "requiredSkills": [],
+        "template": "precision",
+        "length": "one_page",
+        "status": "draft",
+        "analysis": null,
+        "sample": false,
+        "createdAt": "2026-10-17T09:00:00.000Z",
+        "updatedAt": "2026-10-17T09:00:00.000Z"
+      },
+      "items": [
+        {
+          "bullets": [
+            "Rebuilt the reporting pipeline that the finance team used every month end, replacing a fragile spreadsheet process with a scheduled job, and documented the new runbook so anyone on the team could operate it without me, which reduced the monthly close from three days to one."
+          ],
+          "tags": [],
+          "links": [],
+          "attachments": [],
+          "evidence": "attested",
+          "order": 0,
+          "id": "e1",
+          "section": "experience",
+          "title": "Engineer",
+          "organization": "Northwind",
+          "startDate": "2023-02",
+          "endDate": "2025-04"
+        }
+      ],
+      "workspaceVersion": 1,
+      "workspaceUpdatedAt": "2026-10-16T09:12:00.000Z",
+      "generatedAt": "2026-10-16T09:12:00.000Z",
+      "expected": {
+        "targetId": "tgt-edge-13",
+        "workspaceVersion": 1,
+        "generatedAt": "2026-10-16T09:12:00.000Z",
+        "score": 9,
+        "factors": [
+          {
+            "name": "Required skills",
+            "weight": 0.5714,
+            "value": 0,
+            "detail": "0 matched, 0 partially matched, 1 unsupported of 1 required skill requirement(s)."
+          },
+          {
+            "name": "Relevant experience",
+            "weight": 0.2857,
+            "value": 30,
+            "detail": "This posting doesn't set an experience bar, so this reflects your workspace: 1 experience/internship item(s)."
+          },
+          {
+            "name": "Education",
+            "weight": 0.1429,
+            "value": 0,
+            "detail": "This posting doesn't require a qualification, and your workspace has no education items yet."
+          }
+        ],
+        "methodology": {
+          "note": "Weighted average of the factors below. For each factor we count how much of that job's requirements your workspace evidence supports — matched counts fully, partially matched counts half, unsupported counts zero. A factor with no matching requirements instead reflects how deep your workspace is in that area. Weights are fixed for every job, factors with nothing to compare are dropped, and the remaining weights are renormalised.",
+          "scoreDisclaimer": "This is not a probability of being hired.",
+          "atsDisclaimer": "Based on defined checks. Not a guarantee for any employer's ATS.",
+          "atsNote": "Deterministic checks only — no LLM scored this. The score starts at 100 and each issue subtracts 12 (high), 7 (medium) or 3 (low) points. Every issue lists what was found and how to fix it."
+        },
+        "requirements": [
+          {
+            "id": "req-skill-typescript",
+            "text": "TypeScript",
+            "kind": "required",
+            "status": "unsupported",
+            "gapType": "genuinely_missing",
+            "evidenceIds": [],
+            "explanation": "Nothing in your workspace mentions TypeScript or anything adjacent to it."
+          }
+        ],
+        "skills": {
+          "documented": [],
+          "demonstrated": [],
+          "notEvidenced": [],
+          "toDevelop": [
+            {
+              "name": "TypeScript",
+              "reason": "Nothing in your workspace mentions TypeScript or anything adjacent to it."
+            }
+          ]
+        },
+        "included": [],
+        "excluded": [
+          {
+            "itemId": "e1",
+            "reason": "Not used as evidence for any requirement in this posting."
+          }
+        ],
+        "content": {
+          "supportedRequirementIds": [],
+          "needsEvidenceRequirementIds": [
+            "req-skill-typescript"
+          ],
+          "sectionsToImprove": [
+            {
+              "section": "project",
+              "reason": "1 project requirement(s) from this job aren't backed yet: TypeScript."
+            }
+          ]
+        },
+        "roadmap": [
+          {
+            "priority": 1,
+            "action": "Learn TypeScript and build a small project that proves it",
+            "reason": "Nothing in your workspace mentions TypeScript or anything adjacent to it."
+          }
+        ],
+        "ats": {
+          "score": 75,
+          "keywordCoverage": 0,
+          "keywords": [
+            {
+              "keyword": "TypeScript",
+              "present": false,
+              "requirementId": "req-skill-typescript"
+            }
+          ],
+          "checks": [
+            {
+              "id": "headings",
+              "label": "Standard section headings",
+              "status": "issue",
+              "detail": "Missing: Education, Projects, Skills.",
+              "issueIds": [
+                "ats-headings"
+              ]
+            },
+            {
+              "id": "dates",
+              "label": "Month-precision dates",
+              "status": "pass",
+              "detail": "Every role and qualification carries a start date.",
+              "issueIds": []
+            },
+            {
+              "id": "bullets",
+              "label": "Detail lines on roles and projects",
+              "status": "pass",
+              "detail": "Every role and project has at least one detail line.",
+              "issueIds": []
+            },
+            {
+              "id": "line-length",
+              "label": "Scannable line length",
+              "status": "issue",
+              "detail": "Engineer",
+              "issueIds": [
+                "ats-long-lines"
+              ]
+            },
+            {
+              "id": "keywords",
+              "label": "Job keywords present",
+              "status": "issue",
+              "detail": "0% coverage — missing TypeScript.",
+              "issueIds": [
+                "ats-keywords"
+              ]
+            },
+            {
+              "id": "contact",
+              "label": "Contact block present",
+              "status": "issue",
+              "detail": "No personal details item.",
+              "issueIds": [
+                "ats-contact"
+              ]
+            },
+            {
+              "id": "layout",
+              "label": "Single-column layout",
+              "status": "not_checked",
+              "detail": "Layout checks run on the rendered PDF, which lands with export in F5. Nothing is claimed about it yet.",
+              "issueIds": []
+            }
+          ],
+          "issues": [
+            {
+              "id": "ats-headings",
+              "severity": "med",
+              "message": "No Education, Projects, Skills content to place under a standard heading.",
+              "fix": "Add education, projects, skills items in your workspace — parsers look for those headings.",
+              "check": "Standard headings"
+            },
+            {
+              "id": "ats-long-lines",
+              "severity": "low",
+              "message": "1 detail line runs past 200 characters.",
+              "fix": "Split long lines into two shorter ones so a reader can scan them.",
+              "check": "Line length"
+            },
+            {
+              "id": "ats-keywords",
+              "severity": "high",
+              "message": "Only 0% of this job's keywords appear in the text of your resume (0 of 1).",
+              "fix": "Add the keywords you can honestly back with evidence; the gaps list below shows which ones need a new project or course first.",
+              "check": "Keyword coverage"
+            },
+            {
+              "id": "ats-contact",
+              "severity": "low",
+              "message": "No personal details item, so the resume has no header block.",
+              "fix": "Add a personal details item with the name and links you want shown.",
+              "check": "Contact block"
+            }
+          ],
+          "examples": [
+            {
+              "id": "example-dates",
+              "issueId": "ats-format",
+              "before": "Engineer · Northwind · 2023-02 – 2025-04",
+              "after": "Engineer · Northwind · Feb 2023 – Apr 2025",
+              "note": "Formatting only — the same dates, rendered the way people read them. No detail was invented."
+            },
+            {
+              "id": "example-long-line",
+              "issueId": "ats-long-lines",
+              "before": "Rebuilt the reporting pipeline that the finance team used every month end, replacing a fragile spreadsheet process with a scheduled job, and documented the new runbook so anyone on the team could operate it without me, which reduced the monthly close from three days to one.",
+              "after": "Rebuilt the reporting pipeline that the finance team used every month end, replacing a fragile spreadsheet process with a scheduled job, and documented the new\nrunbook so anyone on the team could operate it without me, which reduced the monthly close from three days to one.",
+              "note": "Formatting only — the same sentence, broken in two. No words were added or removed."
+            }
+          ]
+        },
+        "aiUsed": false
+      }
+    },
+    {
+      "id": "edge-full-report",
+      "target": {
+        "id": "tgt-edge-14",
+        "role": "Test Role",
+        "company": null,
+        "jobDescription": "Requirements\n• Strong TypeScript skills.",
+        "requiredSkills": [],
+        "template": "precision",
+        "length": "one_page",
+        "status": "draft",
+        "analysis": null,
+        "sample": false,
+        "createdAt": "2026-10-17T09:00:00.000Z",
+        "updatedAt": "2026-10-17T09:00:00.000Z"
+      },
+      "items": [
+        {
+          "bullets": [],
+          "tags": [
+            "typescript"
+          ],
+          "links": [],
+          "attachments": [],
+          "evidence": "attested",
+          "order": 0,
+          "id": "s1",
+          "section": "skill",
+          "title": "TypeScript"
+        },
+        {
+          "bullets": [
+            "Built a small evidence tracker."
+          ],
+          "tags": [
+            "typescript"
+          ],
+          "links": [],
+          "attachments": [],
+          "evidence": "verified",
+          "order": 0,
+          "id": "p1",
+          "section": "project",
+          "title": "Evidence tool"
+        },
+        {
+          "bullets": [],
+          "tags": [],
+          "links": [],
+          "attachments": [],
+          "evidence": "missing",
+          "order": 0,
+          "id": "p2",
+          "section": "project",
+          "title": "Unrelated thing"
+        }
+      ],
+      "workspaceVersion": 4,
+      "workspaceUpdatedAt": "2026-10-16T09:12:00.000Z",
+      "generatedAt": "2026-10-16T09:12:00.000Z",
+      "expected": {
+        "targetId": "tgt-edge-14",
+        "workspaceVersion": 4,
+        "generatedAt": "2026-10-16T09:12:00.000Z",
+        "score": 56,
+        "factors": [
+          {
+            "name": "Required skills",
+            "weight": 0.4706,
+            "value": 100,
+            "detail": "1 matched, 0 partially matched, 0 unsupported of 1 required skill requirement(s)."
+          },
+          {
+            "name": "Relevant experience",
+            "weight": 0.2353,
+            "value": 0,
+            "detail": "This posting doesn't set an experience bar, and your workspace has no experience or internship items yet."
+          },
+          {
+            "name": "Education",
+            "weight": 0.1176,
+            "value": 0,
+            "detail": "This posting doesn't require a qualification, and your workspace has no education items yet."
+          },
+          {
+            "name": "Projects & achievements",
+            "weight": 0.1765,
+            "value": 50,
+            "detail": "Your workspace has 2 project/achievement item(s); the value reflects how well they are evidenced."
+          }
+        ],
+        "methodology": {
+          "note": "Weighted average of the factors below. For each factor we count how much of that job's requirements your workspace evidence supports — matched counts fully, partially matched counts half, unsupported counts zero. A factor with no matching requirements instead reflects how deep your workspace is in that area. Weights are fixed for every job, factors with nothing to compare are dropped, and the remaining weights are renormalised.",
+          "scoreDisclaimer": "This is not a probability of being hired.",
+          "atsDisclaimer": "Based on defined checks. Not a guarantee for any employer's ATS.",
+          "atsNote": "Deterministic checks only — no LLM scored this. The score starts at 100 and each issue subtracts 12 (high), 7 (medium) or 3 (low) points. Every issue lists what was found and how to fix it."
+        },
+        "requirements": [
+          {
+            "id": "req-skill-typescript",
+            "text": "TypeScript",
+            "kind": "required",
+            "status": "matched",
+            "gapType": null,
+            "evidenceIds": [
+              "s1",
+              "p1"
+            ],
+            "explanation": "TypeScript appears with attached evidence in 2 workspace items."
+          }
+        ],
+        "skills": {
+          "documented": [
+            {
+              "name": "TypeScript",
+              "itemIds": [
+                "s1"
+              ]
+            }
+          ],
+          "demonstrated": [
+            {
+              "name": "TypeScript",
+              "itemIds": [
+                "p1"
+              ]
+            }
+          ],
+          "notEvidenced": [],
+          "toDevelop": []
+        },
+        "included": [
+          {
+            "itemId": "s1",
+            "reason": "Evidence for TypeScript."
+          },
+          {
+            "itemId": "p1",
+            "reason": "Evidence for TypeScript."
+          }
+        ],
+        "excluded": [
+          {
+            "itemId": "p2",
+            "reason": "Marked Missing — there's nothing backing it yet, so it can't support a claim in this resume."
+          }
+        ],
+        "content": {
+          "supportedRequirementIds": [
+            "req-skill-typescript"
+          ],
+          "needsEvidenceRequirementIds": [],
+          "sectionsToImprove": [
+            {
+              "section": "project",
+              "reason": "1 project item(s) are marked related or missing, so they can't support a claim yet."
+            }
+          ]
+        },
+        "roadmap": [
+          {
+            "priority": 1,
+            "action": "Verify Unrelated thing",
+            "reason": "1 item(s) in the sections this posting cares about are marked related or missing, so they weaken the resume for Test Role."
+          },
+          {
+            "priority": 2,
+            "action": "Add one detail line to Unrelated thing",
+            "reason": "Job-specific reports read better when every role and project says what changed. Use numbers you can defend."
+          }
+        ],
+        "ats": {
+          "score": 83,
+          "keywordCoverage": 100,
+          "keywords": [
+            {
+              "keyword": "TypeScript",
+              "present": true,
+              "requirementId": "req-skill-typescript"
+            }
+          ],
+          "checks": [
+            {
+              "id": "headings",
+              "label": "Standard section headings",
+              "status": "issue",
+              "detail": "Missing: Education, Experience.",
+              "issueIds": [
+                "ats-headings"
+              ]
+            },
+            {
+              "id": "dates",
+              "label": "Month-precision dates",
+              "status": "pass",
+              "detail": "Every role and qualification carries a start date.",
+              "issueIds": []
+            },
+            {
+              "id": "bullets",
+              "label": "Detail lines on roles and projects",
+              "status": "issue",
+              "detail": "Unrelated thing",
+              "issueIds": [
+                "ats-bullets"
+              ]
+            },
+            {
+              "id": "line-length",
+              "label": "Scannable line length",
+              "status": "pass",
+              "detail": "No detail line is over 200 characters.",
+              "issueIds": []
+            },
+            {
+              "id": "keywords",
+              "label": "Job keywords present",
+              "status": "pass",
+              "detail": "100% coverage (1 of 1 terms).",
+              "issueIds": []
+            },
+            {
+              "id": "contact",
+              "label": "Contact block present",
+              "status": "issue",
+              "detail": "No personal details item.",
+              "issueIds": [
+                "ats-contact"
+              ]
+            },
+            {
+              "id": "layout",
+              "label": "Single-column layout",
+              "status": "not_checked",
+              "detail": "Layout checks run on the rendered PDF, which lands with export in F5. Nothing is claimed about it yet.",
+              "issueIds": []
+            }
+          ],
+          "issues": [
+            {
+              "id": "ats-headings",
+              "severity": "med",
+              "message": "No Education, Experience content to place under a standard heading.",
+              "fix": "Add education, experience items in your workspace — parsers look for those headings.",
+              "check": "Standard headings"
+            },
+            {
+              "id": "ats-bullets",
+              "severity": "med",
+              "message": "1 entry has no detail lines.",
+              "fix": "Add one or two lines describing what you did and what changed, using numbers you can defend.",
+              "check": "Detail lines"
+            },
+            {
+              "id": "ats-contact",
+              "severity": "low",
+              "message": "No personal details item, so the resume has no header block.",
+              "fix": "Add a personal details item with the name and links you want shown.",
+              "check": "Contact block"
+            }
+          ],
+          "examples": []
+        },
+        "aiUsed": false
+      }
+    },
+    {
+      "id": "edge-roadmap-tailoring",
+      "target": {
+        "id": "tgt-edge-15",
+        "role": "Test Role",
+        "company": null,
+        "jobDescription": "Requirements\n• 8+ years of experience.\n• Senior Frontend Engineer — Halcyon Systems",
+        "requiredSkills": [],
+        "template": "precision",
+        "length": "one_page",
+        "status": "draft",
+        "analysis": null,
+        "sample": false,
+        "createdAt": "2026-10-17T09:00:00.000Z",
+        "updatedAt": "2026-10-17T09:00:00.000Z"
+      },
+      "items": [
+        {
+          "bullets": [],
+          "tags": [
+            "typescript"
+          ],
+          "links": [],
+          "attachments": [],
+          "evidence": "attested",
+          "order": 0,
+          "id": "e1",
+          "section": "experience",
+          "title": "Engineer",
+          "startDate": "2024-01"
+        }
+      ],
+      "workspaceVersion": 1,
+      "workspaceUpdatedAt": "2026-10-16T09:12:00.000Z",
+      "generatedAt": "2026-10-16T09:12:00.000Z",
+      "expected": {
+        "targetId": "tgt-edge-15",
+        "workspaceVersion": 1,
+        "generatedAt": "2026-10-16T09:12:00.000Z",
+        "score": 33,
+        "factors": [
+          {
+            "name": "Relevant experience",
+            "weight": 0.6667,
+            "value": 50,
+            "detail": "0 matched, 2 partially matched, 0 unsupported of 2 experience requirement(s)."
+          },
+          {
+            "name": "Education",
+            "weight": 0.3333,
+            "value": 0,
+            "detail": "This posting doesn't require a qualification, and your workspace has no education items yet."
+          }
+        ],
+        "methodology": {
+          "note": "Weighted average of the factors below. For each factor we count how much of that job's requirements your workspace evidence supports — matched counts fully, partially matched counts half, unsupported counts zero. A factor with no matching requirements instead reflects how deep your workspace is in that area. Weights are fixed for every job, factors with nothing to compare are dropped, and the remaining weights are renormalised.",
+          "scoreDisclaimer": "This is not a probability of being hired.",
+          "atsDisclaimer": "Based on defined checks. Not a guarantee for any employer's ATS.",
+          "atsNote": "Deterministic checks only — no LLM scored this. The score starts at 100 and each issue subtracts 12 (high), 7 (medium) or 3 (low) points. Every issue lists what was found and how to fix it."
+        },
+        "requirements": [
+          {
+            "id": "req-experience",
+            "text": "8+ years of experience",
+            "kind": "required",
+            "pattern": "experience",
+            "status": "partial",
+            "gapType": null,
+            "evidenceIds": [
+              "e1"
+            ],
+            "explanation": "Your dated experience totals about 3 year(s), less than the 8 asked for."
+          },
+          {
+            "id": "req-seniority",
+            "text": "Senior Frontend Engineer — Halcyon Systems",
+            "kind": "required",
+            "pattern": "seniority",
+            "status": "partial",
+            "gapType": null,
+            "evidenceIds": [
+              "e1"
+            ],
+            "explanation": "You have experience, but no role title matches “senior”."
+          }
+        ],
+        "skills": {
+          "documented": [],
+          "demonstrated": [
+            {
+              "name": "TypeScript",
+              "itemIds": [
+                "e1"
+              ]
+            }
+          ],
+          "notEvidenced": [],
+          "toDevelop": [
+            {
+              "name": "8+ years of experience",
+              "reason": "Your dated experience totals about 3 year(s), less than the 8 asked for."
+            },
+            {
+              "name": "Senior Frontend Engineer — Halcyon Systems",
+              "reason": "You have experience, but no role title matches “senior”."
+            }
+          ]
+        },
+        "included": [
+          {
+            "itemId": "e1",
+            "reason": "Evidence for 8+ years of experience, Senior Frontend Engineer — Halcyon Systems."
+          }
+        ],
+        "excluded": [],
+        "content": {
+          "supportedRequirementIds": [
+            "req-experience",
+            "req-seniority"
+          ],
+          "needsEvidenceRequirementIds": [],
+          "sectionsToImprove": [
+            {
+              "section": "experience",
+              "reason": "2 experience requirement(s) from this job aren't backed yet: 8+ years of experience, Senior Frontend Engineer."
+            }
+          ]
+        },
+        "roadmap": [
+          {
+            "priority": 1,
+            "action": "Record any earlier roles you haven't added yet, and show how the months you have overlap this one",
+            "reason": "Your dated experience totals about 3 year(s), less than the 8 asked for. The posting asks: “8+ years of experience”."
+          },
+          {
+            "priority": 2,
+            "action": "Make the level visible in your role titles and the scope you owned",
+            "reason": "You have experience, but no role title matches “senior”. The posting asks: “Senior Frontend Engineer — Halcyon Systems”."
+          },
+          {
+            "priority": 3,
+            "action": "Add one detail line to Engineer",
+            "reason": "Job-specific reports read better when every role and project says what changed. Use numbers you can defend."
+          }
+        ],
+        "ats": {
+          "score": 83,
+          "keywordCoverage": 0,
+          "keywords": [],
+          "checks": [
+            {
+              "id": "headings",
+              "label": "Standard section headings",
+              "status": "issue",
+              "detail": "Missing: Education, Projects, Skills.",
+              "issueIds": [
+                "ats-headings"
+              ]
+            },
+            {
+              "id": "dates",
+              "label": "Month-precision dates",
+              "status": "pass",
+              "detail": "Every role and qualification carries a start date.",
+              "issueIds": []
+            },
+            {
+              "id": "bullets",
+              "label": "Detail lines on roles and projects",
+              "status": "issue",
+              "detail": "Engineer",
+              "issueIds": [
+                "ats-bullets"
+              ]
+            },
+            {
+              "id": "line-length",
+              "label": "Scannable line length",
+              "status": "pass",
+              "detail": "No detail line is over 200 characters.",
+              "issueIds": []
+            },
+            {
+              "id": "contact",
+              "label": "Contact block present",
+              "status": "issue",
+              "detail": "No personal details item.",
+              "issueIds": [
+                "ats-contact"
+              ]
+            },
+            {
+              "id": "layout",
+              "label": "Single-column layout",
+              "status": "not_checked",
+              "detail": "Layout checks run on the rendered PDF, which lands with export in F5. Nothing is claimed about it yet.",
+              "issueIds": []
+            }
+          ],
+          "issues": [
+            {
+              "id": "ats-headings",
+              "severity": "med",
+              "message": "No Education, Projects, Skills content to place under a standard heading.",
+              "fix": "Add education, projects, skills items in your workspace — parsers look for those headings.",
+              "check": "Standard headings"
+            },
+            {
+              "id": "ats-bullets",
+              "severity": "med",
+              "message": "1 entry has no detail lines.",
+              "fix": "Add one or two lines describing what you did and what changed, using numbers you can defend.",
+              "check": "Detail lines"
+            },
+            {
+              "id": "ats-contact",
+              "severity": "low",
+              "message": "No personal details item, so the resume has no header block.",
+              "fix": "Add a personal details item with the name and links you want shown.",
+              "check": "Contact block"
+            }
+          ],
+          "examples": []
+        },
+        "aiUsed": false
+      }
+    }
+  ]
+}
