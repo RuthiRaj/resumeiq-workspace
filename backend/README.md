@@ -180,8 +180,9 @@ Schema + RLS live in `db/migrations/` (`0001_initial.sql`, then
 `db/README.md`. Apply them with the Supabase SQL editor or CLI (`supabase db push`
 once the project is linked). `0002` adds the readable `change_log` columns and the
 `SECURITY INVOKER` workspace functions; `0003` hardens grants/policies; `0004`
-adds `import_sessions` + `import_review_items` and the import RPCs. `0004` is
-written but **not applied**.
+adds `import_sessions` + `import_review_items` and the import RPCs. `0004` was
+applied to the dev project on 2026-10-19; RLS, owner-only policies and the
+invoker-only RPCs were verified read-only.
 
 ## Docker / Render
 
