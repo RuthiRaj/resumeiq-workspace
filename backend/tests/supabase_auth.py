@@ -100,10 +100,67 @@ def isolation_available() -> bool:
 
 
 def skip_reason() -> str:
-    return (
-        "integration disabled: set RUN_SUPABASE_INTEGRATION=1 and the test-user "
-        "credentials in backend/.env.test (see backend/.env.test.example)"
-    )
+    """Name every condition that currently disables the integration tests."""
+    settings = env()
+    missing: list[str] = []
+    if not settings.run_supabase_integration:
+        missing.append("RUN_SUPABASE_INTEGRATION is not 1 in backend/.env.test")
+    if not settings.supabase_url or not settings.supabase_publishable_key:
+        missing.append("SUPABASE_URL / SUPABASE_PUBLISHABLE_KEY are missing from backend/.env")
+    if not _has_account_a(settings):
+        missing.append("user A credentials are missing from backend/.env.test")
+    if not missing:
+        return "integration tests are enabled"
+    return "integration tests disabled: " + "; ".join(missing)
+
+
+@functools.lru_cache(maxsize=1)
+def import_schema_status() -> tuple[bool, str]:
+    """Probe the Data API read-only for the import tables (migration 0004).
+
+    Returns ``(available, detail)``. The probe uses the publishable key as the
+    ``anon`` role: PostgREST reports a missing table before privileges are
+    checked (404 ``PGRST205``), while an applied table answers 401/403 for
+    ``anon`` because 0004 revokes its access. No user credential is needed and
+    nothing is written, so this is safe to call from a skip check.
+    """
+    settings = env()
+    if not (settings.supabase_url and settings.supabase_publishable_key):
+        return False, "SUPABASE_URL / SUPABASE_PUBLISHABLE_KEY are not set in backend/.env"
+    base = settings.supabase_url.rstrip("/")
+    headers = {
+        "apikey": settings.supabase_publishable_key,
+        "Accept": "application/json",
+    }
+    try:
+        response = httpx.get(
+            f"{base}/rest/v1/import_sessions",
+            params={"select": "id", "limit": "1"},
+            headers=headers,
+            timeout=_TIMEOUT_SECONDS,
+        )
+    except httpx.HTTPError as exc:
+        return False, f"the Data API could not be reached ({type(exc).__name__})"
+
+    try:
+        body = response.json()
+    except ValueError:
+        body = None
+    code = str(body.get("code", "")) if isinstance(body, dict) else ""
+
+    if response.status_code < 400:
+        return True, "import_sessions is reachable"
+    if response.status_code in (401, 403) or code in {"42501", "PGRST301"}:
+        # The table exists; `anon` is simply not allowed to read it (as designed).
+        return True, "import_sessions exists (access limited to authenticated users)"
+    if response.status_code == 404 or code in {"PGRST204", "PGRST205"}:
+        return (
+            False,
+            "migration 0004_imports.sql is not applied "
+            "(import_sessions is not in the PostgREST schema cache)",
+        )
+    detail = f"the Data API answered HTTP {response.status_code}"
+    return False, detail + (f" ({code})" if code else "")
 
 
 def _sign_in(email: str, password: str, label: str) -> str:

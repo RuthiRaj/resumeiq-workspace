@@ -66,4 +66,6 @@ disallow_untyped_defs = false
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-q"
+# ``-rs`` always prints the reason a test was skipped, so an opt-in integration
+# run that did not actually run says exactly which condition was missing.
+addopts = "-q -rs"

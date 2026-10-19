@@ -147,7 +147,7 @@ cd backend
 uv run pytest            # unit + contract tests (in-memory repo, httpx.MockTransport)
 
 # opt-in integration tests (skipped unless backend/.env.test opts in)
-uv run pytest tests/test_workspace_integration.py
+uv run pytest tests/test_workspace_integration.py tests/test_import_integration.py
 ```
 
 Integration tests read `backend/.env.test` (git-ignored; copy
@@ -156,8 +156,14 @@ Integration tests read `backend/.env.test` (git-ignored; copy
 (`SUPABASE_TEST_EMAIL_A`/`_PASSWORD_A` and `..._B`); the helper
 `tests/supabase_auth.py` signs them in through Supabase Auth. They hit a real
 project with a real user JWT, so they prove RLS, the per-user change log and
-standard resume, and the transactional versioning. Without the flag they are
-skipped; no key, password or token is ever printed.
+standard resume, and the transactional versioning.
+
+`tests/test_import_integration.py` additionally needs migration `0004` applied;
+it proves import isolation between two users, idempotent confirm, and the
+attested/verified evidence rules. Both suites skip cleanly when the flag or the
+credentials are absent; the import suite also skips when `0004` is not applied,
+and prints which condition caused the skip. No key, password or token is ever
+printed.
 
 ## Supabase JWT verification (what was verified)
 

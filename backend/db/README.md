@@ -158,3 +158,8 @@ those are skipped unless a real project and two signed-in test users are supplie
 `0004_imports.sql` is authored but **not yet applied** (deliberate, per the B2
 brief): apply it in the SQL editor, then re-run the Supabase security and
 performance advisors.
+
+The opt-in import suite (`tests/test_import_integration.py`) probes the Data API
+for `import_sessions` before running. Until `0004` is applied it skips every test
+and names that migration as the reason (the same gate also requires user B's
+credentials in `backend/.env.test`).

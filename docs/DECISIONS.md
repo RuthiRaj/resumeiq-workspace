@@ -1072,3 +1072,14 @@ Consequences (accepted limits, all covered by tests):
 Numbering note: 026 and 027 are claimed by the environment-hygiene and UI/QA
 sweep changes merged from `chore/clean-env` and `fix/ui-qa`, so this one is 028
 rather than 026 to avoid duplicate headings.
+
+Addendum (same day) — the live import-isolation suite. `tests/test_import_integration.py`
+proves the parts only a real project can: user A cannot list, read, patch or
+confirm user B's sessions/items; a second confirm returns the same workspace item
+(no duplicate); and a confirmed item is `attested` unless a certificate link was
+attached, in which case it is `verified`. It reuses the `.env.test` gate (never
+the runtime `.env`) and probes `import_sessions` read-only with the publishable
+key before running: a 404 `PGRST205` means `0004` is not applied, so the suite
+skips and prints that exact condition instead of failing on a missing table.
+`-rs` is now in pytest's `addopts`, so every skipped opt-in run names its cause
+(gate, user A/B credentials, or the migration) even without `-v`.
