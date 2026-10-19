@@ -57,7 +57,12 @@ async function signUpToWorkspace(page: Page, prefix: string) {
   await page.getByRole("button", { name: "Consent and continue" }).click();
 
   await expect(page).toHaveURL(/\/workspace$/, { timeout: NAV_TIMEOUT });
-  await expect(page.getByRole("heading", { name: "Your workspace" })).toBeVisible();
+  // `exact` matters: an empty workspace also renders the "Your workspace is
+  // empty — let's start it right" heading, and Playwright's default name
+  // matching is a substring match, so the two are ambiguous while the empty
+  // state is on screen (a strict-mode violation, or a flake if the empty state
+  // renders a beat after the heading).
+  await expect(page.getByRole("heading", { name: "Your workspace", exact: true })).toBeVisible();
 }
 
 /**
@@ -121,13 +126,16 @@ async function submitTarget(page: Page) {
 /**
  * The `Score N` badge for one named target on `/targets`. The list renders
  * newest-first (see `mocks/targets-store.ts`), so a score is matched to the
- * target it belongs to (via the card's accessible name) rather than by list
- * position.
+ * target it belongs to by the card's visible text rather than by list position.
+ * The card link deliberately has no `aria-label` (axe
+ * `label-content-name-mismatch`: the accessible name must contain the visible
+ * text), so the name comes from its content.
  */
 async function scoreFor(page: Page, role: string): Promise<number> {
   const badge = page
     .getByTestId("target-list")
-    .getByRole("link", { name: `Open the report for ${role}` })
+    .getByRole("link")
+    .filter({ hasText: role })
     .getByText(/^Score \d+$/);
   await expect(badge).toBeVisible();
   const text = await badge.innerText();

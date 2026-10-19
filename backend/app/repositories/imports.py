@@ -66,7 +66,7 @@ def initial_values(item: ExtractionItem) -> ImportItemValues:
 
     A bare year ("2019") is shown as read in ``extraction`` but is **not** copied
     into ``values.startDate``: the wire accepts month precision only, and we will
-    not invent a month for it (ADR-026).
+    not invent a month for it (ADR-028).
     """
     by_key: dict[ExtractedFieldKey, str] = {field.key: field.value for field in item.fields}
 
@@ -115,7 +115,7 @@ def values_to_workspace_create(
     elif isinstance(support, ImportSupportFile):
         # Certificate *files* are not stored in B2 (uploads are discarded), so the
         # attachment carries an internal reference, not a fake external URL. B6
-        # replaces it with a private-Storage signed URL (ADR-026).
+        # replaces it with a private-Storage signed URL (ADR-028).
         attachments.append(
             Attachment(
                 id=f"att-{item_id}", name=support.name, url=f"import://{import_id}/{item_id}"

@@ -31,7 +31,7 @@ export function SectionCard({
   return (
     <Link
       href={`/workspace/${meta.key}`}
-      aria-label={`${meta.label}, ${count} ${count === 1 ? "item" : "items"}${breakdown ? `: ${breakdown}` : ", empty"}`}
+      data-testid={`section-card-${meta.key}`}
       className={cn(
         "glass group flex flex-col gap-3 rounded-md p-4 transition-colors duration-200 hover:bg-white/[0.09]",
         weakest ? EVIDENCE_META[weakest].glow : "ring-1 ring-white/[0.06]",
@@ -41,7 +41,12 @@ export function SectionCard({
         <span className="flex size-9 items-center justify-center rounded-sm border border-white/[0.12] bg-elevated">
           <Icon className="size-4 text-accent-cyan" aria-hidden="true" />
         </span>
-        <span className="font-mono text-lg tabular-nums text-text">{count}</span>
+        <span
+          data-testid={`section-count-${meta.key}`}
+          className="font-mono text-lg tabular-nums text-text"
+        >
+          {count}
+        </span>
       </div>
       <div className="min-w-0">
         <p className="truncate text-sm font-medium text-text">{meta.label}</p>
@@ -65,6 +70,11 @@ export function SectionCard({
           ))
         )}
       </div>
+      {/* Read out after the visible text so the evidence summary is announced
+          without an `aria-label` that would hide the visible content. */}
+      <span className="sr-only">
+        {`${count} ${count === 1 ? "item" : "items"}${breakdown ? `, ${breakdown}` : ", empty"}`}
+      </span>
     </Link>
   );
 }

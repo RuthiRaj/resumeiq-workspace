@@ -2,7 +2,6 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { FlaskConical, WifiOff } from "lucide-react";
-import { api } from "@/lib/api";
 import type { WorkspacePersona } from "@/lib/schemas";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/features/ui/toast-store";
@@ -13,6 +12,14 @@ const PERSONAS: { value: WorkspacePersona; label: string }[] = [
   { value: "fresher", label: "Fresher" },
   { value: "midlevel", label: "Mid-level dev" },
 ];
+
+/**
+ * The dev-only client lives in its own module and is loaded on demand, so a
+ * production page chunk never contains it (`npm run check:dev-excluded`).
+ */
+async function devClient() {
+  return (await import("@/lib/api/dev")).devApi;
+}
 
 /**
  * Dev-only fixture switcher + failure simulation (PRD §8.5, §7.7). Rendered
@@ -27,7 +34,11 @@ export function WorkspaceDevBar() {
 function DevBarInner() {
   const queryClient = useQueryClient();
   const devKey = ["dev", "workspace"] as const;
-  const { data } = useQuery({ queryKey: devKey, queryFn: api.getDevState, staleTime: Infinity });
+  const { data } = useQuery({
+    queryKey: devKey,
+    queryFn: async () => (await devClient()).getDevState(),
+    staleTime: Infinity,
+  });
 
   function refresh() {
     void queryClient.invalidateQueries({ queryKey: workspaceKeys.root });
@@ -37,7 +48,8 @@ function DevBarInner() {
 
   async function switchPersona(persona: WorkspacePersona) {
     try {
-      await api.setWorkspacePersona(persona);
+      const devApi = await devClient();
+      await devApi.setWorkspacePersona(persona);
       refresh();
       toast({ tone: "info", title: "Fixture loaded", description: `Sample workspace: ${persona}.` });
     } catch {
@@ -48,7 +60,8 @@ function DevBarInner() {
   async function toggleFailures() {
     const next = !data?.failures;
     try {
-      await api.setMockFailures(next);
+      const devApi = await devClient();
+      await devApi.setMockFailures(next);
       refresh();
       toast({
         tone: next ? "error" : "success",

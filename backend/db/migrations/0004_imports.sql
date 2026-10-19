@@ -253,7 +253,7 @@ BEGIN
   v_organization := NULLIF(btrim(COALESCE(v_item.values->>'organization', '')), '');
   v_location     := NULLIF(btrim(COALESCE(v_item.values->>'location', '')), '');
   -- The wire rule is month precision ("YYYY-MM") or nothing. A value that does
-  -- not match is dropped rather than coerced: never invent a date (ADR-026).
+  -- not match is dropped rather than coerced: never invent a date (ADR-028).
   v_start := CASE
     WHEN COALESCE(v_item.values->>'startDate', '') ~ '^\d{4}-(0[1-9]|1[0-2])$'
       THEN to_date(v_item.values->>'startDate' || '-01', 'YYYY-MM-DD')
@@ -272,7 +272,7 @@ BEGIN
 
   -- A link becomes a link; a certificate file becomes a 'certificate' evidence
   -- link. The file itself is not stored in B2, so its url is an internal
-  -- reference (B6 replaces it with a private-Storage signed URL, ADR-026).
+  -- reference (B6 replaces it with a private-Storage signed URL, ADR-028).
   v_links := CASE
     WHEN v_item.support->>'kind' = 'link' THEN ARRAY[v_item.support->>'url']
     ELSE ARRAY[]::text[]

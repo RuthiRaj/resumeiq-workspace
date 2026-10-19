@@ -6,6 +6,16 @@ from typing import Annotated
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
+#: Variables the app cannot serve a request without. Named here so the startup
+#: check can list what is missing **by name** and never print a value.
+#: Integration-test credentials live in ``backend/.env.test`` (see
+#: ``.env.test.example``) and are deliberately not part of the runtime settings.
+REQUIRED_ENV_VARS = ("SUPABASE_URL", "SUPABASE_PUBLISHABLE_KEY")
+
+
+class MissingSettingsError(RuntimeError):
+    """Required configuration is absent; the message names variables only."""
+
 
 class Settings(BaseSettings):
     """All backend configuration comes from environment variables."""
@@ -31,9 +41,6 @@ class Settings(BaseSettings):
     # header; user data is reached with the *caller's* JWT so RLS applies. The
     # service_role key is never used (ADR-016).
     supabase_publishable_key: str = ""
-
-    # Opt-in gate for tests that hit a real Supabase project (skipped when unset).
-    run_supabase_integration: bool = False
 
     max_request_bytes: int = 1_048_576
     rate_limit_per_minute: int = 60
@@ -86,6 +93,25 @@ class Settings(BaseSettings):
     def data_api_configured(self) -> bool:
         """True when the workspace Data API can be reached (URL + publishable key)."""
         return bool(self.rest_url and self.supabase_publishable_key)
+
+    def missing_required(self) -> list[str]:
+        """Names of required variables that are unset (never their values)."""
+        return [name for name in REQUIRED_ENV_VARS if not getattr(self, name.lower())]
+
+    def validate_required(self) -> None:
+        """Fail fast at startup when required configuration is missing.
+
+        The raised message lists variable **names** only, so a startup failure
+        can never leak a secret into logs or crash reports.
+        """
+        missing = self.missing_required()
+        if missing:
+            raise MissingSettingsError(
+                "Missing required configuration: "
+                + ", ".join(missing)
+                + ". Set them in the environment or backend/.env "
+                "(see backend/.env.example). No values are printed."
+            )
 
 
 @lru_cache(maxsize=1)

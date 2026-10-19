@@ -13,7 +13,6 @@ import type {
   Workspace,
   WorkspaceChangeLogEntry,
   WorkspaceItem,
-  WorkspacePersona,
   WorkspaceReorderInput,
 } from "@/lib/schemas";
 import type { Consent } from "@/lib/privacy/consent";
@@ -22,6 +21,9 @@ import type { Consent } from "@/lib/privacy/consent";
  * Typed API client (PRD §8.3). Every network call goes through here so the
  * mock layer (MSW, `src/mocks/`) can later be swapped for the real FastAPI
  * backend without a UI rewrite. F0: endpoint shapes + types only.
+ *
+ * Development-only endpoints (fixture switcher, failure simulation) live in
+ * `./dev` so that a production build cannot contain them — see ADR-027.
  */
 const BASE = "/api/v1";
 
@@ -69,6 +71,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (!text) return undefined as T;
   return JSON.parse(text) as T;
 }
+
+/** Shared by the dev-only client in `./dev`; not part of the public API surface. */
+export { request as apiRequest };
 
 export const api = {
   // --- Workspace (B1 contract) ---
@@ -159,19 +164,7 @@ export const api = {
       body: JSON.stringify(input),
     }),
 
-  // --- Dev-only fixture controls (no-op outside `next dev`) ---
-  getDevState: () =>
-    request<{ persona: WorkspacePersona; failures: boolean }>("/dev/workspace-persona"),
-  setWorkspacePersona: (persona: WorkspacePersona) =>
-    request<{ ok: true }>("/dev/workspace-persona", {
-      method: "POST",
-      body: JSON.stringify({ persona }),
-    }),
-  setMockFailures: (enabled: boolean) =>
-    request<{ enabled: boolean }>("/dev/failures", {
-      method: "POST",
-      body: JSON.stringify({ enabled }),
-    }),
+  // --- Dev-only fixture controls live in `./dev` (see ADR-027) ---
   /** Writes the three demo job targets (PRD §8.5). Development only. */
   createSampleTargets: () =>
     request<{ targets: JobTarget[] }>("/dev/sample-targets", { method: "POST" }),

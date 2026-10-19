@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import {
   ChevronLeft,
   ChevronRight,
+  Command,
   FileText,
   FileUp,
   History,
@@ -167,7 +168,11 @@ function UserMenu() {
     <>
       <DropdownMenu>
         <DropdownMenuTrigger
-          aria-label={`Account menu for ${user.name}`}
+          aria-label={
+            initials
+              ? `${initials} — account menu for ${user.name}`
+              : `Account menu for ${user.name}`
+          }
           className="flex size-9 items-center justify-center rounded-full border border-white/[0.12] bg-elevated font-mono text-xs text-text transition-colors hover:bg-white/[0.08]"
         >
           <span aria-hidden="true">{initials || "•"}</span>
@@ -347,7 +352,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             data-app-chrome
             className="sticky top-0 z-40 flex h-16 items-center gap-2 border-b border-white/[0.08] bg-bg/80 px-4 backdrop-blur-xl sm:px-6"
           >
-            <Link href="/workspace" className="flex items-center gap-2 md:hidden" aria-label="ResumeIQ workspace">
+            <Link
+              href="/workspace"
+              className="flex items-center gap-2 md:hidden"
+              aria-label="R ResumeIQ workspace"
+            >
               <span aria-hidden="true" className="flex size-7 items-center justify-center rounded-sm bg-gradient-to-br from-accent-violet to-accent-cyan font-display text-base text-white">
                 R
               </span>
@@ -355,15 +364,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Breadcrumbs pathname={pathname ?? "/"} />
             <div className="flex-1" />
             <QuickCreate />
-            <IconTooltip label="Open command palette (Ctrl+K)">
+            <IconTooltip label="Open the command palette (Ctrl+K)">
               <button
                 type="button"
                 onClick={() => setCommandPaletteOpen(true)}
-                aria-label="Open command palette"
                 className="flex items-center gap-2 rounded-sm border border-white/[0.08] bg-elevated px-3 py-1.5 text-xs text-muted hover:text-text"
               >
-                <span aria-hidden="true" className="font-mono">⌘K</span>
-                <span className="hidden sm:inline">Command</span>
+                <Command className="size-3.5" aria-hidden="true" />
+                <span className="hidden sm:inline">Command palette</span>
+                <span className="sr-only sm:hidden">Command palette</span>
               </button>
             </IconTooltip>
             <UserMenu />
@@ -398,7 +407,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <button
             type="button"
             onClick={() => setMoreOpen(true)}
-            aria-label="Open all navigation"
+            aria-label="More navigation"
             aria-haspopup="dialog"
             className="flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-sm px-1 py-2 text-[11px] text-muted"
           >

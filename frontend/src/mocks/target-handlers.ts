@@ -9,7 +9,7 @@ import {
   startRun,
   advanceRun,
 } from "./targets-store";
-import { failuresEnabled } from "./workspace-store";
+import { failuresEnabled } from "./dev-state";
 import { currentUserId, failIfEnabled, latency, storage } from "./context";
 
 /**
@@ -79,7 +79,7 @@ export const targetHandlers = [
       currentUserId(),
       String(params.id),
       undefined,
-      failuresEnabled(storage()),
+      failuresEnabled(),
     );
     if (!state) {
       return HttpResponse.json(

@@ -13,7 +13,7 @@ upload is sniffed on magic bytes, parsed **in memory** by a deterministic sectio
 parser (no OCR, no AI) and discarded — only the extracted text and the candidate
 items are stored. Nothing reaches the workspace until the user confirms an item,
 and confirming runs through one transactional RPC (`api_import_confirm`). See
-ADR-026.
+ADR-028.
 
 ## Requirements
 
@@ -26,7 +26,8 @@ ADR-026.
 ```bash
 cd backend
 uv sync            # creates .venv and installs locked deps (uv.lock)
-cp .env.example .env   # then fill in Supabase values; never commit .env
+cp .env.example .env              # runtime; fill in Supabase values; never commit
+cp .env.test.example .env.test    # optional: only for the integration tests
 ```
 
 ## Run
@@ -54,9 +55,14 @@ With plain pip instead of uv: `python -m venv .venv && .venv/bin/activate`
 
 ## Configuration
 
-See `.env.example` for every variable (no real values committed).
-Key notes:
+`.env.example` lists every runtime variable (no real values committed), grouped
+as **App**, **CORS**, **Supabase**, **AI providers** and **Limits**, each with a
+comment. The runtime app only reads variables in that file; the **AI providers**
+group is intentionally empty because no provider key is read before B3.
 
+- The app **fails fast at startup**: if a required variable is missing it exits
+  with a message naming it (`SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`) — a value
+  is never printed (see `app/core/config.py`).
 - `SUPABASE_URL` derives the JWKS URL
   (`{url}/auth/v1/.well-known/jwks.json`) and expected issuer
   (`{url}/auth/v1`); both overridable via `SUPABASE_JWKS_URL` /
@@ -68,7 +74,6 @@ Key notes:
 - `SUPABASE_PUBLISHABLE_KEY` is the Data API `apikey` header (publishable/anon
   key). Workspace queries also send the **caller's JWT**, so RLS applies; the
   `service_role` key is never used (ADR-016).
-- `RUN_SUPABASE_INTEGRATION=1` opts into the integration tests (see below).
 - `MAX_IMPORT_BYTES` (default 5 MiB) caps an import upload. It is enforced both
   by `RequestSizeLimitMiddleware` for `{API_V1_PREFIX}/imports` (which streams
   the body, so an oversized upload is rejected before it is buffered) and by the
@@ -76,6 +81,24 @@ Key notes:
 - `EXTRACTION_TIMEOUT_SECONDS` (default 8.0) bounds a single document parse; the
   deadline is checked inside the page/block loops, so a pathological file cannot
   hold a worker indefinitely.
+
+### Integration-test environment
+
+Integration-test credentials are **not** part of the runtime `.env`: they live in
+`backend/.env.test` (git-ignored; copy `.env.test.example`), so a deployed backend
+never holds test passwords. `RUN_SUPABASE_INTEGRATION=1` there opts into the
+integration tests; see Tests below.
+
+### Check your environment
+
+`scripts/check_env.py` reports which required variables are **set or missing** for
+the app and for the tests — names only, never values:
+
+```bash
+cd backend
+uv run python scripts/check_env.py
+uv run python scripts/check_env.py --strict   # exit 1 if an app variable is missing
+```
 
 ## API (B1 + B2)
 
@@ -123,13 +146,14 @@ damaged, zip bomb or over a cap), `import_file_too_large` (413),
 cd backend
 uv run pytest            # unit + contract tests (in-memory repo, httpx.MockTransport)
 
-# opt-in integration tests (skipped unless backend/.env has the values below)
+# opt-in integration tests (skipped unless backend/.env.test opts in)
 uv run pytest tests/test_workspace_integration.py
 ```
 
-Integration tests read `backend/.env` (never committed). Set
-`RUN_SUPABASE_INTEGRATION=1`, `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` and two
-test users (`SUPABASE_TEST_EMAIL_A`/`_PASSWORD_A` and `..._B`); the helper
+Integration tests read `backend/.env.test` (git-ignored; copy
+`.env.test.example`) plus the runtime `backend/.env` for `SUPABASE_URL` /
+`SUPABASE_PUBLISHABLE_KEY`. Set `RUN_SUPABASE_INTEGRATION=1` and two test users
+(`SUPABASE_TEST_EMAIL_A`/`_PASSWORD_A` and `..._B`); the helper
 `tests/supabase_auth.py` signs them in through Supabase Auth. They hit a real
 project with a real user JWT, so they prove RLS, the per-user change log and
 standard resume, and the transactional versioning. Without the flag they are

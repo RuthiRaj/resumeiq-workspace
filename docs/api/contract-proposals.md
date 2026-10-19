@@ -10,7 +10,7 @@ This document is the contract the F4 frontend already speaks. It complements
 `/api/v1/me`, `/api/v1/workspace*`, `/api/v1/resume/standard`) plus the B2 import
 routes (`/api/v1/imports*`). The remaining proposed paths are exported when B4
 ships, and the frontend Zod schemas + MSW handlers get reconciled against that
-export before the mock layer is removed at B7 (see ADR-013, ADR-021, ADR-026).
+export before the mock layer is removed at B7 (see ADR-013, ADR-021, ADR-028).
 
 Source of truth on the frontend:
 

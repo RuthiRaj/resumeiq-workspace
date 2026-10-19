@@ -1,5 +1,8 @@
 """ResumeIQ backend application factory (B0 scaffold)."""
 
+import contextlib
+from collections.abc import AsyncIterator
+
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -105,12 +108,22 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or get_settings()
     setup_logging(settings.log_level)
 
+    @contextlib.asynccontextmanager
+    async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+        # Fail fast at startup: a server that cannot serve requests must not
+        # start. The message names missing variables and never prints a value
+        # (see Settings.validate_required). Tests that build an app without a
+        # lifespan are unaffected; uvicorn always runs it.
+        settings.validate_required()
+        yield
+
     app = FastAPI(
         title="ResumeIQ API",
         version=settings.app_version,
         docs_url="/docs",
         redoc_url="/redoc",
         openapi_url="/openapi.json",
+        lifespan=lifespan,
     )
     app.state.settings = settings
 

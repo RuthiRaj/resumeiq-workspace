@@ -2,16 +2,15 @@ import { http, HttpResponse } from "msw";
 import {
   addItem,
   deriveStandardResume,
-  failuresEnabled,
   loadWorkspace,
   personaOf,
   reorderItems,
   restoreItem,
-  setFailures,
   setPersona,
   softDeleteItem,
   updateItem,
 } from "./workspace-store";
+import { failuresEnabled, setFailures } from "./dev-state";
 import {
   currentUserId,
   failIfEnabled,
@@ -330,7 +329,7 @@ export const workspaceHandlers = [
     }
     return HttpResponse.json({
       persona: personaOf(storage(), currentUserId()),
-      failures: failuresEnabled(storage()),
+      failures: failuresEnabled(),
     });
   }),
 
@@ -355,7 +354,7 @@ export const workspaceHandlers = [
     if (!parsed.success) {
       return HttpResponse.json({ error: "Expected { enabled: boolean }." }, { status: 400 });
     }
-    setFailures(storage(), parsed.data.enabled);
+    setFailures(parsed.data.enabled);
     return HttpResponse.json({ enabled: parsed.data.enabled });
   }),
 ];

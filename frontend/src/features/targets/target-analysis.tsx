@@ -109,7 +109,12 @@ export function TargetAnalysis({ targetId }: { targetId: string }) {
       );
     }
     return (
-      <div className="flex flex-col gap-3 py-8" aria-busy="true" aria-label="Loading target">
+      <div
+        role="status"
+        className="flex flex-col gap-3 py-8"
+        aria-busy="true"
+        aria-label="Loading target"
+      >
         <Skeleton className="h-8 w-1/2" />
         <Skeleton className="h-56 w-full" />
         <Skeleton className="h-40 w-full" />
@@ -177,7 +182,12 @@ export function TargetAnalysis({ targetId }: { targetId: string }) {
           retrying={reportQuery.isFetching}
         />
       ) : (
-        <div className="flex flex-col gap-3" aria-busy="true" aria-label="Starting analysis">
+        <div
+          role="status"
+          className="flex flex-col gap-3"
+          aria-busy="true"
+          aria-label="Starting analysis"
+        >
           <Skeleton className="h-6 w-1/3" />
           <Skeleton className="h-72 w-full" />
         </div>

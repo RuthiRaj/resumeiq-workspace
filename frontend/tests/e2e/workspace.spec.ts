@@ -54,7 +54,7 @@ async function signUpToWorkspace(page: Page) {
   await page.getByRole("button", { name: "Consent and continue" }).click();
 
   await expect(page).toHaveURL(/\/workspace$/, { timeout: NAV_TIMEOUT });
-  await expect(page.getByRole("heading", { name: "Your workspace" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Your workspace", exact: true })).toBeVisible();
 }
 
 /** Arrange: create items directly through the mock API so tests stay focused. */
@@ -90,6 +90,27 @@ async function rowTitles(page: Page): Promise<string[]> {
     .evaluateAll((rows) => rows.map((row) => (row.querySelector("p")?.textContent ?? "").trim()));
 }
 
+/**
+ * Titles of a section's items as the mock API has actually *stored* them.
+ *
+ * Reorder is optimistic in the UI (`useReorderItems`), so a reload fired the
+ * moment the rows look right can cancel the still-in-flight POST and lose the
+ * move. Awaiting the persisted order is what makes a "persists across reload"
+ * assertion test persistence instead of timing.
+ */
+async function persistedTitles(page: Page, section: string): Promise<string[]> {
+  return page.evaluate(async (target) => {
+    const res = await fetch("/api/v1/workspace");
+    const body = (await res.json()) as {
+      items: { section: string; title: string; order: number; deletedAt?: string | null }[];
+    };
+    return body.items
+      .filter((item) => item.section === target && !item.deletedAt)
+      .sort((a, b) => a.order - b.order)
+      .map((item) => item.title);
+  }, section);
+}
+
 test("adds an item from the dashboard and shows it in its section", async ({ page }) => {
   await signUpToWorkspace(page);
 
@@ -103,10 +124,11 @@ test("adds an item from the dashboard and shows it in its section", async ({ pag
   await sheet.getByRole("button", { name: "Save item" }).click();
 
   await expect(page.getByText("Project added")).toBeVisible();
-  // The dashboard section card now reports one item.
-  await expect(
-    page.getByRole("region", { name: "All sections" }).getByRole("link", { name: /Projects, 1 item/ }),
-  ).toBeVisible({ timeout: NAV_TIMEOUT });
+  // The dashboard section card now reports one item (stable test id; the card
+  // no longer carries an aria-label — see section-card.tsx).
+  await expect(page.getByTestId("section-count-project")).toHaveText("1", {
+    timeout: NAV_TIMEOUT,
+  });
 
   // And the item is really on its section page.
   await gotoReady(page, "/workspace/project");
@@ -176,6 +198,13 @@ test("reorders with the Move buttons and persists the order across reload", asyn
 
   await page.getByRole("button", { name: "Move Alpha down" }).click();
   await expect.poll(() => rowTitles(page)).toEqual(["Beta", "Alpha", "Gamma"]);
+  // The reorder is optimistic: wait until the API has the new order before the
+  // reload, which would otherwise cancel the in-flight POST.
+  await expect.poll(() => persistedTitles(page, "skill")).toEqual([
+    "Beta",
+    "Alpha",
+    "Gamma",
+  ]);
 
   // The order is stored, not just optimistic UI state.
   await gotoReady(page, "/workspace/skill");

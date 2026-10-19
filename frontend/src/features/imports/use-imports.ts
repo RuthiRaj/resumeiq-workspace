@@ -7,8 +7,9 @@ import type {
   ImportSession,
   ImportSummary,
   ImportSupport,
+  WorkspaceItem,
 } from "@/lib/schemas";
-import { reviewItemToWorkspaceInput } from "@/lib/schemas";
+import { reviewItemToWorkspaceInputs } from "@/lib/schemas";
 import { workspaceKeys } from "@/features/workspace/use-workspace";
 
 /**
@@ -97,15 +98,20 @@ export function useDecideImportItem(sessionId: string) {
 }
 
 /**
- * Confirm = create the workspace item, then mark the review item confirmed.
- * Order matters: if the create fails, the item stays pending and nothing
- * pretended to be saved.
+ * Confirm = create the workspace item(s), then mark the review item confirmed.
+ * Order matters: if a create fails, the item stays pending and nothing
+ * pretended to be saved. A skills card holds one chip per skill, so it creates
+ * one workspace item per chip (see `reviewItemToWorkspaceInputs`).
  */
 export function useConfirmImportItem(sessionId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (item: ImportReviewItem) => {
-      const created = await api.createItem(reviewItemToWorkspaceInput(item));
+      const inputs = reviewItemToWorkspaceInputs(item);
+      const created: WorkspaceItem[] = [];
+      for (const input of inputs) {
+        created.push(await api.createItem(input));
+      }
       await api.updateImportItem(sessionId, item.id, {
         status: "confirmed",
         values: item.values,

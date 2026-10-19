@@ -39,7 +39,7 @@ import { cn } from "@/lib/utils";
 
 function SectionSkeleton() {
   return (
-    <div className="flex flex-col gap-3" aria-busy="true" aria-label="Loading items">
+    <div role="status" className="flex flex-col gap-3" aria-busy="true" aria-label="Loading items">
       {[0, 1, 2].map((index) => (
         <div key={index} className="glass rounded-md p-4">
           <Skeleton className="h-4 w-1/3" />

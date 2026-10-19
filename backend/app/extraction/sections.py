@@ -6,7 +6,7 @@ all. ``confidence`` is the parser's certainty about the *pattern match*, not a
 claim about the person — and it is what drives the review screen's "uncertain
 field" highlighting (PRD §6.2 IM-2, ADR-022).
 
-Known limits, recorded rather than hidden (see ADR-026): a two-column PDF whose
+Known limits, recorded rather than hidden (see ADR-028): a two-column PDF whose
 columns are interleaved in the content stream can merge two entries into one
 block; unusual heading synonyms are not recognised; a bare year is shown as read
 but never turned into an invented month.

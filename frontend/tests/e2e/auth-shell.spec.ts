@@ -148,7 +148,7 @@ test.describe("mobile navigation", () => {
     await mobileNav.getByRole("link", { name: "Job targets" }).click();
     await expectUrl(page, /\/targets$/);
 
-    await mobileNav.getByRole("button", { name: "Open all navigation" }).click();
+    await mobileNav.getByRole("button", { name: "More navigation" }).click();
     await expect(page.getByRole("dialog", { name: "All destinations" })).toBeVisible();
     await page.getByRole("dialog", { name: "All destinations" }).getByRole("link", { name: "Privacy" }).click();
     await expectUrl(page, /\/privacy$/);

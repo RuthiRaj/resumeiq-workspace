@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
+  DEMO_MODE_COPY,
   IMPORT_LIMITS_COPY,
   MAX_IMPORT_BYTES,
   evidenceForReviewItem,
+  reviewFieldPolicy,
   reviewItemProblem,
   reviewItemToWorkspaceInput,
+  reviewItemToWorkspaceInputs,
   reviewProgress,
   uncertainFields,
   validateImportUpload,
@@ -175,11 +178,113 @@ describe("confirming an item (IM-3)", () => {
   });
 
   it("uses the same mid-level skills the analysis engine will match", () => {
-    const skills = parsed.items
-      .filter((item) => item.extraction.section === "skill")
-      .map((item) => reviewItemToWorkspaceInput(item).title);
-    expect(skills).toContain("TypeScript");
-    expect(skills).toContain("React");
-    expect(skills).toContain("PostgreSQL");
+    const groups = parsed.items.filter((item) => item.extraction.section === "skill");
+    expect(groups).toHaveLength(1);
+    const inputs = reviewItemToWorkspaceInputs(groups[0]!);
+    const titles = inputs.map((input) => input.title);
+    expect(titles).toContain("TypeScript");
+    expect(titles).toContain("React");
+    expect(titles).toContain("PostgreSQL");
+  });
+});
+
+describe("import review honesty (sample data)", () => {
+  it("uses unmistakably sample names, not something that reads as the user's own", () => {
+    const parsed = session("ada-resume.pdf");
+    expect(parsed.sourceText).toContain("SAMPLE APPLICANT");
+    expect(parsed.sourceText).not.toMatch(/EXAMPLE CANDIDATE/i);
+    for (const item of parsed.items) {
+      for (const value of [item.values.title, item.values.organization]) {
+        // Proper names the extractor invents all start with "Sample".
+        if (/University|Ltd|Learning/.test(value)) {
+          expect(value).toMatch(/^Sample /);
+        }
+      }
+    }
+  });
+
+  it("labels the whole review as demo mode with a banner", () => {
+    // The banner string is asserted verbatim so it can't drift silently.
+    expect(DEMO_MODE_COPY).toBe(
+      "Demo mode: this preview is sample data. Your file was not read.",
+    );
+  });
+});
+
+describe("review field policy (per section)", () => {
+  const parsed = session("ada-resume.pdf");
+
+  it("shows no organisation, dates or certificate on personal details", () => {
+    const policy = reviewFieldPolicy("personal");
+    expect(policy.organizationLabel).toBeNull();
+    expect(policy.dateMode).toBe("none");
+    expect(policy.supportLabel).toBeNull();
+    expect(policy.titleLabel).toBeTruthy();
+    expect(policy.location).toBe(true);
+  });
+
+  it("shows no organisation, dates or certificate on skills", () => {
+    const policy = reviewFieldPolicy("skill");
+    expect(policy.organizationLabel).toBeNull();
+    expect(policy.dateMode).toBe("none");
+    expect(policy.supportLabel).toBeNull();
+    expect(policy.titleLabel).toBeNull();
+    expect(policy.skillChips).toBe(true);
+  });
+
+  it("keeps the fields a dated section actually has", () => {
+    const education = reviewFieldPolicy("education");
+    expect(education.organizationLabel).toBe("Institution");
+    expect(education.dateMode).toBe("range");
+    expect(education.supportLabel).toBeTruthy();
+  });
+
+  it("gives a certificate a single issued date, not a range", () => {
+    expect(reviewFieldPolicy("certificate").dateMode).toBe("issued");
+  });
+
+  it("never lets a hidden field leak into the created item", () => {
+    const personal = parsed.items.find(
+      (item) => item.extraction.section === "personal",
+    ) as ImportReviewItem;
+    const input = reviewItemToWorkspaceInput({
+      ...personal,
+      values: {
+        ...personal.values,
+        organization: "Sneaky Employer",
+        startDate: "2020-01",
+        endDate: "2021-01",
+      },
+    });
+    expect(input.title).toBe("Sample Applicant");
+    expect(input.organization).toBeUndefined();
+    expect(input.startDate).toBeUndefined();
+    expect(input.endDate).toBeUndefined();
+  });
+
+  it("splits a skills card into one attested item per chip", () => {
+    const group = parsed.items.find(
+      (item) => item.extraction.section === "skill",
+    ) as ImportReviewItem;
+    const inputs = reviewItemToWorkspaceInputs({
+      ...group,
+      values: { ...group.values, tags: ["TypeScript", "TypeScript", " React "] },
+    });
+    expect(inputs).toHaveLength(2);
+    expect(inputs.map((input) => input.title)).toEqual(["TypeScript", "React"]);
+    expect(inputs.every((input) => input.evidence === "attested")).toBe(true);
+    expect(inputs.every((input) => input.section === "skill")).toBe(true);
+  });
+
+  it("refuses to confirm a skills card with no chips", () => {
+    const group = parsed.items.find(
+      (item) => item.extraction.section === "skill",
+    ) as ImportReviewItem;
+    const empty: ImportReviewItem = {
+      ...group,
+      values: { ...group.values, tags: [] },
+    };
+    expect(reviewItemProblem(empty)).toContain("skill");
+    expect(reviewItemProblem(group)).toBeNull();
   });
 });

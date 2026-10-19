@@ -4,7 +4,7 @@ Forward-only migrations: `0001_initial.sql` creates the B0 schema (PRD section
 6); `0002_workspace_api.sql` adds the B1 workspace columns + functions;
 `0003_hardening.sql` locks down the RPC privileges and closes the
 version↔change-log gap (ADR-018); `0004_imports.sql` adds the B2 import tables
-and functions (ADR-026). Apply them in order with the Supabase SQL editor or CLI
+and functions (ADR-028). Apply them in order with the Supabase SQL editor or CLI
 (`supabase db push` once the project is linked). They reference `auth.users` /
 `auth.uid()`, so they only run on Supabase Postgres (or a local Postgres with an
 `auth` schema stub) — not on vanilla local Postgres.
@@ -45,7 +45,7 @@ separately in the SQL editor):
   `resume_claims.user_id`, `resume_versions.user_id`, `skill_relations.user_id`,
   `skill_relations.to_skill_id`.
 
-## Migration 0004 — B2 import parsing (ADR-026)
+## Migration 0004 — B2 import parsing (ADR-028)
 
 Adds what a document upload produced. **The uploaded file itself is not stored**
 — it is parsed in memory and discarded; only the extracted text and the candidate

@@ -28,7 +28,12 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 
   if (status === "loading") {
     return (
-      <div className="flex flex-col gap-3 py-10" aria-busy="true" aria-label="Checking your session">
+      <div
+        role="status"
+        className="flex flex-col gap-3 py-10"
+        aria-busy="true"
+        aria-label="Checking your session"
+      >
         <Skeleton className="h-8 w-1/3" />
         <Skeleton className="h-4 w-full" />
         <Skeleton className="h-4 w-5/6" />
@@ -39,7 +44,12 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 
   if (status === "unauthenticated") {
     return (
-      <div className="flex flex-col gap-2 py-10" aria-busy="true" aria-label="Redirecting to sign in">
+      <div
+        role="status"
+        className="flex flex-col gap-2 py-10"
+        aria-busy="true"
+        aria-label="Redirecting to sign in"
+      >
         <p className="text-sm text-muted">Checking your session — redirecting to sign in…</p>
         <Skeleton className="h-4 w-1/2" />
       </div>
