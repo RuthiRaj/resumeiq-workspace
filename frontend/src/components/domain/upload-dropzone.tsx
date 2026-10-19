@@ -90,6 +90,7 @@ export function UploadDropzone({
         type="file"
         accept={accept}
         className="sr-only"
+        aria-label="Choose a document to import"
         aria-describedby={hintId}
         disabled={blocked}
         data-testid="upload-input"

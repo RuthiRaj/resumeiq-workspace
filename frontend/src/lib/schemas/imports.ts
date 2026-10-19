@@ -3,6 +3,7 @@ import {
   MonthValueSchema,
   WorkspaceSectionSchema,
   type WorkspaceItem,
+  type WorkspaceSection,
 } from "./workspace";
 
 /**
@@ -75,6 +76,15 @@ export { formatBytes };
  * hidden: the review UI prints the threshold it uses.
  */
 export const UNCERTAIN_CONFIDENCE = 0.75;
+
+/**
+ * Demo-mode disclosure (PRD §4, §6.2). There is no parser in this build, so the
+ * review is explicitly and prominently labelled as sample data — a user must
+ * never be able to mistake it for their own file. The exact sentence is shared
+ * by the banner and the test so the two cannot drift apart.
+ */
+export const DEMO_MODE_COPY =
+  "Demo mode: this preview is sample data. Your file was not read.";
 
 /** Workspace field a single extracted value maps onto. */
 export const ExtractedFieldKeySchema = z.enum([
@@ -221,24 +231,196 @@ export function evidenceForReviewItem(
 }
 
 /**
- * The create payload sent to `POST /workspace/items` when the user confirms.
- * Derived from the reviewed values — never from the raw extraction — so what
- * the user read on screen is exactly what enters the workspace.
+ * Which editable fields make sense for each section (PRD §6.1 WS-3, §6.2 IM-2).
+ *
+ * A personal detail is a name and a location: it has no employer, no dates and
+ * no certificate, and the workspace does not model those there. A skill is a
+ * name and nothing else, so skills are reviewed together as one card of chips
+ * rather than one card each. The full field set on every section would invite
+ * users to type information that can be stored nowhere and evidenced never.
+ */
+export type ReviewDateMode = "none" | "range" | "issued";
+
+export interface ReviewFieldPolicy {
+  /** Label for the single editable title field; `null` when the section has none. */
+  titleLabel: string | null;
+  /** Label for the organisation field; `null` when the section has none. */
+  organizationLabel: string | null;
+  /** `range` = start + end month; `issued` = one issued month; `none` = no dates. */
+  dateMode: ReviewDateMode;
+  location: boolean;
+  bullets: boolean;
+  /** Tags are the skills: render them as removable chips and review as one card. */
+  skillChips: boolean;
+  /** Show the free-text keyword input (never alongside `skillChips`). */
+  keywords: boolean;
+  /** Copy for the supporting-evidence control, or `null` when none applies. */
+  supportLabel: string | null;
+}
+
+const REVIEW_FIELD_POLICIES: Record<WorkspaceSection, ReviewFieldPolicy> = {
+  personal: {
+    titleLabel: "Full name",
+    organizationLabel: null,
+    dateMode: "none",
+    location: true,
+    bullets: false,
+    skillChips: false,
+    keywords: false,
+    supportLabel: null,
+  },
+  education: {
+    titleLabel: "Qualification",
+    organizationLabel: "Institution",
+    dateMode: "range",
+    location: true,
+    bullets: true,
+    skillChips: false,
+    keywords: true,
+    supportLabel: "certificate or transcript",
+  },
+  experience: {
+    titleLabel: "Role",
+    organizationLabel: "Employer",
+    dateMode: "range",
+    location: true,
+    bullets: true,
+    skillChips: false,
+    keywords: true,
+    supportLabel: "reference or certificate",
+  },
+  internship: {
+    titleLabel: "Role",
+    organizationLabel: "Employer",
+    dateMode: "range",
+    location: true,
+    bullets: true,
+    skillChips: false,
+    keywords: true,
+    supportLabel: "certificate",
+  },
+  project: {
+    titleLabel: "Project",
+    organizationLabel: "Context",
+    dateMode: "range",
+    location: false,
+    bullets: true,
+    skillChips: false,
+    keywords: true,
+    supportLabel: "repository or demo link",
+  },
+  skill: {
+    titleLabel: null,
+    organizationLabel: null,
+    dateMode: "none",
+    location: false,
+    bullets: false,
+    skillChips: true,
+    keywords: false,
+    supportLabel: null,
+  },
+  achievement: {
+    titleLabel: "Award",
+    organizationLabel: "Awarding body",
+    dateMode: "issued",
+    location: false,
+    bullets: true,
+    skillChips: false,
+    keywords: true,
+    supportLabel: "award certificate",
+  },
+  extracurricular: {
+    titleLabel: "Activity",
+    organizationLabel: "Organisation",
+    dateMode: "range",
+    location: false,
+    bullets: true,
+    skillChips: false,
+    keywords: true,
+    supportLabel: "supporting link",
+  },
+  certificate: {
+    titleLabel: "Certificate",
+    organizationLabel: "Issuer",
+    dateMode: "issued",
+    location: false,
+    bullets: false,
+    skillChips: false,
+    keywords: true,
+    supportLabel: "certificate",
+  },
+  course: {
+    titleLabel: "Course",
+    organizationLabel: "Provider",
+    dateMode: "range",
+    location: false,
+    bullets: true,
+    skillChips: false,
+    keywords: true,
+    supportLabel: "completion certificate",
+  },
+  publication: {
+    titleLabel: "Title",
+    organizationLabel: "Venue or publisher",
+    dateMode: "issued",
+    location: false,
+    bullets: true,
+    skillChips: false,
+    keywords: true,
+    supportLabel: "DOI or publisher link",
+  },
+  training: {
+    titleLabel: "Programme",
+    organizationLabel: "Provider",
+    dateMode: "range",
+    location: false,
+    bullets: true,
+    skillChips: false,
+    keywords: true,
+    supportLabel: "completion certificate",
+  },
+};
+
+export function reviewFieldPolicy(section: WorkspaceSection): ReviewFieldPolicy {
+  return REVIEW_FIELD_POLICIES[section];
+}
+
+/**
+ * The create payload sent to `POST /workspace/items` when the user confirms a
+ * single-item section. Derived from the reviewed values — never from the raw
+ * extraction — so what the user read on screen is exactly what enters the
+ * workspace. Only the fields the section's policy actually shows are carried
+ * across, and a skills card (one card, many chips) must go through
+ * `reviewItemToWorkspaceInputs` instead.
  */
 export function reviewItemToWorkspaceInput(
   item: ImportReviewItem,
 ): Omit<WorkspaceItem, "id"> {
+  const policy = reviewFieldPolicy(item.extraction.section);
+  if (policy.skillChips) {
+    throw new Error(
+      "A skills card creates one item per chip — use reviewItemToWorkspaceInputs().",
+    );
+  }
   const evidence = evidenceForReviewItem(item);
   const support = item.support;
   return {
     section: item.extraction.section,
     title: item.values.title.trim(),
-    organization: item.values.organization.trim() || undefined,
-    startDate: item.values.startDate || undefined,
-    endDate: item.values.endDate || undefined,
-    location: item.values.location.trim() || undefined,
-    bullets: item.values.bullets.map((bullet) => bullet.trim()).filter(Boolean),
-    tags: item.values.tags.map((tag) => tag.trim()).filter(Boolean),
+    organization: policy.organizationLabel
+      ? item.values.organization.trim() || undefined
+      : undefined,
+    startDate:
+      policy.dateMode === "range" ? item.values.startDate || undefined : undefined,
+    endDate:
+      policy.dateMode === "none" ? undefined : item.values.endDate || undefined,
+    location: policy.location ? item.values.location.trim() || undefined : undefined,
+    bullets: policy.bullets
+      ? item.values.bullets.map((bullet) => bullet.trim()).filter(Boolean)
+      : [],
+    tags: policy.keywords
+      ? item.values.tags.map((tag) => tag.trim()).filter(Boolean)
+      : [],
     // A link is also an evidence link for the workspace item; a file becomes
     // an attachment so `Verified` stays true to its definition (PRD §4.2).
     links: support?.kind === "link" ? [support.url] : [],
@@ -251,8 +433,44 @@ export function reviewItemToWorkspaceInput(
   };
 }
 
+/**
+ * Every workspace item a confirm should create. A skills card is one review card
+ * holding many chips, so it becomes one `skill` item per chip — the workspace
+ * models skills one per item and the analysis engine matches each separately.
+ * Every other section maps to exactly one item.
+ */
+export function reviewItemToWorkspaceInputs(
+  item: ImportReviewItem,
+): Omit<WorkspaceItem, "id">[] {
+  const policy = reviewFieldPolicy(item.extraction.section);
+  if (!policy.skillChips) return [reviewItemToWorkspaceInput(item)];
+
+  const skills = [...new Set(item.values.tags.map((tag) => tag.trim()).filter(Boolean))];
+  return skills.map((skill) => ({
+    section: item.extraction.section,
+    title: skill,
+    organization: undefined,
+    startDate: undefined,
+    endDate: undefined,
+    location: undefined,
+    bullets: [],
+    tags: [],
+    links: [],
+    attachments: [],
+    // Skills carry no certificate control, so a skill is always User-attested (IM-3).
+    evidence: "attested" as const,
+    order: 0,
+  }));
+}
+
 /** Why an item cannot be confirmed yet, or `null` when it is ready. */
 export function reviewItemProblem(item: ImportReviewItem): string | null {
+  const policy = reviewFieldPolicy(item.extraction.section);
+  if (policy.skillChips) {
+    return item.values.tags.some((tag) => tag.trim())
+      ? null
+      : "Add at least one skill before confirming — nothing is saved without a skill.";
+  }
   const parsed = ImportItemValuesSchema.safeParse(item.values);
   if (!parsed.success) {
     const first = parsed.error.issues[0];

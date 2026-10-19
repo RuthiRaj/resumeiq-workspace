@@ -52,7 +52,12 @@ async function signUpToWorkspace(page: Page, prefix: string) {
   await page.getByRole("button", { name: "Consent and continue" }).click();
 
   await expect(page).toHaveURL(/\/workspace$/, { timeout: NAV_TIMEOUT });
-  await expect(page.getByRole("heading", { name: "Your workspace" })).toBeVisible();
+  // `exact` distinguishes the h1 from the brand-new-workspace empty-state
+  // heading, and the generous timeout absorbs a slow first compile of
+  // /workspace under parallel dev-server workers (see ADR-008).
+  await expect(page.getByRole("heading", { name: "Your workspace", exact: true })).toBeVisible({
+    timeout: NAV_TIMEOUT,
+  });
 }
 
 test("upload -> extraction review -> confirmed item lands in the workspace", async ({ page }) => {
@@ -74,7 +79,7 @@ test("upload -> extraction review -> confirmed item lands in the workspace", asy
   await expect(review).toBeVisible({ timeout: REVIEW_TIMEOUT });
   await expect(review.getByTestId("source-preview")).toBeVisible();
   await expect(review.getByTestId("review-progress")).toBeVisible();
-  await expect(review.getByText("7 candidate items")).toBeVisible();
+  await expect(review.getByText("5 sample items")).toBeVisible();
 
   // Extracted title sits next to its confidence and source line.
   const internship = review.locator('[data-testid^="review-item-"]').filter({
@@ -88,7 +93,7 @@ test("upload -> extraction review -> confirmed item lands in the workspace", asy
   await expect(internship.getByText("Not imported")).toBeVisible({ timeout: NAV_TIMEOUT });
 
   const project = review.locator('[data-testid^="review-item-"]').filter({
-    hasText: "Recipe box",
+    hasText: "Sample Recipe Box",
   });
   await expect(project).toHaveCount(1);
   await project.getByTestId(/confirm-/).click();
@@ -105,11 +110,62 @@ test("upload -> extraction review -> confirmed item lands in the workspace", asy
   // import-review.tsx), and this test deliberately leaves items pending.
   await gotoReady(page, "/workspace");
   await expect(page).toHaveURL(/\/workspace$/, { timeout: NAV_TIMEOUT });
-  await expect(
-    page
-      .getByRole("region", { name: "All sections" })
-      .getByRole("link", { name: /Projects, 1 item/ }),
-  ).toBeVisible({ timeout: NAV_TIMEOUT });
+  // The dashboard section card now reports exactly one project. Located by its
+  // stable test id: the card no longer carries an `aria-label` (axe
+  // `label-content-name-mismatch` — the visible text must be part of the name).
+  await expect(page.getByTestId("section-count-project")).toHaveText("1", {
+    timeout: NAV_TIMEOUT,
+  });
+});
+
+test("demo-mode banner, sample tags and per-section fields on review", async ({ page }) => {
+  await signUpToWorkspace(page, "f4-import-demo");
+
+  await gotoReady(page, "/workspace/import");
+  await page
+    .getByTestId("upload-input")
+    .setInputFiles({ name: "resume.pdf", mimeType: "application/pdf", buffer: Buffer.alloc(2048) });
+
+  const review = page.getByTestId("import-review");
+  await expect(review).toBeVisible({ timeout: REVIEW_TIMEOUT });
+
+  // Honesty: the whole review is labelled demo mode, verbatim.
+  await expect(page.getByTestId("demo-mode-banner")).toContainText(
+    "Demo mode: this preview is sample data. Your file was not read.",
+  );
+
+  // Every extracted card carries a Sample tag — none is presented as read.
+  const cards = review.locator('[data-testid^="review-item-"]');
+  await expect(cards).toHaveCount(5);
+  await expect(review.locator('[data-testid^="sample-tag-"]')).toHaveCount(5);
+
+  // Personal details: name and location only — no employer, dates or certificate.
+  const personal = page.getByTestId("review-item-ext-personal");
+  await expect(personal.getByLabel("Full name")).toBeVisible();
+  await expect(personal.getByLabel("Location")).toBeVisible();
+  await expect(personal.getByLabel("Employer")).toHaveCount(0);
+  await expect(personal.getByLabel("Start (month)")).toHaveCount(0);
+  await expect(personal.getByLabel("Supporting link")).toHaveCount(0);
+
+  // Skills: one card of chips, no dates, no certificate.
+  const skills = page.getByTestId("review-item-ext-skills");
+  await expect(skills.getByRole("list", { name: "Extracted skills" })).toBeVisible();
+  await expect(skills.getByText("TypeScript")).toBeVisible();
+  await expect(skills.getByText("PostgreSQL")).toBeVisible();
+  await expect(skills.getByLabel("Start (month)")).toHaveCount(0);
+  await expect(skills.getByLabel("Supporting link")).toHaveCount(0);
+
+  // Confirming the skills card creates one skill item per chip.
+  await page.getByTestId("confirm-ext-skills").click();
+  await expect(skills.getByText("In your workspace", { exact: true })).toBeVisible({
+    timeout: NAV_TIMEOUT,
+  });
+  const skillItems = await page.evaluate(async () => {
+    const res = await fetch("/api/v1/workspace");
+    const body = (await res.json()) as { items: { section: string; title: string }[] };
+    return body.items.filter((item) => item.section === "skill").map((item) => item.title);
+  });
+  expect(skillItems.sort()).toEqual(["PostgreSQL", "React", "TypeScript"]);
 });
 
 test("an unsupported file type is rejected with a reason", async ({ page }) => {

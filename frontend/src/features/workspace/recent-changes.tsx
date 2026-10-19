@@ -44,7 +44,12 @@ export function RecentChanges({
       </div>
 
       {isLoading ? (
-        <div className="flex flex-col gap-2" aria-busy="true" aria-label="Loading recent changes">
+        <div
+          role="status"
+          className="flex flex-col gap-2"
+          aria-busy="true"
+          aria-label="Loading recent changes"
+        >
           {[0, 1, 2].map((index) => (
             <Skeleton key={index} className="h-10 w-full" />
           ))}

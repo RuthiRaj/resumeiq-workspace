@@ -13,7 +13,12 @@ export default function WorkspaceImportPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex flex-col gap-3 py-8" aria-busy="true" aria-label="Loading import">
+        <div
+          role="status"
+          className="flex flex-col gap-3 py-8"
+          aria-busy="true"
+          aria-label="Loading import"
+        >
           <Skeleton className="h-8 w-1/3" />
           <Skeleton className="h-40 w-full" />
         </div>

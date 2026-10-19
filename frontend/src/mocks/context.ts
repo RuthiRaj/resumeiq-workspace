@@ -1,6 +1,7 @@
 import { HttpResponse } from "msw";
 import { loadSession } from "@/lib/auth/store";
-import { activeItems, failuresEnabled, loadWorkspace } from "./workspace-store";
+import { failuresEnabled } from "./dev-state";
+import { activeItems, loadWorkspace } from "./workspace-store";
 
 /**
  * Shared helpers for the mock handlers (PRD §8.4). Handlers run in the browser
@@ -33,7 +34,7 @@ export function currentUserId(): string {
 
 /** Dev-only failure simulation (PRD §7.7 error states, §8.4). */
 export function failIfEnabled() {
-  if (failuresEnabled(storage())) {
+  if (failuresEnabled()) {
     return HttpResponse.json(
       {
         error:

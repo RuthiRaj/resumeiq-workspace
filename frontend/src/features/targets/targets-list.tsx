@@ -77,7 +77,12 @@ export function TargetsList() {
       </header>
 
       {targetsQuery.isLoading ? (
-        <div className="flex flex-col gap-3" aria-busy="true" aria-label="Loading targets">
+        <div
+          role="status"
+          className="flex flex-col gap-3"
+          aria-busy="true"
+          aria-label="Loading targets"
+        >
           <Skeleton className="h-24 w-full" />
           <Skeleton className="h-24 w-full" />
         </div>
@@ -130,7 +135,6 @@ function TargetCard({ target }: { target: JobTarget }) {
       <Link
         href={`/targets/${target.id}`}
         className="flex flex-col gap-3 p-4"
-        aria-label={`Open the report for ${target.role}`}
       >
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex min-w-0 flex-col gap-1">

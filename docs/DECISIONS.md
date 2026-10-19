@@ -817,4 +817,164 @@ artifacts and the regenerated `frontend/AGENTS.md` (ADR-007); `git worktree prun
 found no stale metadata; a scan of all 43 commits and the tracked tree found no
 `sb_`, `gsk_`, `nvapi-`, `github_pat_` or JWT-shaped value.
 
+## ADR-027 — 2026-10-18 — UI/QA sweep: placement, dev-only state, and honest import review
 
+Context: a pass over every built route at 360 / 768 / 1280 px surfaced six defect
+areas. Only one was a crash; the rest were honesty or consistency defects: the
+import review could look as though it had read the user's file, its forms offered
+fields the workspace cannot store, the dev failure toggle persisted in
+`localStorage` and could leave the app failing on every later load, menus opened
+at inconsistent positions and could clip off-screen, the placeholder pages
+described features without saying what the page was for, and no test asserted any
+of this at more than one width.
+
+Decision:
+1. Menu placement belongs to the shared primitives, not to call sites.
+   `DropdownMenuContent` and `PopoverContent` default to `side="bottom"`,
+   `align="end"`, `sideOffset={8}`, `collisionPadding={8}`, `avoidCollisions`,
+   with `max-h-[var(--radix-*-content-available-height)]` + `overflow-y-auto`.
+   Rejected: fixing each menu individually — the next menu added would drift
+   again, and the defect was that there was no shared contract.
+2. The dev failure flag is in-memory (`src/mocks/dev-state.ts` module variable),
+   never `localStorage`, so a fresh page load always starts clean; and the
+   dev-only client moved to `src/lib/api/dev.ts`, reached only through a dynamic
+   `import()` behind a `process.env.NODE_ENV !== "development"` gate so `next
+   build` eliminates it. A build-artifact check (`npm run check:dev-excluded`,
+   wired into CI) proves the failure markers appear in none of the chunks a
+   production page loads. "Excluded" must be verifiable, not asserted in a
+   comment, and a developer convenience must never persist into a state the
+   developer cannot see.
+3. Import review honesty is enforced by shape, not by a sentence: a prominent
+   demo-mode banner built from a shared `DEMO_MODE_COPY` constant (so the banner
+   and the test that asserts it cannot drift), an unconditional "Sample" badge on
+   every extracted card, and every fixture name rewritten to a "Sample …" form.
+4. Editable fields are decided per section by `REVIEW_FIELD_POLICIES` in the
+   schema layer and consumed by the card: a personal detail is a name and a
+   location, a skill is chips, only sections that can carry a document offer the
+   certificate control. Skills are reviewed as one card whose chips create one
+   workspace item per skill (`reviewItemToWorkspaceInputs`); the single-item path
+   (`reviewItemToWorkspaceInput`) now throws for a skills section rather than
+   silently dropping them.
+5. Placeholder pages state what the page will do, list its capabilities and link
+   back to the workspace. They are not built, and they carry no dead buttons.
+6. One sweep (`tests/e2e/ui-qa.spec.ts`) walks every built route at three widths
+   and asserts no horizontal scroll, no dead links, that Tab lands on a visible
+   element, no unexpected console error, and axe WCAG 2.x A/AA; the two defects
+   above additionally get explicit bounding-box and persistence assertions.
+
+Consequence: the fix for each defect is a rule the codebase enforces (a shared
+default, a module boundary, a schema policy, a test) rather than a one-off patch,
+so the same class of defect fails a check next time instead of shipping.
+
+Addendum (same day, after the sweep first ran): the sweep initially failed on its
+own helpers, which is the most expensive kind of wrong — it could not see what it
+was written to see. Four were fixed before its verdict could be trusted: a heading
+locator that also matched the brand-new-workspace empty state's second heading
+(`exact: true` now), a case-sensitive `/Account menu/` trigger regex against a name
+that now begins with the user's initials, a "nothing rendered" probe whose
+`.first()` picked the desktop sidebar, which is `hidden` below `md`, and focus
+logic that pressed Tab only when focus was *already* on the dev overlay — so it
+never pressed Tab at all and reported `body` for every route. The last one now
+presses Tab (bounded) until the app takes visible focus, and treats
+`offsetParent === null` as focused-but-fixed rather than invisible.
+
+With the sweep honest, two real defects remained:
+1. `aria-prohibited-attr` (serious): `aria-label` sat on generic `div`s — the
+   loading skeletons in thirteen places. ARIA forbids a name on a generic element
+   and assistive tech ignores it, so the label was decoration. Those containers now
+   carry `role="status"`, which both permits the name and announces the wait.
+2. At 360 px the auth pages (`/signin`, `/signup`, `/forgot-password`) and
+   `/onboarding` scrolled sideways: their decorative glows (`size-96` centred,
+   `size-72` at `left-1/4`) were wider than the viewport; and the OAuth provider
+   buttons overrode their name with an `aria-label` ("… (mocked demo account)")
+   whose text is not a contiguous part of the visible text ("Continue with Google
+   Mocked in F2") — `label-content-name-mismatch` (serious). The glows are now
+   clipped by an `overflow-hidden` container, which is what `EmptyState` and the
+   landing CTA already did, and the OAuth label is gone so the name comes from the
+   content. `defect 4` in the sweep pins both at 360 px, signed out, so it does not
+   depend on a redirect race.
+
+Hygiene: `eslint` walked the Playwright trace bundles under `test-results/`
+(generated, git-ignored, thousands of third-party files), so `eslint.config.mjs`
+now ignores `test-results/**`, `playwright-report/**` and `blob-report/**`. Lint is
+green on source alone.
+
+Reconciliation (same day) — the axe fixes removed accessible names that older
+specs located by. Fixing `label-content-name-mismatch` means the visible text
+must be *inside* the accessible name, which in three places only worked by
+dropping an `aria-label` (the section card, the target report card, and the
+"Open all navigation" trigger). Five pre-existing E2E assertions still referenced
+the removed names, so they were updated rather than the fix being reverted:
+`section-card.tsx` gained `data-testid="section-card-{key}"` /
+`section-count-{key}` seams (the card's name is now prose, unsuitable for a
+locator), `analysis.spec.ts#scoreFor` filters the list by the card's visible
+role text, `auth-shell.spec.ts` uses "More navigation", and the import/targets
+copy assertions follow the new shared strings and the five sample items. These
+are locator/copy updates only — no behaviour changed. The sweep's own defects
+(a `role="status"` on the loading skeletons, the 360px auth glows, the OAuth
+label) are described above.
+
+Addendum 2 (same day) — what the second pass added:
+
+1. **The dev route indicator is off** (`devIndicators: false` in
+   `next.config.ts`). Its floating overlay owns the first keyboard tab stops in
+   development and renders inside a shadow root, so focus appears permanently
+   "stuck" on `nextjs-portal` and an honest keyboard sweep of the app cannot be
+   written. It is dev-only chrome, absent from any production build, and compile
+   and runtime errors are still surfaced — only the indicator badge is hidden.
+2. **`instant = false` on `/history`, `/resume`, `/settings` and `/privacy`.** The
+   `(app)` layout resolves the mock session on the client, so these segments
+   cannot produce a meaningful static shell at navigation time and Cache
+   Components' instant-navigation validation flags them — the same reason
+   `/workspace` opts out (ADR-014). The sweep asserts no "instant navigation"
+   console error on `/privacy`, so the opt-out is checked, not assumed.
+3. **The a11y fix broke four existing locators, and the specs were updated rather
+   than the names restored.** Removing an `aria-label` that duplicates (or hides)
+   visible text is the *fix* for `label-content-name-mismatch`; keeping the label
+   to keep a test green would reintroduce the violation. So `analysis.spec.ts`
+   (`scoreFor`) locates the target card by content, `auth-shell.spec.ts` uses the
+   renamed "More navigation" button, `import.spec.ts` asserts the section card by
+   its `section-count-*` test id, and `targets.spec.ts` uses the reworded
+   "Supporting evidence is attached…" copy. Each is a locator change in a test,
+   not a behaviour change in the app.
+
+Two further findings were dev-server artefacts rather than product defects, and
+both were dealt with explicitly instead of being silenced:
+- The Next.js dev route indicator is a floating overlay whose contents live in a
+  shadow root, so it owns the first keyboard tab stops and focus reads as stuck on
+  `nextjs-portal`. It never ships, and it makes an honest keyboard sweep
+  impossible, so `next.config.ts` sets `devIndicators: false` (compile and runtime
+  errors are still surfaced). The sweep still tolerates `nextjs-portal` in case a
+  developer re-enables it.
+- A streamed client navigation can briefly leave the document without a `<title>`.
+  axe's `document-title` rule fired on `/signup` during a redirect, which is a
+  race, not a defect: the sweep now waits (bounded, 5 s) for a title before running
+  axe, so a page that genuinely never gets one is still reported.
+- `next dev`'s HMR socket (`ws://…/_next/hmr`) is intercepted by MSW and closed,
+  which logs "WebSocket is already in CLOSING or CLOSED state" — dev-server
+  tooling that no production build ships, seen once on `/workspace/course`. The
+  sweep's console filter excludes that exact message for the same reason it
+  excludes the `nextjs-portal` dev overlay; real console errors still fail the
+  sweep.
+
+The route sweep is also expensive by nature — 27 routes x 3 widths, each with a
+full axe pass against a dev server that compiles routes on demand — so it carries
+its own 900 s budget (`test.describe.configure`), while every other test keeps the
+300 s default. Without it the sweep was aborted mid-way on a loaded machine and
+reported a timeout instead of its findings.
+
+Addendum 3 (same day) — an E2E race the sweep exposed in *older* specs, not a
+product defect. `workspace.spec.ts` ("Move buttons … persists across reload") and
+`workspace-audit.spec.ts` ("reorders with the keyboard … persists it") polled the
+DOM for the new row order and then reloaded immediately. But `useReorderItems`
+(`src/features/workspace/use-workspace.ts`) mutates optimistically — `onMutate`
+reorders the cache before the `PATCH` resolves — so the tests were seeing
+optimistic state and the reload cancelled the still-in-flight request. The titles
+were then correct in the DOM but never persisted, which is a timing assumption in
+the test, not a bug in reorder (the code paths are byte-identical to master). Both
+specs now await the order the mock API has actually *stored* (a `persistedTitles`
+helper that reads `/api/v1/workspace`) before reloading, so the assertions test
+persistence rather than latency. No application code changed.
+
+Numbering note: ADR-026 is claimed by the environment-hygiene change merged from
+`chore/clean-env`, so this one is 027 rather than 026 to avoid duplicate headings.

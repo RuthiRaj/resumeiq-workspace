@@ -29,7 +29,6 @@ import {
 
 export const WORKSPACE_KEY_PREFIX = "riq.workspace.";
 export const PERSONA_KEY_PREFIX = "riq.workspace-persona.";
-export const MOCK_FAILURES_KEY = "riq.mock-failures";
 
 /** New workspaces start empty: a brand-new workspace has no invented data. */
 const GENESIS_TIME = "2026-10-16T09:00:00.000Z";
@@ -310,14 +309,6 @@ export function setPersona(
   const ws = persona === "empty" ? emptyWorkspace() : seedFromFixture(persona);
   writeWorkspace(storage, userId, ws);
   return ws;
-}
-
-export function failuresEnabled(storage: KeyValueStorage): boolean {
-  return storage.getItem(MOCK_FAILURES_KEY) === "on";
-}
-
-export function setFailures(storage: KeyValueStorage, enabled: boolean): void {
-  storage.setItem(MOCK_FAILURES_KEY, enabled ? "on" : "off");
 }
 
 /**

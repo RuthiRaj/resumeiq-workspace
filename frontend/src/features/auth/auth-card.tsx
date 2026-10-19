@@ -19,12 +19,11 @@ export function AuthCard({
   footer: ReactNode;
 }) {
   return (
-    <main className="relative mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-6 py-16">
+    <main className="relative mx-auto flex min-h-screen w-full max-w-md flex-col justify-center overflow-hidden px-6 py-16">
       <div aria-hidden="true" className="glow-violet pointer-events-none absolute -top-24 left-1/2 size-96 -translate-x-1/2" />
       <div aria-hidden="true" className="glow-cyan pointer-events-none absolute -bottom-24 left-1/4 size-72" />
-      <Link href="/" className="mb-8 flex items-center gap-2" aria-label="ResumeIQ home">
+      <Link href="/" className="mb-8 flex items-center gap-2">
         <span
-          aria-hidden="true"
           className="flex size-8 items-center justify-center rounded-sm bg-gradient-to-br from-accent-violet to-accent-cyan font-display text-lg text-white"
         >
           R

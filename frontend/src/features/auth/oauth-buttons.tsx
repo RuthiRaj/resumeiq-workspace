@@ -25,7 +25,6 @@ export function OAuthButtons({
           variant="secondary"
           disabled={pending !== null}
           onClick={() => onOAuth(p.id)}
-          aria-label={`${p.label} (mocked demo account)`}
         >
           {pending === p.id
             ? mode === "signin"
