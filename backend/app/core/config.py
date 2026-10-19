@@ -91,6 +91,12 @@ class Settings(BaseSettings):
     max_import_bytes: int = 5 * 1024 * 1024
     extraction_timeout_seconds: float = 8.0
 
+    # Analysis runs (B4). The run executes in-process after the response; this
+    # optional pause per stage lets a local demo show the theatre. It is 0 by
+    # default so tests and production never wait artificially. The free
+    # single-instance host runs one worker: see ADR-031.
+    analysis_stage_delay_seconds: float = 0.0
+
     @field_validator("cors_origins", mode="before")
     @classmethod
     def _split_origins(cls, value: object) -> object:

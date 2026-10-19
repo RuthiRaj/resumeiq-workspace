@@ -1328,3 +1328,153 @@ Consequences (accepted limits, all covered by tests):
 - B3 exposes no public AI route, so consent, quota and grounding are exercised by
   tests (mocked transports) and the bake-off, not by a user-facing endpoint.
 
+## ADR-031 — 2026-10-19 — B4 analysis API: consent-gated runs, in-process execution, no new tables
+
+Context: B4 turns on the targets/analysis surface (`docs/api/contract-proposals.md`
+§3–§5). Three tensions had to be resolved: the contract returns `403
+consent_required` from `POST /targets/{id}/analysis` while the brief also says a
+no-consent deterministic report must still work; runs must show six stages of
+progress across polls; and the free single-instance host cannot run a queue or a
+second worker.
+
+Decision:
+
+- **Consent gates the endpoint, not the engine.** `require_analysis_consent`
+  (distinct from `require_ai_consent`, which keeps the `ai_consent_required`
+  code) returns a `ConsentGrant` after `consent_records` shows a live
+  `ai_processing` grant and otherwise raises the contract's `consent_required`
+  403. The endpoint is where optional AI enrichment can run, so the contract
+  requires the grant there. The deterministic engine, every parity/unit test and
+  the enrichment fallback path never touch the grant — a missing key or a
+  revoked grant still yields a complete, deterministic report wherever the
+  engine is called (which is the real meaning of "works without AI/consent").
+- **Runs execute as a FastAPI `BackgroundTask`, in process, after the response.**
+  `start_analysis` persists the run as `running`, schedules `execute_run`, and
+  returns the initial run (the contract's POST response). `execute_run` walks the
+  six stages, persisting `stage`/`stageIndex`/`progress` before each phase, so a
+  poll sees real progress; `analysis_stage_delay_seconds` (default `0.0`) is the
+  only artificial pause and exists for local demos. Accepted limits, documented
+  in the service docstring: no multi-worker deployment (another worker cannot see
+  the task), a restart loses an in-flight run (it stays `running`), and the AI
+  cache/quota are per-process. A durable queue is the upgrade path when the host
+  changes; nothing in the report depends on the task's lifetime once saved.
+- **Wire statuses are `running|succeeded|failed`.** The frontend Zod schema does
+  not know `queued`; the DB's initial state is mapped on read (`_as_run_status`).
+  Progress is derived from the same per-stage durations as the F4 theatre
+  (900/900/800/1000/600/900 ms → 18/35/51/71/82/100 %).
+- **No new tables.** `targets` carries the latest `TargetAnalysisSummary`
+  (`analysis` jsonb); `jd_requirements` mirrors the classified requirements for
+  the latest report (best-effort, delete-then-insert); `analysis_reports` stores
+  the whole wire report in a new `report` jsonb column (insert-only by RLS, so
+  each run appends and the newest wins); `jobs` carries one run per row with its
+  staged progress in `payload["run"]` plus queryable columns. Migration
+  `0005_analysis.sql` adds the columns, aligns the `targets` enums to the wire
+  (`one_page`/`two_page`, `precision`/`classic`/`compact`, `failed`) and mirrors
+  the table grants. It is **written but not applied**; until it is, only the live
+  Supabase routes are affected (they fail closed), and the in-memory repositories
+  used by every test are unaffected. The existing `auth.uid() = user_id` RLS
+  policies already give per-user isolation, so none are added.
+- **Repository failures become typed contract errors.** `TargetNotFoundError`,
+  `AnalysisRunNotFoundError`, `ReportNotReadyError` and
+  `AnalysisAlreadyRunningError` map to `404 target_not_found`,
+  `404 analysis_run_not_found`, `404 report_not_ready` and `409
+  analysis_already_running`; a bad `POST /targets` body maps to `422
+  target_invalid`. Other users' rows are indistinguishable from missing ones
+  (both `404`), so probing reveals nothing.
+- **Privacy.** No job description or resume text is logged. The run failure
+  records a code-safe message and the stage only (`error` is the exception
+  *class name*), and the AI error path logs `{step, code}` only.
+
+Rejected alternatives:
+
+- **A Celery/RQ/arq queue.** Needs a broker the free host does not provide; the
+  contract only needs one process to report progress.
+- **Blocking the POST until the run finishes.** The contract returns a `running`
+  run and the UI polls; a blocking POST would also break the consent/409 shape.
+- **Putting stage progress in a separate `analysis_runs` table.** `jobs` already
+  exists, is RLS-scoped and is the natural place for a durable unit of work.
+- **Deriving `target.analysis` on every read from `analysis_reports`.** An N+1 (or
+  a wide join) for the list endpoint; storing the summary is a single column and
+  the staleness flag is recomputed from the workspace version on read anyway.
+- **Making the API require no consent and treating consent as AI-only.** The
+  contract explicitly returns `consent_required` from the analysis endpoint; the
+  engine-only reading is captured by keeping the engine free of any consent
+  dependency.
+
+Consequences: a single-process deployment is assumed and stated; a process
+restart during a run leaves it `running` (the UI already renders a stale
+`running` run and can restart); and applying `0005` is a prerequisite for the
+live routes, surfaced by the opt-in integration tests' skip reason.
+
+## ADR-032 — 2026-10-19 — B4 engine port: golden parity, JS numeric semantics, and a conservative AI refinement
+
+Context: the analysis engine was already implemented and tested in the frontend
+(`frontend/src/lib/analysis/`, ADR-021). B4 must serve identical output from
+Python without forking the behaviour, prove it, and add optional AI enrichment
+that can never fabricate coverage or move the score.
+
+Decision:
+
+- **Port the engine, do not re-derive it.** `app/analysis/` mirrors the TS
+  modules one-for-one (`taxonomy`, `requirements`, `matching`, `scoring`, `ats`,
+  `report`, `weights`). Classification keeps the product rules: adjacent skills
+  are *related, never equivalent*; a concrete form answers the general skill
+  (PostgreSQL is SQL) but never the reverse; only verified/user-attested evidence
+  can support a claim, related/missing evidence is a gap; unsupported splits into
+  `not_evidenced` vs `genuinely_missing`.
+- **Parity is proven against golden vectors, not asserted.** A temporary
+  frontend test exported the TS engine's output for 18 cases (strong/partial/poor
+  fixtures plus edge cases: empty workspace, only-related evidence, seniority,
+  no requirements, all-preferred, undated experience, over-length fields) to
+  `backend/tests/golden/analysis_vectors.json`; `tests/test_analysis_parity.py`
+  re-runs the Python engine on the same inputs and diffs every field. The TS
+  fixture scores are 91/60/39 (ATS 100/93/88). The temp exporter was deleted so
+  `/frontend` stays untouched.
+- **Comparisons strip `None` recursively.** The TS engine omits absent optional
+  fields (`pattern` on skill requirements) while Pydantic emits explicit `null`;
+  `strip_none()` makes absence and null equivalent, and every other value is
+  compared exactly. Without this the diff would be noise, not signal.
+- **JS numeric semantics are explicit.** `app/analysis/numeric.py` provides
+  `js_round = floor(x + 0.5)` (not banker's rounding) and `round_fixed` for the
+  factor weights' `toFixed(4)`. Name sorting approximates `localeCompare` with a
+  lowercase key; the golden vectors pin the order so the approximation is
+  verified, not assumed.
+- **AI is optional enrichment, never a scorer.** `app/analysis/enrichment.py`
+  wraps the B3 gateway:
+  - **refinement** may only add a *taxonomy-known skill the posting literally
+    mentions* (via `mentions_skill` on the JD), as a normal `RequirementDraft`,
+    so matching and scoring are unchanged; it cannot invent a requirement, and
+    any claim whose skill the posting omits is dropped. Because the deterministic
+    extractor already scans every line for the whole taxonomy, refinement is in
+    practice a grounded safety net rather than a source of new requirements.
+  - **gap explanations** may replace the prose of at most three unsupported
+    requirements; status, evidence links, gap type and the score are untouched.
+  - Both call `AIGateway.run`, so output is grounded and passes the claim
+    validator (ADR-030); any `AIError` falls back silently to the deterministic
+    text. Refinement is cached per SHA-256 of the JD and explanations per JD hash
+    + requirement, so identical inputs stay deterministic even with AI on.
+  - The report carries `aiUsed: bool` (additive, safe per contract §1.9) and the
+    deterministic baseline is bit-identical with AI off or on.
+- **The engine stays pure.** `assemble_report` takes already-classified
+  requirements, so the service can enrich without touching safety; `build_analysis_report`
+  remains the extract → match → assemble shortcut the parity tests call.
+
+Rejected alternatives:
+
+- **Calling the model to score or classify.** Non-deterministic and exactly what
+  the brief forbids ("no AI for scoring"); the score must be reproducible from
+  the same inputs.
+- **Letting AI add free-text requirements.** The engine matches unknown skills by
+  substring, so an AI-supplied phrase could silently match unrelated evidence
+  ("Agile" inside "fragile"). Restricting to taxonomy keys keeps matching sound.
+- **Comparing golden output without the `None`/absent normalisation.** Would fail
+  on every skill requirement for a cosmetic modelling difference.
+- **Hand-rolling `Math.round` semantics with Python's `round`.** Banker's
+  rounding differs on `.5` and would drift the score on borderline factors.
+
+Consequences: the port and the TS engine cannot drift without a red parity test;
+the engine is deterministic and AI-free by construction; and the AI path's only
+observable effect on a report is `aiUsed` plus up to three rewritten gap
+sentences (verified by `tests/test_analysis_enrichment.py`, including that the
+score and classifications are identical with AI on and off).
+

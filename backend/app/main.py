@@ -36,12 +36,16 @@ from app.extraction.errors import (
     UnsupportedFileTypeError,
 )
 from app.repositories.errors import (
+    AnalysisAlreadyRunningError,
+    AnalysisRunNotFoundError,
     DataApiNotConfiguredError,
     ImportReviewItemNotFoundError,
     ImportSessionNotFoundError,
     InvalidReorderError,
     ItemNotFoundError,
+    ReportNotReadyError,
     RepositoryError,
+    TargetNotFoundError,
 )
 from app.services.import_service import ImportFileTooLargeError
 
@@ -76,9 +80,35 @@ async def _handle_repository_error(_request: Request, _exc: Exception) -> JSONRe
     )
 
 
-async def _handle_validation_error(_request: Request, _exc: Exception) -> JSONResponse:
+async def _handle_validation_error(request: Request, _exc: Exception) -> JSONResponse:
+    # The target intake has its own contract code (docs/api/contract-proposals.md
+    # §3.1); every other body keeps the generic code.
+    if request.method == "POST" and request.url.path.rstrip("/").endswith("/targets"):
+        return _error_response(
+            422, "target_invalid", "Check the role, company, job description and skills."
+        )
     return _error_response(
         422, "invalid_request", "Some fields need attention before this item can be saved."
+    )
+
+
+async def _handle_target_not_found(_request: Request, _exc: Exception) -> JSONResponse:
+    return _error_response(404, "target_not_found", "That job target no longer exists.")
+
+
+async def _handle_analysis_run_not_found(_request: Request, _exc: Exception) -> JSONResponse:
+    return _error_response(
+        404, "analysis_run_not_found", "No analysis has been started for that target."
+    )
+
+
+async def _handle_report_not_ready(_request: Request, _exc: Exception) -> JSONResponse:
+    return _error_response(404, "report_not_ready", "The analysis report is not ready yet.")
+
+
+async def _handle_analysis_already_running(_request: Request, _exc: Exception) -> JSONResponse:
+    return _error_response(
+        409, "analysis_already_running", "An analysis is already running for that target."
     )
 
 
@@ -198,6 +228,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.add_exception_handler(ExtractionTimeoutError, _handle_extraction_unavailable)
     app.add_exception_handler(ExtractionUnavailableError, _handle_extraction_unavailable)
     app.add_exception_handler(ExtractionError, _handle_extraction_unavailable)
+
+    # Targets / analysis (B4). Stable contract codes; repository failures keep
+    # the generic 502 mapping.
+    app.add_exception_handler(TargetNotFoundError, _handle_target_not_found)
+    app.add_exception_handler(AnalysisRunNotFoundError, _handle_analysis_run_not_found)
+    app.add_exception_handler(ReportNotReadyError, _handle_report_not_ready)
+    app.add_exception_handler(AnalysisAlreadyRunningError, _handle_analysis_already_running)
 
     # AI gateway errors (B3): typed, stable codes, no prompt/response content.
     app.add_exception_handler(AINotConfiguredError, _handle_ai_not_configured)
