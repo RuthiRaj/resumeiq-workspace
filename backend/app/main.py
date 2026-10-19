@@ -18,12 +18,22 @@ from app.core.security import (
     RequestSizeLimitMiddleware,
     SecurityHeadersMiddleware,
 )
+from app.extraction.errors import (
+    DocumentRejectedError,
+    ExtractionError,
+    ExtractionTimeoutError,
+    ExtractionUnavailableError,
+    UnsupportedFileTypeError,
+)
 from app.repositories.errors import (
     DataApiNotConfiguredError,
+    ImportReviewItemNotFoundError,
+    ImportSessionNotFoundError,
     InvalidReorderError,
     ItemNotFoundError,
     RepositoryError,
 )
+from app.services.import_service import ImportFileTooLargeError
 
 
 def _error_response(status_code: int, code: str, message: str) -> JSONResponse:
@@ -62,6 +72,38 @@ async def _handle_validation_error(_request: Request, _exc: Exception) -> JSONRe
     )
 
 
+async def _handle_import_session_not_found(_request: Request, _exc: Exception) -> JSONResponse:
+    return _error_response(404, "import_not_found", "That import no longer exists.")
+
+
+async def _handle_import_item_not_found(_request: Request, _exc: Exception) -> JSONResponse:
+    return _error_response(404, "import_item_not_found", "That extracted item no longer exists.")
+
+
+async def _handle_import_file_too_large(_request: Request, _exc: Exception) -> JSONResponse:
+    return _error_response(413, "import_file_too_large", "Files must be 5 MB or smaller.")
+
+
+async def _handle_unsupported_file_type(_request: Request, _exc: Exception) -> JSONResponse:
+    return _error_response(
+        415,
+        "import_file_type_unsupported",
+        "Only PDF and DOCX files can be imported, and the contents must match.",
+    )
+
+
+async def _handle_document_rejected(_request: Request, _exc: Exception) -> JSONResponse:
+    return _error_response(
+        400, "import_file_rejected", "That file could not be read. Try another copy."
+    )
+
+
+async def _handle_extraction_unavailable(_request: Request, _exc: Exception) -> JSONResponse:
+    return _error_response(
+        503, "extraction_unavailable", "Reading the document is unavailable right now. Try again."
+    )
+
+
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or get_settings()
     setup_logging(settings.log_level)
@@ -92,9 +134,26 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.add_exception_handler(RepositoryError, _handle_repository_error)
     app.add_exception_handler(RequestValidationError, _handle_validation_error)
 
+    # Import errors (B2). Starlette resolves the most specific class first, so
+    # these map to the contract codes in docs/api/contract-proposals.md §2.1.
+    app.add_exception_handler(ImportSessionNotFoundError, _handle_import_session_not_found)
+    app.add_exception_handler(ImportReviewItemNotFoundError, _handle_import_item_not_found)
+    app.add_exception_handler(ImportFileTooLargeError, _handle_import_file_too_large)
+    app.add_exception_handler(UnsupportedFileTypeError, _handle_unsupported_file_type)
+    app.add_exception_handler(DocumentRejectedError, _handle_document_rejected)
+    app.add_exception_handler(ExtractionTimeoutError, _handle_extraction_unavailable)
+    app.add_exception_handler(ExtractionUnavailableError, _handle_extraction_unavailable)
+    app.add_exception_handler(ExtractionError, _handle_extraction_unavailable)
+
     # Added last = outermost. Request path: CORS -> headers -> logging -> size -> rate -> router.
     app.add_middleware(InMemoryRateLimiter, per_minute=settings.rate_limit_per_minute)
-    app.add_middleware(RequestSizeLimitMiddleware, max_bytes=settings.max_request_bytes)
+    app.add_middleware(
+        RequestSizeLimitMiddleware,
+        max_bytes=settings.max_request_bytes,
+        # The upload route needs room for a document plus multipart overhead;
+        # every other route keeps the small default cap (PRD §11).
+        path_limits={f"{settings.api_v1_prefix}/imports": settings.max_import_bytes + 8192},
+    )
     app.add_middleware(RequestLoggingMiddleware)
     app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(

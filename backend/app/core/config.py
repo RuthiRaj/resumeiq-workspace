@@ -45,6 +45,13 @@ class Settings(BaseSettings):
     max_request_bytes: int = 1_048_576
     rate_limit_per_minute: int = 60
 
+    # Document import (PRD §6.2 IM-1, §11). The upload cap is applied by
+    # ``RequestSizeLimitMiddleware`` per import route and re-checked by the
+    # import service; the extraction deadline bounds how long a single worker
+    # can be held by a pathological document.
+    max_import_bytes: int = 5 * 1024 * 1024
+    extraction_timeout_seconds: float = 8.0
+
     @field_validator("cors_origins", mode="before")
     @classmethod
     def _split_origins(cls, value: object) -> object:

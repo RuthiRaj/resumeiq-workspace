@@ -1,4 +1,4 @@
-# ResumeIQ backend (FastAPI) — B0 scaffold + B1 workspace API
+# ResumeIQ backend (FastAPI) — B0 scaffold + B1 workspace API + B2 import parsing
 
 B0: app scaffold, Supabase JWT auth (`GET /api/v1/me`), `GET /health`, security
 defaults, Postgres schema + RLS, OpenAPI contract export, Docker, CI.
@@ -7,6 +7,13 @@ B1: the workspace API under `/api/v1` (items across all sections, evidence
 states, attachment metadata, per-user versioning + append-only change log,
 soft-delete/restore/reorder) and the deterministic standard-resume sync. No AI
 calls, no document parsing, no job analysis (those are B2+).
+
+B2: real PDF/DOCX parsing for the import review flow (PRD §6.2 IM-1..IM-3). The
+upload is sniffed on magic bytes, parsed **in memory** by a deterministic section
+parser (no OCR, no AI) and discarded — only the extracted text and the candidate
+items are stored. Nothing reaches the workspace until the user confirms an item,
+and confirming runs through one transactional RPC (`api_import_confirm`). See
+ADR-028.
 
 ## Requirements
 
@@ -67,6 +74,13 @@ group is intentionally empty because no provider key is read before B3.
 - `SUPABASE_PUBLISHABLE_KEY` is the Data API `apikey` header (publishable/anon
   key). Workspace queries also send the **caller's JWT**, so RLS applies; the
   `service_role` key is never used (ADR-016).
+- `MAX_IMPORT_BYTES` (default 5 MiB) caps an import upload. It is enforced both
+  by `RequestSizeLimitMiddleware` for `{API_V1_PREFIX}/imports` (which streams
+  the body, so an oversized upload is rejected before it is buffered) and by the
+  import service.
+- `EXTRACTION_TIMEOUT_SECONDS` (default 8.0) bounds a single document parse; the
+  deadline is checked inside the page/block loops, so a pathological file cannot
+  hold a worker indefinitely.
 
 ### Integration-test environment
 
@@ -86,7 +100,7 @@ uv run python scripts/check_env.py
 uv run python scripts/check_env.py --strict   # exit 1 if an app variable is missing
 ```
 
-## API (B1)
+## API (B1 + B2)
 
 All workspace/resume endpoints require `Authorization: Bearer <Supabase JWT>` and
 mirror the F3 mock contract (`frontend/src/mocks/handlers.ts`):
@@ -108,6 +122,24 @@ Every mutation bumps the per-user workspace version exactly once and appends a
 document or link (enforced in the models *and* in SQL). Wire↔DB mappings and the
 known mismatches are in ADR-016/ADR-017.
 
+Import endpoints (B2, contract in `docs/api/contract-proposals.md` §2):
+
+| Method | Path | Notes |
+|---|---|---|
+| POST | `/api/v1/imports` | multipart `file` (PDF/DOCX) → `201 {"import": ImportSession}` |
+| GET | `/api/v1/imports` | recent imports (list rows, no document text) |
+| GET | `/api/v1/imports/{import_id}` | one session with its review items |
+| PATCH | `/api/v1/imports/{import_id}/items/{item_id}` | edit `values`/`status`/`support` |
+| POST | `/api/v1/imports/{import_id}/items/{item_id}/confirm` | create the workspace item (201) |
+
+Error codes: `import_file_required` (400), `import_file_rejected` (400 — empty,
+damaged, zip bomb or over a cap), `import_file_too_large` (413),
+`import_file_type_unsupported` (415 — the bytes do not match the name),
+`extraction_unavailable` (503), `import_not_found` / `import_item_not_found`
+(404), `values_invalid` (422). Extraction reports per-field `confidence` and a
+1-based `sourceLine`; a scanned or empty document returns
+`previewAvailable: false` with no items.
+
 ## Tests
 
 ```bash
@@ -115,7 +147,7 @@ cd backend
 uv run pytest            # unit + contract tests (in-memory repo, httpx.MockTransport)
 
 # opt-in integration tests (skipped unless backend/.env.test opts in)
-uv run pytest tests/test_workspace_integration.py
+uv run pytest tests/test_workspace_integration.py tests/test_import_integration.py
 ```
 
 Integration tests read `backend/.env.test` (git-ignored; copy
@@ -124,8 +156,14 @@ Integration tests read `backend/.env.test` (git-ignored; copy
 (`SUPABASE_TEST_EMAIL_A`/`_PASSWORD_A` and `..._B`); the helper
 `tests/supabase_auth.py` signs them in through Supabase Auth. They hit a real
 project with a real user JWT, so they prove RLS, the per-user change log and
-standard resume, and the transactional versioning. Without the flag they are
-skipped; no key, password or token is ever printed.
+standard resume, and the transactional versioning.
+
+`tests/test_import_integration.py` additionally needs migration `0004` applied;
+it proves import isolation between two users, idempotent confirm, and the
+attested/verified evidence rules. Both suites skip cleanly when the flag or the
+credentials are absent; the import suite also skips when `0004` is not applied,
+and prints which condition caused the skip. No key, password or token is ever
+printed.
 
 ## Supabase JWT verification (what was verified)
 
@@ -138,9 +176,12 @@ cache); legacy HS256 shared secret kept as opt-in fallback; `aud`
 ## Database
 
 Schema + RLS live in `db/migrations/` (`0001_initial.sql`, then
-`0002_workspace_api.sql`) — see `db/README.md`. Apply them with the Supabase SQL
-editor or CLI (`supabase db push` once the project is linked). `0002` adds the
-readable `change_log` columns and the `SECURITY INVOKER` workspace functions.
+`0002_workspace_api.sql`, `0003_hardening.sql`, `0004_imports.sql`) — see
+`db/README.md`. Apply them with the Supabase SQL editor or CLI (`supabase db push`
+once the project is linked). `0002` adds the readable `change_log` columns and the
+`SECURITY INVOKER` workspace functions; `0003` hardens grants/policies; `0004`
+adds `import_sessions` + `import_review_items` and the import RPCs. `0004` is
+written but **not applied**.
 
 ## Docker / Render
 

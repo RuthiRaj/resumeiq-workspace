@@ -1,14 +1,16 @@
 # Contract proposals — imports, targets, analysis and report (F4)
 
-Status: **proposed**, implemented today by the frontend mock API (MSW) only.
-Owner of the next step: backend B2 (imports) and B4 (targets, analysis, report).
+Status: **§2 (imports) implemented** by the backend (B2, exported into
+`docs/api/openapi.json`); the rest is still implemented only by the frontend mock
+API (MSW).
+Owner of the next step: backend B4 (targets, analysis, report).
 
 This document is the contract the F4 frontend already speaks. It complements
-`docs/api/openapi.json` — which stays unchanged and still contains only the B0/B1
-routes (`/health`, `/api/v1/me`, `/api/v1/workspace*`, `/api/v1/resume/standard`).
-When B2/B4 ship, they should export these paths into `openapi.json` and the
-frontend Zod schemas + MSW handlers get reconciled against that export before the
-mock layer is removed at B7 (see ADR-013, ADR-021).
+`docs/api/openapi.json`, which contains the B0/B1 routes (`/health`,
+`/api/v1/me`, `/api/v1/workspace*`, `/api/v1/resume/standard`) plus the B2 import
+routes (`/api/v1/imports*`). The remaining proposed paths are exported when B4
+ships, and the frontend Zod schemas + MSW handlers get reconciled against that
+export before the mock layer is removed at B7 (see ADR-013, ADR-021, ADR-028).
 
 Source of truth on the frontend:
 

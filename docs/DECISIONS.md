@@ -978,3 +978,108 @@ persistence rather than latency. No application code changed.
 
 Numbering note: ADR-026 is claimed by the environment-hygiene change merged from
 `chore/clean-env`, so this one is 027 rather than 026 to avoid duplicate headings.
+
+## ADR-028 — 2026-10-18 — B2 import parsing: deterministic extraction, discard the file, confirm through one RPC
+
+Context: IM-1..IM-3 need a real PDF/DOCX path behind the review screen F4
+already built against MSW mocks. `docs/api/contract-proposals.md` §2 fixes the
+endpoints, the field names and the extraction shape (`extraction` = what was read
+with per-field `confidence` + 1-based `sourceLine`; `values` = what the user
+verified), and PRD §11 fixes the security posture. Hard product rules apply: no
+fabricated fields, no score that reads as a guarantee, and nothing entering the
+workspace without the user's decision.
+
+Decision:
+
+- **Extraction is deterministic and local.** A section parser over extracted text
+  finds headings (experience, education, project, skill, certificate, …), then
+  entries per section: title line, employer/institution, month-precision dates,
+  bullet lines, a `Technologies:` style tag list, and comma-separated skill
+  lists. Every value carries a confidence (title 0.9, month-precision date 0.85,
+  bare year 0.5, org 0.75 with keyword hint else 0.6, skill 0.8, name 0.6,
+  location 0.5) and the 1-based `sourceLine` it came from; an item's confidence is
+  the weakest of its fields (same convention as ADR-022's uncertainty).
+  `UNCERTAIN_CONFIDENCE = 0.75` is shared with the frontend.
+- **Permissively licensed libraries only.** `pypdf` (BSD-3-Clause) for PDF,
+  `python-docx` + `lxml` (MIT / BSD-3-Clause) for DOCX, both typed. No AGPL, no
+  OCR engine, and **no AI call** in this milestone.
+- **Content is sniffed on magic bytes, never on the file name.** The declared
+  type comes from the extension, then the bytes must agree (`%PDF-`, or a zip
+  that actually contains `word/document.xml`); a mismatch is 415. DOCX zips are
+  bounded by entry count and compression ratio (zip bomb), and PDFs by page cap;
+  the whole parse runs under a deadline checked inside the page/block loops.
+- **The upload is parsed in memory and discarded.** Nothing about the original
+  file is stored and its bytes and extracted text are never logged (only type,
+  size and item count). `source_text` is persisted for the preview because the
+  user needs to see what was read; a scanned or image-only document returns
+  `previewAvailable: false`, `sourceText: ""` and no items — "nothing could be
+  read", honestly.
+- **A DOCX reports `pageCount: 1`.** The format does not record a page count and
+  we will not invent one.
+- **A bare year is shown as read but never becomes a value.** `extraction` may
+  say `2019`; `values.startDate` stays `""` because the wire accepts `YYYY-MM`
+  or `""` only. Picking a month for the user would be fabrication.
+- **Confirm is one `SECURITY INVOKER` function**, `api_import_confirm(uuid,
+  text) -> uuid`, mirroring the B1 RPC style: it reads the row's `values` and
+  `support`, inserts the `workspace_items` row, writes the `change_log` entry,
+  adds the evidence link, and flips the review item to `confirmed` in a single
+  transaction. It is idempotent (confirming twice returns the same workspace
+  item) and raises `P0002`/`P0003` for a missing session/item. Nothing else
+  writes a workspace row from an import.
+- **Evidence follows support.** A confirmed item is `attested`; it is `verified`
+  only when a certificate file or link was attached, matching ADR-017 §7.
+  Because B2 discards uploads, a certificate *file* becomes an attachment with an
+  internal `import://<import_id>/<item_id>` url, not a fabricated external link;
+  B6 replaces it with a private-Storage signed URL.
+- **Error codes follow the contract** (`import_file_required` 400,
+  `import_file_rejected` 400, `import_file_too_large` 413,
+  `import_file_type_unsupported` 415, `extraction_unavailable` 503,
+  `import_not_found`/`import_item_not_found` 404, `values_invalid` 422). The
+  router sends `file` as an optional multipart part so a missing file yields the
+  contract's 400 instead of FastAPI's own 422 body.
+
+Rejected alternatives:
+
+- **Keep the uploaded file** so a certificate could be re-downloaded. Out of
+  scope and a privacy liability; B6 owns document storage with retention rules.
+- **Write the workspace item from Python, then mark the review item confirmed.**
+  Two round trips that can half-succeed. The RPC keeps it atomic, and the RPC is
+  the only import→workspace path.
+- **`pdfplumber`** (also permissive) — adds a dependency for layout we do not use
+  yet; `pypdf` gives the text layer directly.
+- **A per-field AI/LLM extraction pass.** Deferred by the PRD: the milestone is
+  explicitly deterministic, and mock/live AI would put fabrication within reach.
+
+Consequences (accepted limits, all covered by tests):
+
+- Interleaved two-column content can merge entries, since the parser reads one
+  text stream. A DOCX table row becomes a single `" | "`-joined line, which the
+  parser splits back out on `|` (that case parses well); genuinely column-major
+  text does not.
+- Unusual heading synonyms are not recognised; unlabelled sections are not
+  guessed.
+- PDF extraction drops blank lines, so entries are also split on bullet runs and
+  on a date line close behind another date line (heuristically; some odd resumes
+  will merge or split imperfectly — which is why every item is reviewed by hand).
+- The `values`→`workspace_items` mapping exists twice: in
+  `values_to_workspace_create` (Python, used by the in-memory repository and the
+  workspace tests) and inside `api_import_confirm` (SQL, the production path).
+  They must be changed together; a follow-up could drive the RPC from a single
+  generated definition.
+- `db/migrations/0004_imports.sql` is written but **not applied**: applying it to
+  the project is a deliberate manual step.
+
+Numbering note: 026 and 027 are claimed by the environment-hygiene and UI/QA
+sweep changes merged from `chore/clean-env` and `fix/ui-qa`, so this one is 028
+rather than 026 to avoid duplicate headings.
+
+Addendum (same day) — the live import-isolation suite. `tests/test_import_integration.py`
+proves the parts only a real project can: user A cannot list, read, patch or
+confirm user B's sessions/items; a second confirm returns the same workspace item
+(no duplicate); and a confirmed item is `attested` unless a certificate link was
+attached, in which case it is `verified`. It reuses the `.env.test` gate (never
+the runtime `.env`) and probes `import_sessions` read-only with the publishable
+key before running: a 404 `PGRST205` means `0004` is not applied, so the suite
+skips and prints that exact condition instead of failing on a missing table.
+`-rs` is now in pytest's `addopts`, so every skipped opt-in run names its cause
+(gate, user A/B credentials, or the migration) even without `-v`.
