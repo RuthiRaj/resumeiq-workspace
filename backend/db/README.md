@@ -155,11 +155,14 @@ The Data API path is covered by `httpx.MockTransport` unit tests and by the
 opt-in integration tests (`RUN_SUPABASE_INTEGRATION=1`, see `backend/README.md`);
 those are skipped unless a real project and two signed-in test users are supplied.
 
-`0004_imports.sql` is authored but **not yet applied** (deliberate, per the B2
-brief): apply it in the SQL editor, then re-run the Supabase security and
-performance advisors.
+`0004_imports.sql` was applied to the Supabase dev project on 2026-10-19 and
+verified read-only: both import tables exist with RLS enabled and four
+`(select auth.uid()) = user_id` policies each; `api_import_create_session` and
+`api_import_confirm` are `SECURITY INVOKER` with `search_path=public`, executable
+by `authenticated` and not by `anon`. The security/performance advisors show no
+new 0004-related findings (see the ADR-028 addendum).
 
 The opt-in import suite (`tests/test_import_integration.py`) probes the Data API
-for `import_sessions` before running. Until `0004` is applied it skips every test
-and names that migration as the reason (the same gate also requires user B's
-credentials in `backend/.env.test`).
+for `import_sessions` before running, so it still skips with that exact reason in
+any project where `0004` has not been applied (the same gate also requires user
+B's credentials in `backend/.env.test`).

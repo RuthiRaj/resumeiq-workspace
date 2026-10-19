@@ -1073,7 +1073,16 @@ Numbering note: 026 and 027 are claimed by the environment-hygiene and UI/QA
 sweep changes merged from `chore/clean-env` and `fix/ui-qa`, so this one is 028
 rather than 026 to avoid duplicate headings.
 
-Addendum (same day) — the live import-isolation suite. `tests/test_import_integration.py`
+Addendum (2026-10-19) — migration 0004 was applied to the Supabase dev project.
+Read-only verification found both import tables with RLS enabled and four
+owner-only policies each; `api_import_create_session` and `api_import_confirm`
+are `SECURITY INVOKER` with `search_path=public`, executable by `authenticated`
+and not by `anon`. The live import-isolation suite passes 4/4. The advisors
+report only one auth WARN (leaked-password protection) and unused-index INFOs;
+the two import indexes exercised by the suite stop being reported unused after
+the run. No 0004-related security or unindexed-foreign-key finding remains.
+
+Addendum (2026-10-19) — the live import-isolation suite. `tests/test_import_integration.py`
 proves the parts only a real project can: user A cannot list, read, patch or
 confirm user B's sessions/items; a second confirm returns the same workspace item
 (no duplicate); and a confirmed item is `attested` unless a certificate link was
