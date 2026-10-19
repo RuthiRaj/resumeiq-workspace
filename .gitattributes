@@ -1,0 +1,41 @@
+# Normalize line endings for text files in the repository.
+* text=auto
+
+# Binary files: never normalize, diff, or merge as text.
+*.png -text
+*.jpg -text
+*.jpeg -text
+*.gif -text
+*.ico -text
+*.webp -text
+*.avif -text
+*.bmp -text
+*.tif -text
+*.tiff -text
+*.psd -text
+*.woff -text
+*.woff2 -text
+*.ttf -text
+*.otf -text
+*.eot -text
+*.mp3 -text
+*.mp4 -text
+*.wav -text
+*.ogg -text
+*.webm -text
+*.mov -text
+*.zip -text
+*.gz -text
+*.tgz -text
+*.7z -text
+*.rar -text
+*.pdf -text
+*.doc -text
+*.docx -text
+*.xls -text
+*.xlsx -text
+*.ppt -text
+*.pptx -text
+*.sqlite -text
+*.sqlite3 -text
+*.db -text
