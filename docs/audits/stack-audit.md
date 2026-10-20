@@ -230,8 +230,8 @@ regression test that failed before the change and passes after it.
 - S-01 — fixed in `e0a3fed`: live sign-in uses Supabase Auth copy; the mock-only password hint and auth footer are gated on `isLiveMode()`.
 - S-02 — fixed in `b93d923`: live forgot-password copy says Supabase Auth sends the reset link instead of claiming no email is sent.
 - S-03 — fixed in `58fad1f`: live import copy says the file goes to the server extractor and only the extracted text is stored.
-- S-04 — fixed in `c9dc44c`: live analysis polling is 2s (mock stays 300ms) and a 429 backs off for the server's `Retry-After`.
-- S-05 — fixed in `97dd73f`: the provider follows Supabase auth-state changes; a 401 clears the session and redirects to `/signin?reason=expired` with an on-page notice.
+- S-04 — fixed in `c9dc44c`: live analysis polling is 2s (mock stays 300ms) and a 429 backs off for the server's `Retry-After` (ADR-036).
+- S-05 — fixed in `97dd73f`: the provider follows Supabase auth-state changes; a 401 clears the session and redirects to `/signin?reason=expired` with an on-page notice (ADR-036).
 
 ## Residue and limits
 
