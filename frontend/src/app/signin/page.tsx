@@ -11,6 +11,7 @@ import { AuthCard } from "@/features/auth/auth-card";
 import { OAuthButtons } from "@/features/auth/oauth-buttons";
 import { PasswordInput } from "@/features/auth/password-input";
 import { useAuth } from "@/lib/auth/context";
+import { isLiveMode } from "@/lib/config/mode";
 import { AuthError } from "@/lib/auth/types";
 import { SigninSchema, type OAuthProvider, type SigninInput } from "@/lib/auth/schemas";
 import { Button } from "@/components/ui/button";
@@ -90,12 +91,16 @@ function SigninForm() {
       }
     >
       <div className="flex flex-col gap-5">
-        <OAuthButtons onOAuth={onOAuth} pending={oauthPending} mode="signin" />
-        <div className="flex items-center gap-3" aria-hidden="true">
-          <span className="h-px flex-1 bg-white/[0.08]" />
-          <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted">or email</span>
-          <span className="h-px flex-1 bg-white/[0.08]" />
-        </div>
+        {isLiveMode() ? null : (
+          <>
+            <OAuthButtons onOAuth={onOAuth} pending={oauthPending} mode="signin" />
+            <div className="flex items-center gap-3" aria-hidden="true">
+              <span className="h-px flex-1 bg-white/[0.08]" />
+              <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted">or email</span>
+              <span className="h-px flex-1 bg-white/[0.08]" />
+            </div>
+          </>
+        )}
         <form noValidate onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="email">Email</Label>

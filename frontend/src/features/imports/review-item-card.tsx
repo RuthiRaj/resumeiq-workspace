@@ -19,6 +19,7 @@ import { EvidenceBadge } from "@/components/domain/evidence-badge";
 import { Label } from "@/components/ui/field";
 import { sectionMeta } from "@/features/workspace/sections";
 import { cn } from "@/lib/utils";
+import { isLiveMode } from "@/lib/config/mode";
 import {
   UNCERTAIN_CONFIDENCE,
   evidenceForReviewItem,
@@ -113,10 +114,13 @@ export function ReviewItemCard({
         <div className="flex min-w-0 flex-col gap-1">
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="outline">{meta.label}</Badge>
-            {/* Unconditional: this field never came from the user's file. */}
-            <Badge variant="related" data-testid={`sample-tag-${item.id}`}>
-              Sample
-            </Badge>
+            {/* Mock builds never read the file, so the tag is unconditional
+                there; live extraction is real and must not claim otherwise. */}
+            {isLiveMode() ? null : (
+              <Badge variant="related" data-testid={`sample-tag-${item.id}`}>
+                Sample
+              </Badge>
+            )}
             <Badge
               variant={item.extraction.confidence < UNCERTAIN_CONFIDENCE ? "related" : "default"}
             >

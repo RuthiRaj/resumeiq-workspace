@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
   MonthValueSchema,
+  WorkspaceItemSchema,
   WorkspaceSectionSchema,
   type WorkspaceItem,
   type WorkspaceSection,
@@ -208,6 +209,18 @@ export const ImportSummarySchema = z.object({
   createdAt: z.string(),
 });
 export type ImportSummary = z.infer<typeof ImportSummarySchema>;
+
+/**
+ * `POST /imports/{id}/items/{itemId}/confirm` body (I1). The mock confirmed a
+ * card through two calls (create + patch); the live backend does it atomically
+ * in one transaction and returns both the new workspace item and the updated
+ * review item.
+ */
+export const ImportConfirmResponseSchema = z.object({
+  item: WorkspaceItemSchema,
+  review: ImportReviewItemSchema,
+});
+export type ImportConfirmResponse = z.infer<typeof ImportConfirmResponseSchema>;
 
 /** Fields the review screen must flag for verification (IM-2). */
 export function uncertainFields(item: ImportReviewItem): ExtractedField[] {

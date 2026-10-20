@@ -11,6 +11,76 @@ npm install
 npm run dev        # http://localhost:3000
 ```
 
+Mock mode is the default: MSW serves `/api/v1` and the mock auth client runs, so
+no backend or Supabase project is needed for normal UI work.
+
+## Live mode (I1)
+
+Live mode talks to the FastAPI backend on **port 8000** and Supabase Auth. It is
+opt-in; mock mode and all existing tests are unchanged.
+
+1. Start the backend (see `backend/README.md`):
+
+   ```sh
+   cd backend
+   uv sync
+   uv run uvicorn app.main:app --reload --port 8000
+   ```
+
+2. Create `frontend/.env.local` (git-ignored) with these **names** only — never
+   commit values, and never use a secret or `service_role` key in the frontend:
+
+   | Variable | Purpose |
+   |---|---|
+   | `NEXT_PUBLIC_API_MODE` | set to `live` (anything else, including unset, means mock) |
+   | `NEXT_PUBLIC_API_BASE_URL` | backend origin, `http://localhost:8000` |
+   | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
+   | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | **publishable** key (`sb_publishable_…` or legacy anon) |
+
+   `frontend/.env.example` documents the same names.
+
+3. Start the frontend:
+
+   ```sh
+   cd frontend
+   npm run dev        # http://localhost:3000
+   ```
+
+4. CORS: the backend allows `http://localhost:3000` by default. If you override
+   it, `CORS_ORIGINS` must contain that exact origin (comma-separated, no
+   wildcard).
+
+What changes in live mode:
+
+- Sign up / sign in / sign out / password reset / session refresh use Supabase
+  Auth; the access token is sent as `Authorization: Bearer …` to the API.
+- Workspace, change log, items, restore, reorder, standard resume, imports,
+  targets, analysis runs and reports call FastAPI. Every response is validated
+  with the Zod schemas in `src/lib/schemas`.
+- Mock-only surfaces are hidden: the workspace dev bar, simulated failures, the
+  sample-targets button, the "Sample" import tags and the simulated-demo banner.
+  OAuth buttons are hidden too (not configured for live yet).
+- Tailored resumes, history, data export and account deletion are not in the
+  backend yet; those calls fail with a clear "not available in live mode" error
+  instead of silently pretending to work. AI-processing consent is written
+  directly to `consent_records` under RLS.
+
+### Opt-in live E2E
+
+The Playwright suite (`npm run e2e`) stays mock-only. A separate smoke test
+exists for live mode and is skipped unless you opt in:
+
+```sh
+# names only; values are read from your shell, never committed
+$env:RUN_LIVE_E2E="1"
+$env:LIVE_E2E_EMAIL="<test account email>"
+$env:LIVE_E2E_PASSWORD="<test account password>"
+npm run e2e:live
+```
+
+It starts the backend (8000) and the live dev server (3000) itself; the spec
+signs in with Supabase and loads the workspace from FastAPI.
+
 ## Verify
 
 ```sh

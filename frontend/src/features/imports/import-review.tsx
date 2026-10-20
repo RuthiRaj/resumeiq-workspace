@@ -35,6 +35,7 @@ import {
   type ImportSession,
 } from "@/lib/schemas";
 import { cn } from "@/lib/utils";
+import { isLiveMode } from "@/lib/config/mode";
 
 /**
  * `/workspace/import` (PRD §6.2 IM-1..IM-3, §7.5).
@@ -63,6 +64,7 @@ export function ImportReviewPage() {
   const [lastFile, setLastFile] = useState<File | null>(null);
 
   const uploading = upload.isPending;
+  const live = isLiveMode();
 
   function handleFile(file: File) {
     setRejectedReason(null);
@@ -84,15 +86,16 @@ export function ImportReviewPage() {
           Review before anything is saved
         </h1>
         <p className="max-w-prose text-sm leading-relaxed text-muted">
-          Upload a resume or certificate and we&apos;ll show the review screen
-          you&apos;ll use once extraction is real: the sample source text next to
-          the extracted fields. Fields we are unsure about are highlighted, and
-          each item is only added to your workspace when you confirm it.
+          {live
+            ? "Upload a resume or certificate and we'll read it, then show the extracted fields next to the text they came from. Fields we are unsure about are highlighted, and each item is only added to your workspace when you confirm it."
+            : "Upload a resume or certificate and we'll show the review screen you'll use once extraction is real: the sample source text next to the extracted fields. Fields we are unsure about are highlighted, and each item is only added to your workspace when you confirm it."}
         </p>
-        <p className="max-w-prose text-xs text-muted">
-          This build has no document parser yet, so the review below runs in
-          demo mode — see the banner while a review is open.
-        </p>
+        {live ? null : (
+          <p className="max-w-prose text-xs text-muted">
+            This build has no document parser yet, so the review below runs in
+            demo mode — see the banner while a review is open.
+          </p>
+        )}
       </header>
 
       {uploading ? (
@@ -140,12 +143,22 @@ export function ImportReviewPage() {
           <div className="glass flex flex-col gap-2 rounded-md p-4">
             <p className="text-sm font-medium">What happens next</p>
             <ol className="flex flex-col gap-1.5 text-sm text-muted">
-              <li>
-                1. Demo mode: the next screen is filled with clearly-labelled sample
-                data — your file is not read in this build.
-              </li>
-              <li>2. You see the sample text and the extracted fields side by side.</li>
-              <li>3. Uncertain fields are highlighted so you can correct them.</li>
+              {live ? (
+                <>
+                  <li>1. The document is read by the server, never stored.</li>
+                  <li>2. You see the extracted fields next to the text they came from.</li>
+                  <li>3. Uncertain fields are highlighted so you can correct them.</li>
+                </>
+              ) : (
+                <>
+                  <li>
+                    1. Demo mode: the next screen is filled with clearly-labelled
+                    sample data — your file is not read in this build.
+                  </li>
+                  <li>2. You see the sample text and the extracted fields side by side.</li>
+                  <li>3. Uncertain fields are highlighted so you can correct them.</li>
+                </>
+              )}
               <li>
                 4. Each item you confirm becomes User-attested — or Verified if
                 you attach supporting evidence.
@@ -201,6 +214,7 @@ function ReviewWorkspace({ session }: { session: ImportSession }) {
   const decide = useDecideImportItem(session.id);
   const confirm = useConfirmImportItem(session.id);
   const [savedItemId, setSavedItemId] = useState<string | null>(null);
+  const live = isLiveMode();
 
   const progress = reviewProgress(session.items);
   const busy = decide.isPending || confirm.isPending || saveValues.isPending;
@@ -279,24 +293,26 @@ function ReviewWorkspace({ session }: { session: ImportSession }) {
 
   return (
     <div className="flex flex-col gap-5" data-testid="import-review">
-      <div
-        role="status"
-        data-testid="demo-mode-banner"
-        className="flex items-start gap-3 rounded-md border border-evidence-related/50 bg-evidence-related/10 p-4"
-      >
-        <FlaskConical className="mt-0.5 size-5 shrink-0 text-evidence-related" aria-hidden="true" />
-        <div className="flex flex-col gap-1">
-          <p className="text-sm font-medium text-text">
-            {DEMO_MODE_COPY}
-          </p>
-          <p className="text-xs text-muted">
-            There is no parser in this build yet. Every card below is sample
-            content, tagged “Sample”, so you can see how the review works. Nothing
-            is taken from the document you selected, and nothing is saved until
-            you confirm a card.
-          </p>
+      {live ? null : (
+        <div
+          role="status"
+          data-testid="demo-mode-banner"
+          className="flex items-start gap-3 rounded-md border border-evidence-related/50 bg-evidence-related/10 p-4"
+        >
+          <FlaskConical className="mt-0.5 size-5 shrink-0 text-evidence-related" aria-hidden="true" />
+          <div className="flex flex-col gap-1">
+            <p className="text-sm font-medium text-text">
+              {DEMO_MODE_COPY}
+            </p>
+            <p className="text-xs text-muted">
+              There is no parser in this build yet. Every card below is sample
+              content, tagged “Sample”, so you can see how the review works. Nothing
+              is taken from the document you selected, and nothing is saved until
+              you confirm a card.
+            </p>
+          </div>
         </div>
-      </div>
+      )}
 
       <section className="glass flex flex-col gap-3 rounded-md p-4" aria-labelledby="review-summary">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -306,7 +322,10 @@ function ReviewWorkspace({ session }: { session: ImportSession }) {
               <span className="truncate">{session.fileName}</span>
             </h2>
             <p className="text-xs text-muted">
-              {session.items.length} sample items · preview is simulated, not your file
+              {session.items.length}{" "}
+              {live
+                ? `item${session.items.length === 1 ? "" : "s"} read from this document`
+                : "sample items · preview is simulated, not your file"}
             </p>
           </div>
           <div className="flex items-center gap-2" data-testid="review-progress">
@@ -407,6 +426,7 @@ function SourcePreview({
   uncertainLines: Set<number>;
 }) {
   const lines = session.sourceText.split("\n");
+  const live = isLiveMode();
   return (
     <section
       aria-labelledby="source-preview-title"
@@ -415,11 +435,13 @@ function SourcePreview({
     >
       <div className="flex flex-col gap-1">
         <h2 id="source-preview-title" className="text-sm font-medium">
-          Sample source text
+          {live ? "Text read from your document" : "Sample source text"}
         </h2>
         <p className="text-xs text-muted">
-          {session.fileType.toUpperCase()} · {session.pageCount} page · simulated
-          sample text — not the contents of your file
+          {session.fileType.toUpperCase()} · {session.pageCount} page ·{" "}
+          {live
+            ? "stored only to show you this preview"
+            : "simulated sample text — not the contents of your file"}
         </p>
       </div>
       {session.previewAvailable ? (

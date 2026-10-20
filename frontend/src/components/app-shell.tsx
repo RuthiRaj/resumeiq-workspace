@@ -22,6 +22,7 @@ import { useUiStore } from "@/features/ui/ui-store";
 import { useAuthOptional } from "@/lib/auth/context";
 import { toast } from "@/features/ui/toast-store";
 import { cn } from "@/lib/utils";
+import { isLiveMode } from "@/lib/config/mode";
 import { CommandPalette } from "@/components/command-palette";
 import {
   Dialog,
@@ -201,7 +202,9 @@ function UserMenu() {
           <DialogHeader>
             <DialogTitle>Sign out?</DialogTitle>
             <DialogDescription>
-              Your mock session on this browser will end. Your workspace data stays saved.
+              {isLiveMode()
+                ? "You'll be signed out of this browser. Your workspace data stays saved."
+                : "Your mock session on this browser will end. Your workspace data stays saved."}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

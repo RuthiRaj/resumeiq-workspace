@@ -8,7 +8,7 @@ import {
   useMemo,
   useState,
 } from "react";
-import { createMockAuthClient } from "./client";
+import { createAuthClient } from "./create-client";
 import type {
   AuthClient,
   Session,
@@ -46,7 +46,7 @@ export function AuthProvider({
 }) {
   // Stabilise the client identity: a fresh object per render would re-fire
   // the session effect below into an infinite getSession loop.
-  const [authClient] = useState<AuthClient>(() => client ?? createMockAuthClient());
+  const [authClient] = useState<AuthClient>(() => client ?? createAuthClient());
   const [status, setStatus] = useState<AuthStatus>("loading");
   const [session, setSession] = useState<Session | null>(null);
 

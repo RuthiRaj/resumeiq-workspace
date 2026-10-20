@@ -7,15 +7,15 @@ import type {
   ImportSession,
   ImportSummary,
   ImportSupport,
-  WorkspaceItem,
 } from "@/lib/schemas";
-import { reviewItemToWorkspaceInputs } from "@/lib/schemas";
 import { workspaceKeys } from "@/features/workspace/use-workspace";
 
 /**
  * Import-session hooks (PRD §6.2). Uploading returns a *review*, and confirming
- * an item is what writes it to the workspace (`POST /workspace/items`), so the
- * "nothing enters the workspace until confirmed" rule is structural.
+ * an item is what writes it to the workspace, so the "nothing enters the
+ * workspace until confirmed" rule is structural. The transport (mock: create
+ * then patch; live: one backend-confirmed transaction) is chosen inside
+ * `api.confirmImportItem`.
  */
 
 export const importKeys = {
@@ -106,19 +106,8 @@ export function useDecideImportItem(sessionId: string) {
 export function useConfirmImportItem(sessionId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (item: ImportReviewItem) => {
-      const inputs = reviewItemToWorkspaceInputs(item);
-      const created: WorkspaceItem[] = [];
-      for (const input of inputs) {
-        created.push(await api.createItem(input));
-      }
-      await api.updateImportItem(sessionId, item.id, {
-        status: "confirmed",
-        values: item.values,
-        support: item.support,
-      });
-      return created;
-    },
+    mutationFn: (item: ImportReviewItem) =>
+      api.confirmImportItem(sessionId, item).then((result) => result.items),
     onSuccess: () => {
       invalidateSession(queryClient, sessionId);
       void queryClient.invalidateQueries({ queryKey: workspaceKeys.root });

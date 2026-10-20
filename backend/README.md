@@ -40,6 +40,31 @@ uv run uvicorn app.main:app --reload --port 8000
 # Docs: http://localhost:8000/docs
 ```
 
+## Run with the frontend (live mode)
+
+Run the API on port **8000** and the Next.js app on port **3000**:
+
+```bash
+# terminal 1 (backend)
+cd backend
+uv run uvicorn app.main:app --reload --port 8000
+
+# terminal 2 (frontend)
+cd frontend
+npm run dev        # http://localhost:3000
+```
+
+The frontend uses these variable **names** in `frontend/.env.local` (values are
+never committed): `NEXT_PUBLIC_API_MODE=live`, `NEXT_PUBLIC_API_BASE_URL`,
+`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. See
+`frontend/README.md` for the walkthrough.
+
+CORS: `CORS_ORIGINS` is an exact, comma-separated allowlist with no wildcard.
+The default already includes `http://localhost:3000`; add it explicitly if you
+override the list. The frontend sends the Supabase access token as
+`Authorization: Bearer …`, so the backend verifies it against the project's
+JWKS exactly as it does for any other client.
+
 ## Checks (all must pass)
 
 ```bash

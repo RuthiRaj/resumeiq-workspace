@@ -1478,3 +1478,91 @@ observable effect on a report is `aiUsed` plus up to three rewritten gap
 sentences (verified by `tests/test_analysis_enrichment.py`, including that the
 score and classifications are identical with AI on and off).
 
+
+## ADR-033 - 2026-10-20 - Live mode (I1): transport switch, wire fixes, mock-only surfaces
+
+Context: F0-F7 ran against MSW, B1-B4 exposed a real FastAPI API, and the two
+contracts had never been connected in the browser. I1 adds `NEXT_PUBLIC_API_MODE`
+with `mock` as the default and `live` as an opt-in, so every existing test and
+demo stays untouched.
+
+Decisions:
+
+1. **One client, two transports.** `src/lib/api/client.ts` keeps the same `api`
+   object screens already call. It chooses `"/api/v1"` (MSW) or
+   `"{NEXT_PUBLIC_API_BASE_URL}/api/v1"` (FastAPI) per call and validates every
+   success body with the existing Zod schema. A schema failure is a typed
+   `ApiError` (`invalid_response`, 502), never a half-rendered screen.
+2. **Auth behind the existing interface.** `createAuthClient()` returns the mock
+   adapter by default and a Supabase adapter in live mode. The adapter implements
+   sign up, sign in, sign out, password reset and session refresh (refresh when
+   the token is within 60 s of expiry) and maps Supabase errors onto `AuthError`.
+   Only the publishable key is read; `@supabase/supabase-js` is imported
+   dynamically so the marketing bundle and mock mode never contain it. A new
+   `AuthError` code, `email_confirmation_required`, covers projects that require
+   email confirmation before a session exists.
+3. **Errors keep the backend envelope.** `ApiError` now carries `detail.code`
+   alongside `status` and the server's `detail.message`. Known codes without a
+   message (for example `consent_required`, `rate_limited`,
+   `import_file_too_large`) fall back to the copy in `CODE_FALLBACKS`; the
+   screens' existing error states render the result unchanged.
+4. **Wire differences fixed on the frontend:**
+   - `ResumeResponse.targetId` is `string | null`; `ResumeSchema` accepted only
+     `string | undefined`, so the live standard resume failed validation. It is
+     now `.nullish()` (ADR-017 already documented the wire as the contract).
+   - The mock confirmed an import card with `POST /workspace/items` per item plus
+     `PATCH /imports/{id}/items/{id}`; the backend has an atomic
+     `POST /imports/{id}/items/{id}/confirm` returning `{item, review}`. Live
+     now uses that route; the mock path is preserved inside the same
+     `api.confirmImportItem` method, and a new Zod
+     `ImportConfirmResponseSchema` validates the body.
+   - The run status enum (`running|succeeded|failed`) and the analysis report
+     shapes already matched (ADR-031); no change. Additive `aiUsed` is stripped
+     by the schema today and is not displayed.
+5. **Skills cards remain a known contract gap.** The backend confirm maps one
+   review item to one workspace item and requires a title; a frontend skills
+   card is one card holding N chips with no title. In live mode that card creates
+   one `skill` item per chip through `POST /workspace/items`, then marks the card
+   confirmed with `PATCH /imports/{id}/items/{id}`. This is the only place the
+   live client does not use the atomic route; a future backend change (one
+   confirm -> many items, or a skills-specific route) should replace it.
+6. **Consent has no backend route yet.** The backend enforces consent by reading
+   `consent_records`, but the OpenAPI has no consent endpoint. In live mode the
+   browser writes/reads that table through the Supabase Data API with the user's
+   own JWT; RLS policies (`consent_records_owner_*`) restrict every row to that
+   user. Granting inserts a `granted=true` row; revoking stamps `revoked_at` on
+   every open grant before recording the denial, so the backend cannot still see
+   an older grant.
+7. **Honest gaps stay visible.** `GET /targets/{id}/resume`, `GET /resumes`,
+   `/privacy/export` and `DELETE /privacy/account` are not in the live backend.
+   Their client methods reject with `not_available_in_live_mode` (501) instead of
+   calling a non-existent endpoint or pretending success.
+8. **Mock-only UI is hidden, not merely disabled.** In live mode the workspace
+   dev bar, simulated-failure banner, "Load sample targets" button, import
+   "Sample" tags, simulated-demo banner and its copy, and the OAuth buttons (not
+   configured live) are not rendered. The import copy instead says the server
+   read the document. `startMocks()` and `QueryProvider` also refuse to start
+   MSW in live mode.
+9. **Privacy.** No request/response body, token or file content is logged. The
+   token provider returns the Supabase access token to the API client only; the
+   file is sent once, as multipart, to `POST /imports`. Supabase session
+   persistence is its own storage, not ours.
+
+Rejected alternatives:
+
+- **A second `liveApi` object.** Every screen/hook would need to branch and the
+  two shapes could drift. One validated client keeps a single contract.
+- **Static `import "@supabase/supabase-js"` at module scope.** It would ship
+  Supabase into chunks the landing page can load, and the budget/no-leak checks
+  exist for that reason.
+- **Bypassing the confirm route for every card** because skills are awkward.
+  Normal cards get the backend's transactional path; only skills need the
+  documented fallback.
+- **Deleting consent rows instead of revoking them.** The backend checks
+  `revoked_at is null`; an audit trail of grants and revocations is also more
+  honest than erasure.
+
+Consequences: `NEXT_PUBLIC_API_MODE` is build-time (Next inlines
+`NEXT_PUBLIC_*`); changing it requires a restart/rebuild. Live E2E is opt-in and
+skipped by default. The skills-card and consent gaps are recorded here so a
+later backend milestone can close them without rediscovering them.
