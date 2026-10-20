@@ -24,6 +24,7 @@ import {
 } from "@/lib/schemas";
 import type { z } from "zod";
 import { JOB_DESCRIPTION_FIXTURES } from "@/mocks/analysis-fixtures";
+import { isLiveMode } from "@/lib/config/mode";
 import { cn } from "@/lib/utils";
 
 /** Form input type: fields with schema defaults are optional while editing. */
@@ -205,7 +206,7 @@ export function TargetForm() {
           <FieldError id="target-jd-error" message={errors.jobDescription?.message} />
         </div>
 
-        {process.env.NODE_ENV === "development" ? (
+        {process.env.NODE_ENV === "development" && !isLiveMode() ? (
           <details className="rounded-sm border border-white/[0.08] p-3 text-sm">
             <summary className="flex cursor-pointer items-center gap-2 text-muted">
               <Wand2 className="size-3.5 text-accent-cyan" aria-hidden="true" />
