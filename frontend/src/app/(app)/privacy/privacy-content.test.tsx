@@ -26,4 +26,11 @@ describe("privacy consent card", () => {
     ).toBeInTheDocument();
     expect(screen.queryByText(/visit onboarding to record one/i)).not.toBeInTheDocument();
   });
+
+  it("renders the onboarding action as a link, not a button inside a link", async () => {
+    render(<PrivacyContent />);
+
+    const action = await screen.findByRole("link", { name: "Revisit onboarding" });
+    expect(action.querySelector("button")).toBeNull();
+  });
 });
