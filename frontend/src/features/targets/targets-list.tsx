@@ -10,6 +10,7 @@ import { ErrorState } from "@/components/domain/error-state";
 import { GlassCard } from "@/components/domain/glass-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/features/ui/toast-store";
+import { isLiveMode } from "@/lib/config/mode";
 import { useSampleTargets, useTargets } from "./use-targets";
 import type { JobTarget } from "@/lib/schemas";
 
@@ -41,7 +42,7 @@ export function TargetsList() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {process.env.NODE_ENV === "development" ? (
+          {process.env.NODE_ENV === "development" && !isLiveMode() ? (
             <Button
               variant="ghost"
               size="sm"

@@ -18,7 +18,11 @@ export type ResumeSection = z.infer<typeof ResumeSectionSchema>;
 export const ResumeSchema = z.object({
   id: z.string(),
   kind: z.enum(["standard", "tailored"]),
-  targetId: z.string().optional(),
+  /**
+   * Present for tailored resumes only. The backend serialises "no target" as
+   * `null` on the standard resume (live wire, I1), so both are accepted.
+   */
+  targetId: z.string().nullish(),
   /** Workspace version this resume was generated from (staleness, PRD §6.8). */
   workspaceVersion: z.number().int().nonnegative(),
   stale: z.boolean().default(false),

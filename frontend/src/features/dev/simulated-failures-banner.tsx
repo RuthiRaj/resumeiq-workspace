@@ -3,6 +3,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { WifiOff, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { isLiveMode } from "@/lib/config/mode";
 import { workspaceKeys } from "@/features/workspace/use-workspace";
 
 /**
@@ -19,6 +20,8 @@ import { workspaceKeys } from "@/features/workspace/use-workspace";
  */
 export function SimulatedFailuresBanner() {
   if (process.env.NODE_ENV !== "development") return null;
+  // No mock failure simulation exists in live mode (I1).
+  if (isLiveMode()) return null;
   return <BannerInner />;
 }
 

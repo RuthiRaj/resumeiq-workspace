@@ -13,11 +13,14 @@
  * `/signin` and tear down client state (see ADR-014). Every caller must wait
  * on the same promise, which only settles once the worker is actually ready.
  */
+import { isLiveMode } from "@/lib/config/mode";
+
 let pending: Promise<boolean> | null = null;
 
 export function startMocks(): Promise<boolean> {
   if (typeof window === "undefined") return Promise.resolve(false);
   if (process.env.NODE_ENV !== "development") return Promise.resolve(false);
+  if (isLiveMode()) return Promise.resolve(false);
   if (!pending) {
     pending = (async () => {
       try {

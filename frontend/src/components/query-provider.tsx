@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { isLiveMode } from "@/lib/config/mode";
 
 let client: QueryClient | null = null;
 function getQueryClient(): QueryClient {
@@ -15,7 +16,8 @@ function getQueryClient(): QueryClient {
   return client;
 }
 
-const MOCKS_REQUIRED = process.env.NODE_ENV === "development";
+/** Live mode talks to the real API, so MSW must stay out of the way (I1). */
+const MOCKS_REQUIRED = process.env.NODE_ENV === "development" && !isLiveMode();
 
 /**
  * App-only data provider (F2+ routes under (app)/ and the auth screens). NOT

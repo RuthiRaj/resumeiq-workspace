@@ -28,6 +28,7 @@ export class AuthError extends Error {
       | "invalid_credentials"
       | "email_taken"
       | "validation"
+      | "email_confirmation_required"
       | "network"
       | "unknown",
   ) {

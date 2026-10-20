@@ -5,6 +5,7 @@ import { FlaskConical, WifiOff } from "lucide-react";
 import type { WorkspacePersona } from "@/lib/schemas";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/features/ui/toast-store";
+import { isLiveMode } from "@/lib/config/mode";
 import { workspaceKeys } from "./use-workspace";
 
 const PERSONAS: { value: WorkspacePersona; label: string }[] = [
@@ -28,6 +29,8 @@ async function devClient() {
  */
 export function WorkspaceDevBar() {
   if (process.env.NODE_ENV !== "development") return null;
+  // Live mode has no mock fixtures or simulated failures to switch (I1).
+  if (isLiveMode()) return null;
   return <DevBarInner />;
 }
 
