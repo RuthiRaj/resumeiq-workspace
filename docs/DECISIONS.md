@@ -1726,3 +1726,40 @@ Consequences: a live analysis updates less often than the mock (acceptable for a
 multi-stage run that takes seconds), and expiry causes a reload that drops
 unsaved local UI state. The reload is the safer trade: an expired token cannot
 save anyway, and the next= parameter returns the user to the page they left.
+
+## ADR-037 - 2026-10-20 - Mobile shell, consent lookups and typed tests (S-06, S-09, S-11, S-14)
+
+Context: the second stack audit found the 360px shell drew a fixed bottom
+navigator over the page (the only action on `/resume` and the JD field on
+`/targets/new`), the consent gate rendered before its lookup resolved, and the
+test suite was outside `mypy` so error paths in tests were unchecked.
+
+Decision:
+
+- The mobile app shell owns the viewport (`h-dvh`, `position: fixed` on small
+  screens only). The header and page live in an internal `overflow-y-auto`
+  region and the navigator is a normal `shrink-0` sibling below it. A fixed
+  navigator was rejected because no amount of page padding stops content from
+  passing underneath it mid-scroll; the static row reserves its own space and
+  the inner scroller clips content, so a control can never be drawn under it.
+  Desktop keeps the document scroll (`md:` resets height, position and
+  overflow) so deep links, print and the existing layout are unchanged.
+- The consent gate only renders after the consent lookup has **resolved with
+  no grant**. Loading shows a status skeleton; a failed lookup shows a
+  retryable error. Submitting the target form during the lookup reports
+  "still checking" instead of opening the gate, which avoids asking for a
+  grant that may already exist. Live auth calls get a 20 s deadline and
+  consent calls 15 s (`withTimeout`), reported as network failures so the
+  existing retry copy applies.
+- Hydration-sensitive client state (the resolved session) is read through
+  `useHydrated` (`useSyncExternalStore`), so the first client render matches
+  the server skeleton instead of regenerating the tree.
+- `tests/` is type-checked with the application (`mypy app tests` in CI).
+  Fixing the helpers was preferred over a per-module ignore list because the
+  errors were mostly missing annotations on shared doubles, and an ignore list
+  would keep new test code unchecked.
+
+Consequences: mobile uses nested scrolling (a normal app-shell pattern) and
+`window.scrollY` stays 0 inside the shell, so tests must scroll the app region,
+not the window. `NODE_ENV`-only development fixtures are now also gated on
+mock mode, so live `next dev` sessions never offer fictional postings.
