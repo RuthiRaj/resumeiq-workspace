@@ -21,7 +21,7 @@ def service() -> WorkspaceService:
 def create_item(**kw: object) -> WorkspaceItemCreate:
     payload: dict[str, object] = {"section": "skill", "title": "TypeScript"}
     payload.update(kw)
-    return WorkspaceItemCreate(**payload)  # type: ignore[arg-type]
+    return WorkspaceItemCreate(**payload)
 
 
 def test_create_bumps_version_once_and_logs_label() -> None:

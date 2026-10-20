@@ -15,21 +15,28 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass
+from typing import Any, cast
 
 from fastapi.testclient import TestClient
 
 from app.ai.consent import ConsentGrant, InMemoryConsentStore
 from app.ai.errors import AINotConfiguredError
+from app.ai.gateway import AIGateway
 from app.ai.schemas import Claim, GapExplanationResult, JobRequirementsResult, RequirementClaim
 from app.analysis.enrichment import AnalysisEnricher
-from app.analysis.matching import build_evidence_index, match_requirements
+from app.analysis.matching import (
+    EvidenceIndex,
+    build_evidence_index,
+    match_requirements,
+)
 from app.analysis.requirements import RequirementDraft, extract_requirements
 from app.api.deps import get_target_repository, get_workspace_repository
 from app.core.config import Settings
 from app.main import create_app
 from app.repositories.memory import InMemoryWorkspaceRepository
 from app.repositories.target_memory import InMemoryTargetRepository
-from app.schemas.workspace import WorkspaceItemResponse
+from app.schemas.analysis import Requirement
+from app.schemas.workspace import EvidenceState, WorkspaceItemResponse, WorkspaceSection
 from tests.conftest import FIXED_CLOCK, TEST_SUBJECT
 from tests.test_targets_api import JD, headers_for, seed_items, seed_workspace
 
@@ -84,14 +91,20 @@ class FakeGateway:
         )
 
 
-def ws_item(item_id: str, *, title: str, section: str = "skill", evidence: str = "verified"):
+def ws_item(
+    item_id: str,
+    *,
+    title: str,
+    section: WorkspaceSection = "skill",
+    evidence: EvidenceState = "verified",
+) -> WorkspaceItemResponse:
     return WorkspaceItemResponse(
         id=item_id,
-        section=section,  # type: ignore[arg-type]
+        section=section,
         title=title,
         tags=[title],
         links=["https://example.com/proof"] if evidence == "verified" else [],
-        evidence=evidence,  # type: ignore[arg-type]
+        evidence=evidence,
         order=0,
     )
 
@@ -102,7 +115,7 @@ def ws_item(item_id: str, *, title: str, section: str = "skill", evidence: str =
 def test_refinement_adds_only_taxonomy_skills_the_posting_mentions() -> None:
     jd = "We orchestrate services with Kubernetes and Docker."
     gateway = FakeGateway(requirements=["Experience with Kubernetes", "A warm personality"])
-    enricher = AnalysisEnricher(gateway)
+    enricher = AnalysisEnricher(cast(AIGateway, gateway))
 
     drafts, used = asyncio.run(enricher.refine(job_description=jd, drafts=[], consent=CONSENT))
 
@@ -117,7 +130,7 @@ def test_refinement_adds_only_taxonomy_skills_the_posting_mentions() -> None:
 def test_refinement_never_adds_a_skill_the_posting_omits() -> None:
     jd = "We build web applications in TypeScript."
     gateway = FakeGateway(requirements=["Deep Kubernetes and Terraform experience"])
-    enricher = AnalysisEnricher(gateway)
+    enricher = AnalysisEnricher(cast(AIGateway, gateway))
 
     drafts, used = asyncio.run(enricher.refine(job_description=jd, drafts=[], consent=CONSENT))
     assert drafts == []
@@ -127,7 +140,7 @@ def test_refinement_never_adds_a_skill_the_posting_omits() -> None:
 def test_refinement_does_not_duplicate_an_existing_requirement() -> None:
     jd = "Requirements: TypeScript and React."
     gateway = FakeGateway(requirements=["TypeScript", "React"])
-    enricher = AnalysisEnricher(gateway)
+    enricher = AnalysisEnricher(cast(AIGateway, gateway))
 
     existing = extract_requirements(job_description=jd, required_skills=[])
     drafts, used = asyncio.run(
@@ -140,7 +153,7 @@ def test_refinement_does_not_duplicate_an_existing_requirement() -> None:
 def test_refinement_is_cached_per_job_description() -> None:
     jd = "Requirements: Kubernetes."
     gateway = FakeGateway(requirements=["Kubernetes"])
-    enricher = AnalysisEnricher(gateway)
+    enricher = AnalysisEnricher(cast(AIGateway, gateway))
 
     asyncio.run(enricher.refine(job_description=jd, drafts=[], consent=CONSENT))
     asyncio.run(enricher.refine(job_description=jd, drafts=[], consent=CONSENT))
@@ -149,7 +162,9 @@ def test_refinement_is_cached_per_job_description() -> None:
 
 def test_refinement_failure_falls_back_to_the_deterministic_drafts() -> None:
     jd = "Requirements: Kubernetes."
-    enricher = AnalysisEnricher(FakeGateway(requirements=["Kubernetes"], fail=True))
+    enricher = AnalysisEnricher(
+        cast(AIGateway, FakeGateway(requirements=["Kubernetes"], fail=True))
+    )
     baseline = extract_requirements(job_description=jd, required_skills=[])
 
     drafts, used = asyncio.run(
@@ -162,7 +177,7 @@ def test_refinement_failure_falls_back_to_the_deterministic_drafts() -> None:
 # --- gap explanations -------------------------------------------------------
 
 
-def _unsupported_requirement():
+def _unsupported_requirement() -> tuple[Requirement, EvidenceIndex]:
     index = build_evidence_index(
         [ws_item("i-docker", title="Docker", evidence="attested")], FIXED_CLOCK
     )
@@ -173,7 +188,7 @@ def _unsupported_requirement():
 def test_gap_explanation_changes_prose_only() -> None:
     requirement, index = _unsupported_requirement()
     gateway = FakeGateway(explanation="No Rust evidence; Docker is the closest tooling.")
-    enricher = AnalysisEnricher(gateway)
+    enricher = AnalysisEnricher(cast(AIGateway, gateway))
 
     updated, used = asyncio.run(
         enricher.explain(
@@ -194,7 +209,7 @@ def test_gap_explanation_changes_prose_only() -> None:
 
 def test_gap_explanation_failure_keeps_the_deterministic_text() -> None:
     requirement, index = _unsupported_requirement()
-    enricher = AnalysisEnricher(FakeGateway(explanation="ignored", fail=True))
+    enricher = AnalysisEnricher(cast(AIGateway, FakeGateway(explanation="ignored", fail=True)))
 
     updated, used = asyncio.run(
         enricher.explain(
@@ -232,7 +247,7 @@ def _client_with(enricher: AnalysisEnricher | None) -> TestClient:
     return TestClient(app)
 
 
-def _run_and_report(client: TestClient) -> dict:
+def _run_and_report(client: TestClient) -> dict[str, Any]:
     headers = headers_for(TEST_SUBJECT)
     target = client.post(
         f"{BASE}/targets",
@@ -251,7 +266,7 @@ def _run_and_report(client: TestClient) -> dict:
     client.post(f"{BASE}/targets/{target_id}/analysis", headers=headers).raise_for_status()
     report = client.get(f"{BASE}/targets/{target_id}/analysis", headers=headers)
     report.raise_for_status()
-    return report.json()
+    return cast(dict[str, Any], report.json())
 
 
 def test_ai_enrichment_leaves_the_deterministic_score_untouched() -> None:
@@ -259,9 +274,12 @@ def test_ai_enrichment_leaves_the_deterministic_score_untouched() -> None:
     enriched = _run_and_report(
         _client_with(
             AnalysisEnricher(
-                FakeGateway(
-                    requirements=["TypeScript"],
-                    explanation="Gap explained by the model.",
+                cast(
+                    AIGateway,
+                    FakeGateway(
+                        requirements=["TypeScript"],
+                        explanation="Gap explained by the model.",
+                    ),
                 )
             )
         )

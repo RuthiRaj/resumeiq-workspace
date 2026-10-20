@@ -5,6 +5,8 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+from collections.abc import Sequence
+from typing import Any
 
 import httpx
 import pytest
@@ -17,7 +19,8 @@ from app.ai.errors import (
     AIQuotaExceededError,
     AIUnavailableError,
 )
-from app.ai.schemas import RewriteBulletInput
+from app.ai.gateway import AICallResult, AIGateway
+from app.ai.schemas import EvidenceItem, RewriteBulletInput
 from tests.ai_fakes import (
     CONSENT,
     EVIDENCE,
@@ -42,7 +45,12 @@ VALID = json.dumps(
 PAYLOAD = RewriteBulletInput(bullet="Built a Python service handling 12,000 requests per day.")
 
 
-def run(gateway, payload=PAYLOAD, evidence=EVIDENCE, consent=CONSENT):
+def run(
+    gateway: AIGateway,
+    payload: Any = PAYLOAD,
+    evidence: Sequence[EvidenceItem] = EVIDENCE,
+    consent: ConsentGrant | None = CONSENT,
+) -> AICallResult:
     return asyncio.run(gateway.run("rewrite_bullet", payload, evidence, consent=consent))
 
 

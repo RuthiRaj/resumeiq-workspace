@@ -1,5 +1,7 @@
 """Workspace API contract tests (in-memory repository via dependency override)."""
 
+from typing import cast
+
 from fastapi.testclient import TestClient
 
 BASE = "/api/v1"
@@ -10,7 +12,7 @@ def create(client: TestClient, headers: dict[str, str], **body: object) -> dict[
     payload.update(body)
     response = client.post(f"{BASE}/workspace/items", json=payload, headers=headers)
     assert response.status_code == 201, response.text
-    return response.json()
+    return cast(dict[str, object], response.json())
 
 
 def test_get_workspace_empty(workspace_client: TestClient, auth_headers: dict[str, str]) -> None:

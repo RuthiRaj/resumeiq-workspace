@@ -29,7 +29,7 @@ import pytest
 
 from app.analysis.report import build_analysis_report
 from app.repositories.targets import SupabaseTargetRepository
-from app.schemas.analysis import AnalysisRun, TargetAnalysisSummary, TargetCreate
+from app.schemas.analysis import AnalysisRun, AnalysisRunStatus, TargetAnalysisSummary, TargetCreate
 from tests import supabase_auth
 
 _TIMEOUT_SECONDS = 15.0
@@ -145,12 +145,12 @@ def _target_input() -> TargetCreate:
     )
 
 
-def _run(target_id: str, status: str) -> AnalysisRun:
+def _run(target_id: str, status: AnalysisRunStatus) -> AnalysisRun:
     now = _now_iso()
     return AnalysisRun(
         id=str(uuid4()),
         targetId=target_id,
-        status=status,  # type: ignore[arg-type]
+        status=status,
         stage="writing",
         stageIndex=5,
         stageCount=6,

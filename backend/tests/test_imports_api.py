@@ -10,8 +10,11 @@ review → confirm. The two rules the brief insists on are asserted directly:
 from __future__ import annotations
 
 import logging
+from typing import Any, cast
 
+import pytest
 from fastapi.testclient import TestClient
+from httpx import Response
 
 from app.api.deps import get_import_repository
 from app.core.config import Settings
@@ -59,7 +62,7 @@ def upload(
     name: str = "resume.pdf",
     data: bytes = PDF_RESUME,
     content_type: str = "application/pdf",
-) -> object:
+) -> Response:
     return client.post(
         f"{BASE}/imports",
         files={"file": (name, data, content_type)},
@@ -67,12 +70,16 @@ def upload(
     )
 
 
-def session_of(response: object) -> dict[str, object]:
-    assert response.status_code == 201, response.text  # type: ignore[attr-defined]
-    return response.json()["import"]  # type: ignore[attr-defined]
+def session_of(response: Response) -> dict[str, Any]:
+    assert response.status_code == 201, response.text
+    body = response.json()
+    assert isinstance(body, dict)
+    session = body["import"]
+    assert isinstance(session, dict)
+    return cast(dict[str, Any], session)
 
 
-def item_of(session: dict[str, object], section: str) -> dict[str, object]:
+def item_of(session: dict[str, Any], section: str) -> dict[str, Any]:
     items = session["items"]
     assert isinstance(items, list)
     return next(i for i in items if i["extraction"]["section"] == section)
@@ -197,15 +204,15 @@ def test_scanned_pdf_upload_reads_nothing(
 
 
 def test_upload_never_logs_the_document_or_its_text(
-    import_client: TestClient, auth_headers: dict[str, str], caplog: object
+    import_client: TestClient, auth_headers: dict[str, str], caplog: pytest.LogCaptureFixture
 ) -> None:
     marker = "ZZTOP-UNLOGGABLE-MARKER"
     lines = ["EXAMPLE CANDIDATE", marker, "SKILLS", "TypeScript"]
-    with caplog.at_level(logging.INFO):  # type: ignore[attr-defined]
+    with caplog.at_level(logging.INFO):
         response = upload(import_client, auth_headers, data=build_pdf([lines]))
     assert response.status_code == 201
-    assert marker not in caplog.text  # type: ignore[attr-defined]
-    assert "EXAMPLE CANDIDATE" not in caplog.text  # type: ignore[attr-defined]
+    assert marker not in caplog.text
+    assert "EXAMPLE CANDIDATE" not in caplog.text
 
 
 def test_list_imports(import_client: TestClient, auth_headers: dict[str, str]) -> None:

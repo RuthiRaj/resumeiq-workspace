@@ -14,6 +14,7 @@ the full report must still be produced (PRD §6.9).
 from __future__ import annotations
 
 import asyncio
+from typing import cast
 
 import pytest
 from fastapi.testclient import TestClient
@@ -110,7 +111,7 @@ def analysis_client(
     return TestClient(app)
 
 
-def create_target(client: TestClient, headers: dict[str, str]) -> dict:
+def create_target(client: TestClient, headers: dict[str, str]) -> dict[str, object]:
     response = client.post(
         f"{BASE}/targets",
         json={
@@ -124,7 +125,7 @@ def create_target(client: TestClient, headers: dict[str, str]) -> dict:
         headers=headers,
     )
     assert response.status_code == 201, response.text
-    return response.json()
+    return cast(dict[str, object], response.json())
 
 
 # --- auth & targets ---------------------------------------------------------
@@ -235,7 +236,7 @@ def test_run_lifecycle_produces_a_full_deterministic_report(
     assert refreshed["analysis"]["stale"] is False
 
     # The requirements snapshot is mirrored into jd_requirements.
-    stored = target_repo.stored_requirements(TEST_SUBJECT, target["id"])
+    stored = target_repo.stored_requirements(TEST_SUBJECT, cast(str, target["id"]))
     assert [requirement.id for requirement in stored] == [
         requirement["id"] for requirement in report["requirements"]
     ]

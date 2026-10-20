@@ -9,7 +9,7 @@ from __future__ import annotations
 from app.extraction.plaintext import normalize_lines
 from app.extraction.sections import heading_section, parse_sections
 from app.repositories.imports import initial_values
-from app.schemas.imports import ExtractionItem
+from app.schemas.imports import ExtractedField, ExtractionItem
 
 RESUME = """\
 EXAMPLE CANDIDATE
@@ -63,7 +63,7 @@ def value(item: ExtractionItem, key: str) -> str | None:
     return None
 
 
-def field(item: ExtractionItem, key: str) -> object | None:
+def field(item: ExtractionItem, key: str) -> ExtractedField | None:
     for candidate in item.fields:
         if candidate.key == key:
             return candidate

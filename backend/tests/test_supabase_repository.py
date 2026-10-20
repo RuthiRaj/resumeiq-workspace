@@ -5,6 +5,7 @@ exercised without a live project or any credentials.
 """
 
 import asyncio
+from collections.abc import Callable
 
 import httpx
 import pytest
@@ -36,7 +37,7 @@ ITEM_ROW = {
 }
 
 
-def repo(handler: "callable[[httpx.Request], httpx.Response]") -> SupabaseWorkspaceRepository:
+def repo(handler: Callable[[httpx.Request], httpx.Response]) -> SupabaseWorkspaceRepository:
     return SupabaseWorkspaceRepository(
         "https://project.supabase.co/rest/v1",
         "publishable-key",
@@ -119,7 +120,7 @@ def test_update_maps_order_to_position_and_normalizes_dates() -> None:
 
     asyncio.run(run())
     patch = captured["p_patch"]
-    assert patch == {"position": 1, "start_date": "2023-04-01", "title": "Renamed"}  # type: ignore[index]
+    assert patch == {"position": 1, "start_date": "2023-04-01", "title": "Renamed"}
 
 
 def test_postgrest_p0002_raises_item_not_found() -> None:

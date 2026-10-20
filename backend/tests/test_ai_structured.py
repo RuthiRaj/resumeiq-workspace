@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import asyncio
 import json
+from typing import Any
 
 import httpx
 import pytest
 
 from app.ai.errors import AIGroundingError, AIProviderError, AISchemaError
+from app.ai.gateway import AICallResult, AIGateway
 from app.ai.schemas import (
     BulletRewriteResult,
     JobRequirementsResult,
@@ -39,7 +41,7 @@ GOOD = json.dumps(
 BAD_SHAPE = json.dumps({"claims": [{"text": "Built a Python service.", "evidence_ids": []}]})
 
 
-def run(gateway, payload=PAYLOAD):
+def run(gateway: AIGateway, payload: Any = PAYLOAD) -> AICallResult:
     return asyncio.run(gateway.run("rewrite_bullet", payload, EVIDENCE, consent=CONSENT))
 
 
