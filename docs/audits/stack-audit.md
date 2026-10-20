@@ -237,6 +237,11 @@ failures.
 - The route sweep deliberately waits 65s before each pass and 4s per route to
   keep the per-IP rate limiter quiet, so it does not reproduce S-04; the smoke
   does.
+- The production build reads `.env.local` (build log: \"Environments:
+  .env.local\"). Live mode is opt-in through `NEXT_PUBLIC_API_MODE`, and there is
+  no build-time assertion that a deployment is not shipping the mock client.
+  This audit did not inspect that file; release builds should set the mode
+  explicitly.
 - `gh` is not authenticated in this environment, so the branch was pushed with
   plain `git` and the PR was not opened automatically.
 - No application code was modified. The only repo changes are the two opt-in
