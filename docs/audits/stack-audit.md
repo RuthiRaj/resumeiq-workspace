@@ -262,6 +262,18 @@ after it.
   `/signin?reason=expired&next=%2Fworkspace` and showed “Your session expired.
   Sign in again to continue.”
 
+### Branch `fix/stack-audit-2` verification (2026-10-20)
+
+- `backend/scripts/check_test_users.py`: A HTTP 200; B HTTP 200.
+- Backend `uv run pytest`: **311 passed, 0 failed, 0 skipped**.
+- `uv run mypy app tests`: **0 errors** (104 files); the backend workflow now runs this target.
+- Endpoint smoke: **50 calls, 0 failed, exit 0**; no HTTP 429.
+- Frontend gates: lint and typecheck exit 0; **31 files, 174 tests passed**; production build exit 0; dev-only exclusion check and the 215KB landing budget pass.
+- Live Playwright full run: **5 passed, 1 failed, 0 skipped** in 13.0m. The failure was `target detail route @ 360px`: `page.goto` timed out after 90s while the dev server logged `GET /targets/{id} 200` in 242ms.
+- Live reruns: the actions test and `target detail route @ 360px` together passed (**2 passed**), and the 360px route sweep passed (**1 passed**). The failed test therefore passes on rerun; the first failure was a navigation flake, not a page defect.
+- 360px route sweep after S-11: the original `/resume` overlap=4 and `/targets/new` overlap=5 are gone. The remaining single overlap on many routes is `input ∩ button(Show password)`, the password reveal control drawn inside its field — an audit-instrument false positive, not the mobile navigator.
+- Later full-suite reruns were aborted by the Windows dev server exiting mid-sweep (`ERR_CONNECTION_REFUSED`); the runs above are the completed evidence.
+
 ## Residue and limits
 
 - The test rows created by the live UI runs were removed after the audit with a
