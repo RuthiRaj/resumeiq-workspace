@@ -23,7 +23,7 @@ function safeNext(raw: string | null): string {
   return raw && raw.startsWith("/") && !raw.startsWith("//") ? raw : "/workspace";
 }
 
-function SigninForm() {
+export function SigninForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const next = safeNext(searchParams.get("next"));
@@ -125,7 +125,9 @@ function SigninForm() {
             <PasswordInput aria-invalid={Boolean(errors.password)} {...register("password")} />
             <FieldError id="password-error" message={errors.password?.message} />
             <p id="password-hint" className="text-xs text-muted">
-              Passwords are mock-only in this milestone and stay in your browser.
+              {isLiveMode()
+                ? "Passwords are handled by Supabase Auth; your session is stored by Supabase."
+                : "Passwords are mock-only in this milestone and stay in your browser."}
             </p>
           </div>
           {formError ? (

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { isLiveMode } from "@/lib/config/mode";
 
 /**
  * Centered glass auth shell shared by signin/signup/forgot-password.
@@ -43,10 +44,12 @@ export function AuthCard({
           {footer}
         </div>
       </section>
-      <p className="mt-6 text-center text-xs leading-relaxed text-muted">
-        Mock authentication for the frontend milestone — no real credentials leave
-        your browser. Supabase Auth replaces this layer at backend integration.
-      </p>
+      {isLiveMode() ? null : (
+        <p className="mt-6 text-center text-xs leading-relaxed text-muted">
+          Mock authentication for the frontend milestone — no real credentials leave
+          your browser. Supabase Auth replaces this layer at backend integration.
+        </p>
+      )}
     </main>
   );
 }
