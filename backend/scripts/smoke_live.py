@@ -499,8 +499,11 @@ class Smoke:
 
 
 def main() -> int:
-    if os.environ.get("RUN_LIVE_SMOKE") != "1":
-        print("smoke skipped: set RUN_LIVE_SMOKE=1 to run against the live backend")
+    if not supabase_auth.live_smoke_enabled():
+        print(
+            "smoke skipped: set RUN_LIVE_SMOKE=1 in the shell "
+            "or backend/.env.test to run against the live backend"
+        )
         return 0
     if not supabase_auth.enabled():
         print(f"smoke skipped: {supabase_auth.skip_reason()}")

@@ -1,19 +1,23 @@
 import { expect, test } from "@playwright/test";
 
+import { liveE2eCredentials, liveE2eEnabled } from "./backend-env";
+
 /**
  * Live-mode smoke (I1), opt-in and skipped by default.
  *
  * Requires a real Supabase account plus the backend and frontend running in
- * live mode. See frontend/README.md ("Live mode") for the variable names and
- * commands. Never put credentials in this file.
+ * live mode. The gate and user A credentials are read from
+ * `backend/.env.test` (`RUN_LIVE_E2E`, `SUPABASE_TEST_EMAIL_A`,
+ * `SUPABASE_TEST_PASSWORD_A`); exported `LIVE_E2E_*` values still override
+ * them. See frontend/README.md ("Live mode"). Never put credentials in this
+ * file.
  */
-const email = process.env.LIVE_E2E_EMAIL;
-const password = process.env.LIVE_E2E_PASSWORD;
+const { email, password } = liveE2eCredentials();
 
 test.describe("live mode", () => {
   test.skip(
-    process.env.RUN_LIVE_E2E !== "1" || !email || !password,
-    "Set RUN_LIVE_E2E=1, LIVE_E2E_EMAIL and LIVE_E2E_PASSWORD to run the live smoke test.",
+    !liveE2eEnabled() || !email || !password,
+    "Set RUN_LIVE_E2E=1 and user A credentials in backend/.env.test to run the live smoke test.",
   );
 
   test("signs in with Supabase and loads the workspace from FastAPI", async ({

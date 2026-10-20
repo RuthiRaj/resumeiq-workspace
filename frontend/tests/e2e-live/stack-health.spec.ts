@@ -3,13 +3,16 @@ import { expect, test, type Page } from "@playwright/test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
+import { liveE2eCredentials, liveE2eEnabled } from "./backend-env";
+
 /**
  * Stack-health live audit (opt-in, I1 live mode).
  *
  * Not part of `npm run e2e`: the default suite stays MSW-only. This spec runs
  * only with `RUN_LIVE_E2E=1` and real user A credentials in
- * `LIVE_E2E_EMAIL` / `LIVE_E2E_PASSWORD`, against the local FastAPI backend
- * and the real Supabase project. It is an *instrument*, not a gate:
+ * `backend/.env.test` (`SUPABASE_TEST_EMAIL_A` / `SUPABASE_TEST_PASSWORD_A`;
+ * exported `LIVE_E2E_*` values still override them), against the local FastAPI
+ * backend and the real Supabase project. It is an *instrument*, not a gate:
  *
  *  1. `main live actions` walks the real flows once (add, edit, reorder,
  *     delete, import a synthetic PDF, confirm a review item, create a target,
@@ -25,9 +28,8 @@ import { join } from "node:path";
  * are ever printed.
  */
 
-const enabled = process.env.RUN_LIVE_E2E === "1";
-const email = process.env.LIVE_E2E_EMAIL;
-const password = process.env.LIVE_E2E_PASSWORD;
+const enabled = liveE2eEnabled();
+const { email, password } = liveE2eCredentials();
 
 const SECTIONS = [
   "personal",
@@ -280,7 +282,7 @@ async function readTargetUrl(): Promise<string | null> {
 test.describe("live stack audit", () => {
   test.skip(
     !enabled || !email || !password,
-    "Set RUN_LIVE_E2E=1, LIVE_E2E_EMAIL and LIVE_E2E_PASSWORD.",
+    "Set RUN_LIVE_E2E=1 and user A credentials in backend/.env.test.",
   );
 
   test("main live actions: add, edit, reorder, delete, import, confirm, target, analysis", async ({

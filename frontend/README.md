@@ -71,15 +71,16 @@ The Playwright suite (`npm run e2e`) stays mock-only. A separate smoke test
 exists for live mode and is skipped unless you opt in:
 
 ```sh
-# names only; values are read from your shell, never committed
-$env:RUN_LIVE_E2E="1"
-$env:LIVE_E2E_EMAIL="<test account email>"
-$env:LIVE_E2E_PASSWORD="<test account password>"
+# The gate and user A credentials come from backend/.env.test (git-ignored):
+#   RUN_LIVE_E2E=1
+#   SUPABASE_TEST_EMAIL_A / SUPABASE_TEST_PASSWORD_A
 npm run e2e:live
 ```
 
-It starts the backend (8000) and the live dev server (3000) itself; the spec
-signs in with Supabase and loads the workspace from FastAPI.
+Exported `RUN_LIVE_E2E`, `LIVE_E2E_EMAIL` and `LIVE_E2E_PASSWORD` still override
+the file (useful in CI). It starts the backend (8000) and the live dev server
+(3000) itself; the spec signs in with Supabase and loads the workspace from
+FastAPI. Nothing has to be typed into the terminal, and no value is printed.
 
 ## Verify
 

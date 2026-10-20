@@ -1,14 +1,17 @@
 import { defineConfig, devices } from "@playwright/test";
 
+import { liveE2eEnabled } from "./tests/e2e-live/backend-env";
+
 /**
  * Opt-in live E2E (I1). Not part of `npm run e2e`: that suite stays mock-only.
  *
- * `RUN_LIVE_E2E=1` starts the FastAPI backend (port 8000) and the Next dev
- * server in live mode (port 3000). The spec itself skips unless
- * LIVE_E2E_EMAIL / LIVE_E2E_PASSWORD are set, because a live run needs a real
- * Supabase account. Names only — values are never written here.
+ * `RUN_LIVE_E2E=1` (in the shell or `backend/.env.test`) starts the FastAPI
+ * backend (port 8000) and the Next dev server in live mode (port 3000). The
+ * specs read user A's credentials from `backend/.env.test`
+ * (`SUPABASE_TEST_EMAIL_A` / `SUPABASE_TEST_PASSWORD_A`) and skip if they are
+ * absent. Names only — values are never written here.
  */
-const enabled = process.env.RUN_LIVE_E2E === "1";
+const enabled = liveE2eEnabled();
 
 const frontendEnv: Record<string, string> = {
   NEXT_PUBLIC_API_MODE: "live",
