@@ -1566,3 +1566,124 @@ Consequences: `NEXT_PUBLIC_API_MODE` is build-time (Next inlines
 `NEXT_PUBLIC_*`); changing it requires a restart/rebuild. Live E2E is opt-in and
 skipped by default. The skills-card and consent gaps are recorded here so a
 later backend milestone can close them without rediscovering them.
+
+## ADR-034 - 2026-10-20 - Migration 0006: repair the targets.length default and index jobs.target_id
+
+Context: while verifying B4 (`0005_analysis.sql`) against the live project, two
+schema follow-ups surfaced. `0005` changed `targets.length` to the wire values
+`one_page`/`two_page` and replaced the check constraint, but left the column
+default at the old `one-page`, which the new constraint rejects. Any insert that
+omitted `length` failed with `23514` instead of taking a default. Separately,
+`jobs.target_id` is a foreign key added in `0005`, but the only index containing
+it is `jobs_target_created_idx (user_id, kind, target_id, created_at DESC)`.
+Because `target_id` is not the leading column, a target-only lookup cannot use
+it, and the Supabase performance advisor reports an unindexed foreign key.
+
+Decision: add `backend/db/migrations/0006_fixes.sql`, authored but **not applied
+by this change**. It runs after 0005 and contains exactly two idempotent
+statements:
+
+- `ALTER TABLE public.targets ALTER COLUMN length SET DEFAULT 'one_page'`.
+- `CREATE INDEX IF NOT EXISTS jobs_target_idx ON public.jobs (target_id)`.
+
+`backend/tests/test_migrations.py` reads the migration text, collapses
+whitespace and asserts both statements with regular expressions; it also rejects
+the old `'one-page'` default. The test needs no database, so it runs in the
+normal suite.
+
+Rejected alternatives:
+
+- **Editing 0005 in place.** Migrations are forward-only; 0005 may already be
+  applied. A new file is the only replayable fix.
+- **Extending the composite index to `(target_id, ...)`.** Replacing it would
+  harm the existing user/kind/created queries. A small target-only index is
+  cheaper and leaves the composite path untouched.
+- **Applying the migration from this repository.** The project is shared state;
+  the SQL editor/CLI step stays explicit. Until it is applied, the existing
+  behavior is unchanged and the database still rejects a defaulted insert.
+
+Consequences: after 0006 is applied, inserts that omit `length` get the wire
+default, target-only lookups can use `jobs_target_idx`, and the performance
+advisor's unindexed-FK finding should clear. Nothing changes in application code
+or in mock mode. The migration still has to be applied manually, then verified
+with the advisor and the opt-in integration tests.
+
+## ADR-035 - 2026-10-20 - Supabase latency from this Windows machine: not reproducible, not server-side
+
+Context: live B4 verification earlier reported roughly 30 s per request from this
+Windows machine to the Supabase project. I probed DNS, TCP/TLS, curl, the
+Windows network configuration and Python `httpx` (configured like the backend:
+`timeout=10`, no HTTP/2, default `trust_env=True`, default limits, a new
+`AsyncClient` per request). No keys, tokens, `.env` contents or personal data
+were read or printed; unauthenticated `HEAD`/`GET` requests return `401` and are
+enough for timing.
+
+Measurements on 2026-10-20 (three runs unless noted):
+
+| Probe | Result |
+| --- | --- |
+| DNS A / AAAA | 4-21 ms; A = two Cloudflare addresses; AAAA = `64:ff9b::/96` DNS64/NAT64 translations of those IPv4 addresses |
+| TCP 443, IPv4 | 60-267 ms (first connect 267 ms) |
+| TCP 443, IPv6 | 100-168 ms |
+| `curl.exe` default | total 0.164-0.566 s, `http=401` |
+| `curl.exe -4` | total 0.150-0.237 s |
+| `curl.exe -6` | total 0.186 s |
+| `Invoke-WebRequest` | first 4.45 s, then 0.03-0.09 s (warm `HttpClient` connection) |
+| `httpx` default, new client | 0.179-0.581 s |
+| `httpx`, `local_address="0.0.0.0"` | 0.187-0.379 s |
+| `httpx`, `trust_env=False` | 0.194-0.278 s |
+| `httpx`, one reused client | 0.059-0.166 s |
+| 8 alternating new clients | default 0.108-0.228 s; forced IPv4 0.109-0.202 s |
+
+Network configuration: WinHTTP is direct (no proxy), WinINET `ProxyEnable=0`,
+no `HTTP(S)_PROXY`/`ALL_PROXY` variables are set, and no VPN adapter is present.
+The only physical adapter is Wi-Fi. An IPv6 default route exists and works
+(`curl -6` succeeds); the AAAA answers are DNS64-synthesized NAT64 addresses.
+
+Server side: the MCP project tools expose the API URL but no region field. The
+database server address is in `2406:da1a::/32`, which is AWS `ap-south-1`
+(Mumbai); the edge logs report `HYD` (Hyderabad) as the serving Cloudflare colo.
+Over the last 24 hours, edge logs show origin time p50 67 ms, p95 104 ms and max
+1.2 s across all REST/Auth paths (`/rest/v1/workspace_items`: p50 67 ms, p95
+104 ms, max 727 ms). That includes the period of the earlier slow runs, so the
+30 s was not Supabase processing and is not explained by the region. Expected
+client total from Hyderabad is roughly 0.15-0.3 s, which is what the probes now
+measure.
+
+One cold `httpx` attempt hit the 10 s read timeout before any warm connection;
+it was not reproducible in the next 16 new-client requests, all under 0.6 s. The
+most plausible explanation is a transient local path problem, for example a
+stalled Wi-Fi/NAT64 flow or a machine wake/network switch, not a deterministic
+client setting. I did **not** add `SUPABASE_FORCE_IPV4` (or any other latency
+setting): forcing IPv4 did not remove a reproducible delay, and default `httpx`
+is already sub-second in 16/16 new-client attempts after the one cold failure.
+Adding a default-off knob with no measurable effect would be dead configuration.
+
+Re-timed with the local opt-in integration gate enabled: the full backend suite
+ran 311 tests in about 88 s (311 passed, 0 skipped, 0 failed, exit 0). The live
+integration tests were 4.8-10.1 s each; none showed a 30 s request. The fact
+that the earlier 30 s runs and these sub-second runs use the same backend client
+settings points away from the client configuration.
+
+Options if the 30 s stalls recur:
+
+1. **Force IPv4** with an `httpx.AsyncHTTPTransport(local_address="0.0.0.0")`
+   behind a documented `SUPABASE_FORCE_IPV4` setting (default false). The probe
+   shows this path is viable and marginally faster, but there is no current
+   delay for it to remove, so it is not in this change.
+2. **Bypass DNS64/NAT64** on the machine or router (use an IPv4-only resolver or
+   a network that does not synthesize `64:ff9b::/96`), then repeat the probe.
+3. **Keep the current timeouts and add one bounded retry** for idempotent reads.
+   This hides a transient stall but does not diagnose it; prefer 1 or 2 first.
+4. **Capture a failing interval** with the probe commands below, then check
+   whether all traffic (including `curl -4`) or only Python is affected. That
+   distinguishes a client issue from the Wi-Fi/ISP path.
+5. Region change is not indicated: the database is already in `ap-south-1` and
+   the edge is `HYD`; server origin time is well under 1.2 s.
+
+Reproduction commands (no credentials): `Resolve-DnsName <project>.supabase.co
+-Type A/AAAA`; `curl.exe -sS -o NUL -w "dns=%{time_namelookup} connect=%{time_connect}
+tls=%{time_appconnect} total=%{time_total} ip=%{remote_ip}\n" -4|-6
+https://<project>.supabase.co/rest/v1/`; and an `httpx.AsyncClient(timeout=10)`
+GET of the same URL, once with default transport and once with
+`local_address="0.0.0.0"`. `backend/.env` must not be read for this.

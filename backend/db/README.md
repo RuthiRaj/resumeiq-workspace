@@ -4,7 +4,9 @@ Forward-only migrations: `0001_initial.sql` creates the B0 schema (PRD section
 6); `0002_workspace_api.sql` adds the B1 workspace columns + functions;
 `0003_hardening.sql` locks down the RPC privileges and closes the
 version↔change-log gap (ADR-018); `0004_imports.sql` adds the B2 import tables
-and functions (ADR-028). Apply them in order with the Supabase SQL editor or CLI
+and functions (ADR-028); `0005_analysis.sql` adds the B4 target/run/report
+columns; `0006_fixes.sql` corrects two findings from the B4 live check
+(ADR-034). Apply them in order with the Supabase SQL editor or CLI
 (`supabase db push` once the project is linked). They reference `auth.users` /
 `auth.uid()`, so they only run on Supabase Postgres (or a local Postgres with an
 `auth` schema stub) — not on vanilla local Postgres.
@@ -74,6 +76,23 @@ items are persisted (PRD §11).
 - Version bump and `seq` are inlined, not called: `0003` dropped the
   `api_workspace_next_*` helpers (ADR-018). `0004` therefore runs whether or not
   `0003` has been applied.
+
+## Migration 0006 — B4 follow-ups (ADR-034)
+
+Authored but **not yet applied**. It contains the two fixes found while
+verifying 0005 against the live project; both statements are safe to re-run.
+
+- `targets.length` default is now `'one_page'`. 0005 changed the check
+  constraint to the wire values but left the old `'one-page'` default, so an
+  insert that omitted `length` failed with `23514`.
+- `jobs_target_idx` indexes `jobs (target_id)`. 0005 added the FK but only a
+  composite index starting with `user_id`, so target-only lookups could not use
+  it and the performance advisor reported an unindexed foreign key.
+
+`tests/test_migrations.py` parses the migration text and asserts both statements
+(without connecting to a database). Apply `0006_fixes.sql` after 0005 in the SQL
+editor, then re-run the performance advisor to confirm the unindexed-FK finding
+is cleared.
 
 ## Tables
 
