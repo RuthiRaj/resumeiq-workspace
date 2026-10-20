@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/context";
+import { useHydrated } from "@/lib/use-hydrated";
 import { Skeleton } from "@/components/ui/skeleton";
 
 /**
@@ -15,6 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
  */
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const { status } = useAuth();
+  const hydrated = useHydrated();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -26,7 +28,12 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     }
   }, [status, pathname, searchParams, router]);
 
-  if (status === "loading") {
+  // The server cannot read the session, so it always renders the skeleton.
+  // Keep the first client render identical until hydration has finished;
+  // otherwise a session resolved before hydration swaps the tree and React
+  // reports a mismatch (S-06). The unauthenticated branch also waits, so the
+  // redirect skeleton is never the very first client tree.
+  if (!hydrated || status === "loading") {
     return (
       <div
         role="status"
