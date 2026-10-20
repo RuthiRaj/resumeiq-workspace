@@ -270,12 +270,11 @@ after it.
 - Endpoint smoke: **42 calls, 0 failed, exit 0**; no HTTP 429 (an earlier run made 50 calls).
 - Frontend gates: lint and typecheck exit 0; **31 files, 174 tests passed**; production build exit 0; dev-only exclusion check pass; landing budget **197.4KB gzip / 215KB**.
 - Mock Playwright suite: **51 passed, 0 failed** in 5.4m against the mock dev server.
-- Live Playwright full runs: two attempts completed (9.4m: 2 passed / 2 failed / 2 skipped; 7.5m: 4 passed / 1 failed / 1 skipped). The first failures were Supabase sign-in throttling and a target submit sent before the consent lookup settled; the second failure was the dev server exiting mid-sweep (`page.goto: ERR_CONNECTION_REFUSED`), already noted below.
-- Live reruns on a fresh server: `main live actions` **passed** (target created, gate skipped because consent was already granted, report rendered), `route sweep @ 360px` **passed**, and `target detail route @ 1280px` + `@ 360px` **2 passed** (30.3s) with `console=0 pageErrors=0 failed=0 axe=0 overlap=0 overflow=false`. Every live test therefore passes; no single full run completed without the dev server exiting.
-- The live audit now waits for the visible "Checking your AI-processing consent" status to clear before submitting the target (`888cd97`), matching what the S-09 guard expects from a person.
+- Live Playwright, final full run after the test fix: **6 passed, 0 failed, 0 skipped** (7.4m). The actions test created the target, skipped the gate because consent was already granted, rendered the report and cleaned up; both route sweeps and both target-detail routes passed.
+- Earlier live attempts explained the failures: one full run lost the Windows dev server mid-sweep (`page.goto: ERR_CONNECTION_REFUSED`), and the actions test submitted the target while the S-09 consent lookup was still in flight. A cleanup rerun later hit the app's honest "Couldn't load this section" state after repeated sweeps had used the per-IP request budget.
+- The live audit now waits for the visible "Checking your AI-processing consent" status to clear before submitting the target (`888cd97`), matching what the S-09 guard expects from a person; that fixed the one-click action run (**33.6s, passed**).
 - The 1280px route sweep logged zero console, page-error, failed-request, axe, overlap and overflow findings on every route.
 - 360px route sweep after S-11: the original `/resume` overlap=4 and `/targets/new` overlap=5 are gone. The remaining single overlap on many routes is `input ∩ button(Show password)`, the password reveal control drawn inside its field — an audit-instrument false positive, not the mobile navigator.
-- Later full-suite reruns were aborted by the Windows dev server exiting mid-sweep (`ERR_CONNECTION_REFUSED`); the individual reruns above are the completed evidence.
 
 ## Residue and limits
 
