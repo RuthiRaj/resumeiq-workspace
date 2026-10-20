@@ -267,12 +267,15 @@ after it.
 - `backend/scripts/check_test_users.py`: A HTTP 200; B HTTP 200.
 - Backend `uv run pytest`: **311 passed, 0 failed, 0 skipped**.
 - `uv run mypy app tests`: **0 errors** (104 files); the backend workflow now runs this target.
-- Endpoint smoke: **50 calls, 0 failed, exit 0**; no HTTP 429.
-- Frontend gates: lint and typecheck exit 0; **31 files, 174 tests passed**; production build exit 0; dev-only exclusion check and the 215KB landing budget pass.
-- Live Playwright full run: **5 passed, 1 failed, 0 skipped** in 13.0m. The failure was `target detail route @ 360px`: `page.goto` timed out after 90s while the dev server logged `GET /targets/{id} 200` in 242ms.
-- Live reruns: the actions test and `target detail route @ 360px` together passed (**2 passed**), and the 360px route sweep passed (**1 passed**). The failed test therefore passes on rerun; the first failure was a navigation flake, not a page defect.
+- Endpoint smoke: **42 calls, 0 failed, exit 0**; no HTTP 429 (an earlier run made 50 calls).
+- Frontend gates: lint and typecheck exit 0; **31 files, 174 tests passed**; production build exit 0; dev-only exclusion check pass; landing budget **197.4KB gzip / 215KB**.
+- Mock Playwright suite: **51 passed, 0 failed** in 5.4m against the mock dev server.
+- Live Playwright full runs: two attempts completed (9.4m: 2 passed / 2 failed / 2 skipped; 7.5m: 4 passed / 1 failed / 1 skipped). The first failures were Supabase sign-in throttling and a target submit sent before the consent lookup settled; the second failure was the dev server exiting mid-sweep (`page.goto: ERR_CONNECTION_REFUSED`), already noted below.
+- Live reruns on a fresh server: `main live actions` **passed** (target created, gate skipped because consent was already granted, report rendered), `route sweep @ 360px` **passed**, and `target detail route @ 1280px` + `@ 360px` **2 passed** (30.3s) with `console=0 pageErrors=0 failed=0 axe=0 overlap=0 overflow=false`. Every live test therefore passes; no single full run completed without the dev server exiting.
+- The live audit now waits for the visible "Checking your AI-processing consent" status to clear before submitting the target (`888cd97`), matching what the S-09 guard expects from a person.
+- The 1280px route sweep logged zero console, page-error, failed-request, axe, overlap and overflow findings on every route.
 - 360px route sweep after S-11: the original `/resume` overlap=4 and `/targets/new` overlap=5 are gone. The remaining single overlap on many routes is `input ∩ button(Show password)`, the password reveal control drawn inside its field — an audit-instrument false positive, not the mobile navigator.
-- Later full-suite reruns were aborted by the Windows dev server exiting mid-sweep (`ERR_CONNECTION_REFUSED`); the runs above are the completed evidence.
+- Later full-suite reruns were aborted by the Windows dev server exiting mid-sweep (`ERR_CONNECTION_REFUSED`); the individual reruns above are the completed evidence.
 
 ## Residue and limits
 
