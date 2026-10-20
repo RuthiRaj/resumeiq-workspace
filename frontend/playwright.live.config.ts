@@ -27,7 +27,7 @@ if (process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY) {
 }
 
 export default defineConfig({
-  testDir: "./tests/live",
+  testDir: "./tests/e2e-live",
   fullyParallel: false,
   workers: 1,
   reporter: "list",
