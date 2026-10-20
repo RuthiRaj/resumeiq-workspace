@@ -14,6 +14,7 @@ Values (see ``backend/.env.test.example``):
     RUN_SUPABASE_INTEGRATION=1
     SUPABASE_TEST_EMAIL_A / SUPABASE_TEST_PASSWORD_A
     SUPABASE_TEST_EMAIL_B / SUPABASE_TEST_PASSWORD_B   # optional (isolation)
+    RUN_LIVE_SMOKE / RUN_LIVE_E2E                     # optional live gates
 
 ``SUPABASE_URL`` and ``SUPABASE_PUBLISHABLE_KEY`` are read from the runtime
 ``backend/.env``.
@@ -25,6 +26,7 @@ email/password pair when present, so an already-signed-in token can be reused.
 from __future__ import annotations
 
 import functools
+import os
 from pathlib import Path
 
 import httpx
@@ -52,6 +54,10 @@ class _IntegrationEnv(BaseSettings):
     model_config = SettingsConfigDict(env_file=(_RUNTIME_ENV_FILE, _TEST_ENV_FILE), extra="ignore")
 
     run_supabase_integration: bool = False
+    #: Opt-in gates for the live smoke and the live Playwright suite. They may
+    #: live in ``backend/.env.test`` so no terminal export is needed.
+    run_live_smoke: bool = False
+    run_live_e2e: bool = False
     supabase_url: str = ""
     supabase_publishable_key: str = ""
 
@@ -114,6 +120,20 @@ def skip_reason() -> str:
     return "integration tests disabled: " + "; ".join(missing)
 
 
+def live_smoke_enabled() -> bool:
+    """True when ``RUN_LIVE_SMOKE=1`` is exported or set in ``.env.test``."""
+    return os.environ.get("RUN_LIVE_SMOKE") == "1" or env().run_live_smoke
+
+
+def live_e2e_enabled() -> bool:
+    """True when ``RUN_LIVE_E2E=1`` is exported or set in ``.env.test``.
+
+    Kept here for parity with the Python side; the Playwright config and specs
+    read the same file directly in Node (they cannot import this module).
+    """
+    return os.environ.get("RUN_LIVE_E2E") == "1" or env().run_live_e2e
+
+
 @functools.lru_cache(maxsize=1)
 def import_schema_status() -> tuple[bool, str]:
     """Probe the Data API read-only for the import tables (migration 0004).
@@ -163,58 +183,112 @@ def import_schema_status() -> tuple[bool, str]:
     return False, detail + (f" ({code})" if code else "")
 
 
-def _sign_in(email: str, password: str, label: str) -> str:
+def _password_grant(email: str, password: str) -> tuple[int, str, str]:
+    """Exchange an email/password for a token.
+
+    Returns ``(HTTP status, Supabase error code, access token)``. The response
+    body is parsed only for those fields and is never logged or printed. A
+    transport failure returns status ``0`` and code ``network_error`` so no
+    traceback can echo the credentials.
+    """
     settings = env()
     base = settings.supabase_url.rstrip("/")
-    response = httpx.post(
-        f"{base}/auth/v1/token",
-        params={"grant_type": "password"},
-        headers={
-            "apikey": settings.supabase_publishable_key,
-            "Content-Type": "application/json",
-        },
-        json={"email": email, "password": password},
-        timeout=_TIMEOUT_SECONDS,
-    )
-    if response.status_code != 200:
-        # Deliberately omit the body: Supabase echoes the email on some errors.
-        raise MissingCredentialsError(
-            f"Supabase sign-in failed for {label} (HTTP {response.status_code})."
+    try:
+        response = httpx.post(
+            f"{base}/auth/v1/token",
+            params={"grant_type": "password"},
+            headers={
+                "apikey": settings.supabase_publishable_key,
+                "Content-Type": "application/json",
+            },
+            json={"email": email, "password": password},
+            timeout=_TIMEOUT_SECONDS,
         )
-    token = response.json().get("access_token")
+    except httpx.HTTPError:
+        return 0, "network_error", ""
+
+    try:
+        body = response.json()
+    except ValueError:
+        body = None
+
+    code = ""
+    if isinstance(body, dict):
+        # Supabase uses `error_code` on newer responses; older ones use
+        # `error`. `code` can be the numeric HTTP status, so only keep strings.
+        for key in ("error_code", "code", "error"):
+            value = body.get(key)
+            if isinstance(value, str) and value and not value.isdigit():
+                code = value
+                break
+
+    token = ""
+    if response.status_code == 200 and isinstance(body, dict):
+        token = str(body.get("access_token") or "")
+    return response.status_code, code, token
+
+
+def password_sign_in_status(email: str, password: str) -> tuple[int, str]:
+    """Attempt a password sign-in and return ``(HTTP status, error code)``.
+
+    Used by ``scripts/check_test_users.py``. The token, if any, is discarded
+    here and no email, password, token or response body is ever returned to
+    the caller or printed.
+    """
+    status, code, _ = _password_grant(email, password)
+    return status, code
+
+
+def _sign_in(label: str, which: str) -> str:
+    """Sign in as user ``which`` (``a``/``b``) without exposing credentials.
+
+    The credentials are read inside this function instead of being passed as
+    arguments, so a traceback header cannot echo them.
+    """
+    settings = env()
+    if which == "b":
+        email = settings.supabase_test_email_b
+        password = settings.supabase_test_password_b
+    else:
+        email = settings.supabase_test_email_a
+        password = settings.supabase_test_password_a
+
+    status, code, token = _password_grant(email, password)
+    if status != 200:
+        # Deliberately omit the body: Supabase echoes the email on some errors.
+        detail = f" (HTTP {status}" + (f", code {code}" if code else "") + ")"
+        raise MissingCredentialsError(f"Supabase sign-in failed for {label}{detail}.")
     if not token:
         raise MissingCredentialsError(f"Supabase sign-in returned no access token for {label}.")
-    return str(token)
+    return token
 
 
-def _resolve(explicit: str, email: str, password: str, label: str) -> str:
+def _resolve(which: str) -> str:
+    """Return a token for user ``which`` from an explicit token or sign-in."""
+    settings = env()
+    if which == "b":
+        explicit = settings.supabase_test_token_b
+        has_pair = bool(settings.supabase_test_email_b and settings.supabase_test_password_b)
+        label = "SUPABASE_TEST_*_B"
+    else:
+        explicit = settings.supabase_test_token_a
+        has_pair = bool(settings.supabase_test_email_a and settings.supabase_test_password_a)
+        label = "SUPABASE_TEST_*_A"
     if explicit:
         return explicit
-    if email and password:
-        return _sign_in(email, password, label)
+    if has_pair:
+        return _sign_in(label, which)
     raise MissingCredentialsError(f"{label}: set a token or an email/password pair.")
 
 
 def access_token_a() -> str:
     """Access token for test user A (the caller performing the mutations)."""
-    settings = env()
-    return _resolve(
-        settings.supabase_test_token_a,
-        settings.supabase_test_email_a,
-        settings.supabase_test_password_a,
-        "SUPABASE_TEST_*_A",
-    )
+    return _resolve("a")
 
 
 def access_token_b() -> str:
     """Access token for test user B (the 'other user' in isolation tests)."""
-    settings = env()
-    return _resolve(
-        settings.supabase_test_token_b,
-        settings.supabase_test_email_b,
-        settings.supabase_test_password_b,
-        "SUPABASE_TEST_*_B",
-    )
+    return _resolve("b")
 
 
 def current_user_id(token: str) -> str:

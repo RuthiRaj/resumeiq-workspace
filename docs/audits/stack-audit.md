@@ -233,6 +233,21 @@ regression test that failed before the change and passes after it.
 - S-04 — fixed in `c9dc44c`: live analysis polling is 2s (mock stays 300ms) and a 429 backs off for the server's `Retry-After` (ADR-036).
 - S-05 — fixed in `97dd73f`: the provider follows Supabase auth-state changes; a 401 clears the session and redirects to `/signin?reason=expired` with an on-page notice (ADR-036).
 
+### Post-fix live verification (2026-10-20)
+
+- `backend/scripts/check_test_users.py`: A HTTP 200; B HTTP 200.
+- Backend `uv run pytest`: **311 passed, 0 failed, 0 skipped**.
+- Endpoint smoke: **52 calls, 0 failed, exit 0**; no HTTP 429 in the backend log.
+- Live Playwright suite: **6 passed, 0 failed, 0 skipped** (7.6m).
+- Live analysis polling: four `GET …/analysis/run` calls spaced ~2.5s apart
+  (the 2s interval plus request time), all HTTP 200, zero 429s.
+- An ad-hoc live browser check (not added to the suite) asserted the live import
+  copy (“The document is read by the server; the file itself is not stored.”)
+  and replaced the stored access token with an invalid one. The next
+  `/workspace` load redirected to
+  `/signin?reason=expired&next=%2Fworkspace` and showed “Your session expired.
+  Sign in again to continue.”
+
 ## Residue and limits
 
 - The test rows created by the live UI runs were removed after the audit with a

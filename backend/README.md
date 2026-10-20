@@ -185,6 +185,17 @@ Integration tests read `backend/.env.test` (git-ignored; copy
 project with a real user JWT, so they prove RLS, the per-user change log and
 standard resume, and the transactional versioning.
 
+Before a live run, check both password sign-ins without printing any secret:
+
+```bash
+uv run python scripts/check_test_users.py   # prints label, HTTP status, error code only
+```
+
+The live endpoint smoke (`scripts/smoke_live.py`) and the frontend live
+Playwright suite also read their opt-in gates (`RUN_LIVE_SMOKE` /
+`RUN_LIVE_E2E`) and user A credentials from `backend/.env.test`, so no shell
+export is required; exported values still win.
+
 `tests/test_import_integration.py` additionally needs migration `0004` applied;
 it proves import isolation between two users, idempotent confirm, and the
 attested/verified evidence rules. Both suites skip cleanly when the flag or the
