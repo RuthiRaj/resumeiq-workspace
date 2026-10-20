@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { AuthPageProviders } from "@/features/auth/auth-page-providers";
 import { AuthCard } from "@/features/auth/auth-card";
 import { useAuth } from "@/lib/auth/context";
+import { isLiveMode } from "@/lib/config/mode";
 import { AuthError } from "@/lib/auth/types";
 import { ForgotPasswordSchema, type ForgotPasswordInput } from "@/lib/auth/schemas";
 import { Button } from "@/components/ui/button";
@@ -14,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { FieldError, Label } from "@/components/ui/field";
 import { toast } from "@/features/ui/toast-store";
 
-function ForgotPasswordForm() {
+export function ForgotPasswordForm() {
   const { requestPasswordReset } = useAuth();
   const [sent, setSent] = useState<string | null>(null);
 
@@ -39,7 +40,11 @@ function ForgotPasswordForm() {
     <AuthCard
       eyebrow="Account recovery"
       title="Forgot password?"
-      description="Enter your account email and we'll send a reset link. Mocked in this milestone — no email is actually sent."
+      description={
+        isLiveMode()
+          ? "Enter your account email and we'll send a reset link through Supabase Auth. Open it on this device to choose a new password."
+          : "Enter your account email and we'll send a reset link. Mocked in this milestone — no email is actually sent."
+      }
       footer={
         <>
           Remembered it?{" "}
