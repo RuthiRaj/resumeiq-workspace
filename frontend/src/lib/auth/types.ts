@@ -55,4 +55,11 @@ export interface AuthClient {
   signInWithOAuth(provider: "google" | "github"): Promise<Session>;
   requestPasswordReset(email: string): Promise<{ message: string }>;
   signOut(): Promise<void>;
+  /**
+   * Live transport only: pushes auth-state changes (sign-out, refresh) so the
+   * provider can react without polling. Returns an unsubscribe function.
+   */
+  subscribe?(
+    listener: (session: Session | null) => void,
+  ): Promise<() => void>;
 }

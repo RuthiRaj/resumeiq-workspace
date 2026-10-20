@@ -1687,3 +1687,42 @@ tls=%{time_appconnect} total=%{time_total} ip=%{remote_ip}\n" -4|-6
 https://<project>.supabase.co/rest/v1/`; and an `httpx.AsyncClient(timeout=10)`
 GET of the same URL, once with default transport and once with
 `local_address="0.0.0.0"`. `backend/.env` must not be read for this.
+
+## ADR-036 - 2026-10-20 - Analysis poll rate and expired-session handling (S-04, S-05)
+
+Context: the stack audit found the live UI polled an analysis run every 300 ms
+while the backend allows 60 requests/minute per IP, and that a failed Supabase
+refresh left screens on the raw 401 with no way back to sign-in. The 300 ms
+interval came from the 5s mock run; the real backend acquired a per-IP limiter
+after that choice was made.
+
+Decision:
+
+- Live analysis polling is **2 s** (`LIVE_ANALYSIS_POLL_MS`); mock keeps 300 ms
+  so the demo still shows real, wall-clock progress. 2 s leaves headroom under
+  60/minute for two tabs or a shared IP. A 429 carries `Retry-After`, which
+  `ApiError.retryAfterMs` preserves and `analysisPollDelay` uses as a floor for
+  the next poll (capped at one day by the header parser). The backend limiter is
+  unchanged: it protects every endpoint, not just the poll.
+- A 401 is treated as session expiry, not a generic API error. The auth provider
+  registers one handler with the API client, clears the session, signs out, and
+  performs a **full-page navigation** to
+  `/signin?reason=expired&next=<current path>`. A full navigation is deliberate:
+  a client-side push would leave React Query caches that still belong to the
+  expired session. The handler does nothing extra on `/signin`, `/signup` and
+  `/forgot-password`, so a 401 cannot loop. The sign-in page renders an
+  "expired" alert from the query parameter.
+- The live auth client exposes `subscribe`, backed by Supabase
+  `onAuthStateChange` (with `INITIAL_SESSION` ignored because the provider reads
+  the persisted session itself on mount). The provider follows sign-out and
+  refresh events, so a session removed in another tab is reflected here.
+
+Alternatives rejected: polling at 1 s (exactly the 60/minute budget with no room
+for other requests), SSE/long-poll (no backend stream), `router.push` (stale
+query cache), and clearing every query manually (easy to miss a cache key and
+still leaves in-flight requests running).
+
+Consequences: a live analysis updates less often than the mock (acceptable for a
+multi-stage run that takes seconds), and expiry causes a reload that drops
+unsaved local UI state. The reload is the safer trade: an expired token cannot
+save anyway, and the next= parameter returns the user to the page they left.

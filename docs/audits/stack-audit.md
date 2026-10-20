@@ -99,18 +99,16 @@ Run A — route sweeps and the existing live smoke:
 - `/resume` and `/targets/new` at 360px had 4 and 5 action-overlap pairs with
   the fixed bottom navigation (S-11).
 
-Run B — action flow and `/targets/[id]`:
-
 Run B — action flow and `/targets/[id]` (after fixing the spec, not the app):
 
 - A first attempt failed on the reorder assertion: the account already had rows
-  from earlier attempts, so \"first row in the section\" was the wrong check.
+  from earlier attempts, so "first row in the section" was the wrong check.
   The spec now asserts relative order (second above first). Audit-instrument
   bug, not a product defect.
 - The next attempt passed every action in 34.5s: add, edit with autosave
-  (\"Saved at\"), reorder, delete, import a synthetic PDF, edit the imported
+  ("Saved at"), reorder, delete, import a synthetic PDF, edit the imported
   title, confirm, create a target, accept consent, and run the analysis. The
-  report rendered (\"Match score and factors\").
+  report rendered ("Match score and factors").
 - Cleanup then deleted 0 rows because it counted before the section list
   rendered. After waiting for `workspace-list`, the final run passed in 33.2s
   (42.3s total) and deleted 8 workspace items.
@@ -224,6 +222,17 @@ failures.
 | Supabase slow/unreachable during consent | Gate renders before the lookup resolves; no lookup-loading/error state; no timeout | S-09 |
 | Supabase slow during sign-in | Button stays in "Signing in…" with no deadline | S-09 |
 
+## Fixes applied
+
+Branch `fix/stack-audit-1` fixes the five majors in ID order. Each fix has a
+regression test that failed before the change and passes after it.
+
+- S-01 — fixed in `e0a3fed`: live sign-in uses Supabase Auth copy; the mock-only password hint and auth footer are gated on `isLiveMode()`.
+- S-02 — fixed in `b93d923`: live forgot-password copy says Supabase Auth sends the reset link instead of claiming no email is sent.
+- S-03 — fixed in `58fad1f`: live import copy says the file goes to the server extractor and only the extracted text is stored.
+- S-04 — fixed in `c9dc44c`: live analysis polling is 2s (mock stays 300ms) and a 429 backs off for the server's `Retry-After` (ADR-036).
+- S-05 — fixed in `97dd73f`: the provider follows Supabase auth-state changes; a 401 clears the session and redirects to `/signin?reason=expired` with an on-page notice (ADR-036).
+
 ## Residue and limits
 
 - The test rows created by the live UI runs were removed after the audit with a
@@ -237,13 +246,14 @@ failures.
 - The route sweep deliberately waits 65s before each pass and 4s per route to
   keep the per-IP rate limiter quiet, so it does not reproduce S-04; the smoke
   does.
-- The production build reads `.env.local` (build log: \"Environments:
-  .env.local\"). Live mode is opt-in through `NEXT_PUBLIC_API_MODE`, and there is
+- The production build reads `.env.local` (build log: "Environments:
+  .env.local"). Live mode is opt-in through `NEXT_PUBLIC_API_MODE`, and there is
   no build-time assertion that a deployment is not shipping the mock client.
   This audit did not inspect that file; release builds should set the mode
   explicitly.
 - `gh` is not authenticated in this environment, so the branch was pushed with
   plain `git` and the PR was not opened automatically.
-- No application code was modified. The only repo changes are the two opt-in
-  audit instruments, the live config path update, the moved live smoke and this
-  report.
+- No application code was modified by the audit itself; the five fixes above
+  landed later on `fix/stack-audit-1`. The audit PR's only repo changes are the
+  two opt-in audit instruments, the live config path update, the moved live
+  smoke and this report.

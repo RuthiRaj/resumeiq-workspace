@@ -23,10 +23,11 @@ function safeNext(raw: string | null): string {
   return raw && raw.startsWith("/") && !raw.startsWith("//") ? raw : "/workspace";
 }
 
-function SigninForm() {
+export function SigninForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const next = safeNext(searchParams.get("next"));
+  const expired = searchParams.get("reason") === "expired";
   const { status, signIn, signInWithOAuth } = useAuth();
   const [formError, setFormError] = useState<string | null>(null);
   const [oauthPending, setOauthPending] = useState<OAuthProvider | null>(null);
@@ -91,6 +92,14 @@ function SigninForm() {
       }
     >
       <div className="flex flex-col gap-5">
+        {expired ? (
+          <p
+            role="alert"
+            className="rounded-sm border border-evidence-missing/30 bg-evidence-missing/10 px-3 py-2 text-sm text-text"
+          >
+            Your session expired. Sign in again to continue.
+          </p>
+        ) : null}
         {isLiveMode() ? null : (
           <>
             <OAuthButtons onOAuth={onOAuth} pending={oauthPending} mode="signin" />
@@ -125,7 +134,9 @@ function SigninForm() {
             <PasswordInput aria-invalid={Boolean(errors.password)} {...register("password")} />
             <FieldError id="password-error" message={errors.password?.message} />
             <p id="password-hint" className="text-xs text-muted">
-              Passwords are mock-only in this milestone and stay in your browser.
+              {isLiveMode()
+                ? "Passwords are handled by Supabase Auth; your session is stored by Supabase."
+                : "Passwords are mock-only in this milestone and stay in your browser."}
             </p>
           </div>
           {formError ? (

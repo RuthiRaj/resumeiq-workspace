@@ -53,6 +53,8 @@ export class ApiError extends Error {
     public readonly path: string,
     /** Backend envelope `detail.code` (e.g. `consent_required`), when present. */
     public readonly code?: string,
+    /** `Retry-After` in milliseconds, when the server sent one. */
+    public readonly retryAfterMs?: number,
   ) {
     super(message);
     this.name = "ApiError";
@@ -82,6 +84,20 @@ const CODE_FALLBACKS: Record<string, string> = {
     "That feature isn't connected to the live backend yet.",
 };
 
+type UnauthorizedHandler = () => void;
+
+let unauthorizedHandler: UnauthorizedHandler | null = null;
+
+/**
+ * Auth provider seam: a 401 means the Bearer token is no longer valid. The
+ * handler clears the browser session and sends the user to sign-in.
+ */
+export function setUnauthorizedHandler(
+  handler: UnauthorizedHandler | null,
+): void {
+  unauthorizedHandler = handler;
+}
+
 export function apiErrorMessage(error: unknown, fallback: string): string {
   if (error instanceof ApiError) {
     if (error.code && CODE_FALLBACKS[error.code] && !error.message) {
@@ -102,6 +118,7 @@ export function errorFromBody(
   body: unknown,
   status: number,
   path: string,
+  retryAfterMs?: number,
 ): ApiError {
   let message = "";
   let code: string | undefined;
@@ -121,7 +138,23 @@ export function errorFromBody(
     status,
     path,
     code,
+    retryAfterMs,
   );
+}
+
+/**
+ * `Retry-After` is either delay-seconds or an HTTP date. The backend sends
+ * seconds. Cap it at a day so a bad header cannot park the poller forever.
+ */
+function parseRetryAfter(value: string | null): number | undefined {
+  if (!value) return undefined;
+  const seconds = Number(value);
+  if (Number.isFinite(seconds) && seconds >= 0) {
+    return Math.min(seconds * 1000, 24 * 60 * 60 * 1000);
+  }
+  const at = Date.parse(value);
+  if (Number.isNaN(at)) return undefined;
+  return Math.max(0, Math.min(at - Date.now(), 24 * 60 * 60 * 1000));
 }
 
 function isFormData(value: unknown): value is FormData {
@@ -158,8 +191,14 @@ async function request<T>(
   }
 
   if (!res.ok) {
+    if (res.status === 401) unauthorizedHandler?.();
     const errorBody = await res.json().catch(() => null);
-    throw errorFromBody(errorBody, res.status, path);
+    throw errorFromBody(
+      errorBody,
+      res.status,
+      path,
+      parseRetryAfter(res.headers.get("Retry-After")),
+    );
   }
   if (res.status === 204) return undefined as T;
   const text = await res.text();

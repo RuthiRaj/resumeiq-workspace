@@ -145,7 +145,7 @@ export function ImportReviewPage() {
             <ol className="flex flex-col gap-1.5 text-sm text-muted">
               {live ? (
                 <>
-                  <li>1. The document is read by the server, never stored.</li>
+                  <li>1. The document is read by the server; the file itself is not stored.</li>
                   <li>2. You see the extracted fields next to the text they came from.</li>
                   <li>3. Uncertain fields are highlighted so you can correct them.</li>
                 </>
@@ -176,7 +176,7 @@ export function ImportReviewPage() {
  * flight; the component only lives while the request is pending, so each upload
  * starts from stage one without any state juggling in the parent.
  */
-function ExtractionProgress({ fileName }: { fileName: string }) {
+export function ExtractionProgress({ fileName }: { fileName: string }) {
   const [stageIndex, setStageIndex] = useState(0);
 
   useEffect(() => {
@@ -203,7 +203,9 @@ function ExtractionProgress({ fileName }: { fileName: string }) {
         label="Extraction progress"
       />
       <p className="text-xs text-muted">
-        This is a simulated extractor in this build — no file leaves your browser.
+        {isLiveMode()
+          ? "Your file is sent to the server for extraction; only the extracted text is stored."
+          : "This is a simulated extractor in this build — no file leaves your browser."}
       </p>
     </section>
   );

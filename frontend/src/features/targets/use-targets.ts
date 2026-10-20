@@ -1,7 +1,8 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
+import { isLiveMode } from "@/lib/config/mode";
 import type { JobTarget, TargetCreateValues } from "@/lib/schemas";
 
 /**
@@ -57,11 +58,23 @@ export function useStartAnalysis(targetId: string) {
 }
 
 /**
- * Polls the run every 300ms while it is running. The mock advances the run from
- * wall-clock time, so this is real progress, not a fake animation.
+ * Polls the run while it is running. The mock advances it from wall-clock time,
+ * so 300ms feels live; the real backend is limited to 60 requests/minute per
+ * IP, so live polling stays at 2s and backs off when a 429 carries Retry-After.
  */
+export const LIVE_ANALYSIS_POLL_MS = 2_000;
+const MOCK_ANALYSIS_POLL_MS = 300;
+
+export function analysisPollDelay(error: unknown, baseMs: number): number {
+  if (error instanceof ApiError && error.status === 429) {
+    return Math.max(baseMs, error.retryAfterMs ?? baseMs);
+  }
+  return baseMs;
+}
+
 export function useAnalysisRun(targetId: string, enabled: boolean) {
   const queryClient = useQueryClient();
+  const pollMs = isLiveMode() ? LIVE_ANALYSIS_POLL_MS : MOCK_ANALYSIS_POLL_MS;
   return useQuery({
     queryKey: targetKeys.run(targetId),
     queryFn: async () => {
@@ -75,7 +88,9 @@ export function useAnalysisRun(targetId: string, enabled: boolean) {
     },
     enabled: enabled && Boolean(targetId),
     refetchInterval: (query) =>
-      query.state.data?.run.status === "running" ? 300 : false,
+      query.state.data?.run.status === "running"
+        ? analysisPollDelay(query.state.error, pollMs)
+        : false,
     retry: false,
   });
 }

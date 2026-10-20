@@ -119,6 +119,21 @@ describe("live API client", () => {
     expect(error.message).toContain("Too many requests");
   });
 
+  it("keeps Retry-After on a 429 so the poller can back off", async () => {
+    const response = jsonResponse(
+      { detail: { code: "rate_limited", message: "" } },
+      429,
+    );
+    response.headers.set("Retry-After", "60");
+    vi.stubGlobal("fetch", fetchMock().mockResolvedValue(response));
+
+    const error = (await api
+      .getAnalysisRun("target-1")
+      .catch((err: unknown) => err)) as ApiError & { retryAfterMs?: number };
+
+    expect(error.retryAfterMs).toBe(60_000);
+  });
+
   it("rejects a response that does not match the schema", async () => {
     vi.stubGlobal(
       "fetch",
