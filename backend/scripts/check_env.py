@@ -1,8 +1,12 @@
 """Report which required environment variables are set or missing.
 
 For the runtime app (``backend/.env``) and the opt-in integration tests
-(``backend/.env.test``). Prints variable **names** and a ``set``/``missing``
-status only — a value is never read into the output.
+(``backend/.env.test``). Prints variable **names** and a ``set``/``missing``/
+``using default`` status only — a value is never read into the output.
+
+Optional AI base URLs and model names have built-in defaults in ``Settings``,
+so an unset one is reported as ``using default`` rather than ``missing``.
+Only API keys are truly ``missing`` when absent.
 
     cd backend && uv run python scripts/check_env.py
     cd backend && uv run python scripts/check_env.py --strict  # exit 1 if app vars missing
@@ -18,7 +22,7 @@ from pathlib import Path
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(BACKEND_DIR))
 
-from app.core.config import REQUIRED_ENV_VARS  # noqa: E402
+from app.core.config import REQUIRED_ENV_VARS, Settings  # noqa: E402
 from tests import supabase_auth  # noqa: E402
 
 #: Optional AI variables, reported for visibility only (names, never values).
@@ -27,6 +31,16 @@ OPTIONAL_AI_ENV_VARS = (
     "GROQ_BASE_URL",
     "GROQ_MODEL",
     "NVIDIA_API_KEY",
+    "NVIDIA_BASE_URL",
+    "NVIDIA_MODEL",
+)
+
+#: Optional AI variables that fall back to a built-in default when unset.
+#: Reporting these as "missing" was misleading: the gateway still works without
+#: them, so they are shown as "using default" instead.
+AI_DEFAULTED_ENV_VARS = (
+    "GROQ_BASE_URL",
+    "GROQ_MODEL",
     "NVIDIA_BASE_URL",
     "NVIDIA_MODEL",
 )
@@ -57,8 +71,32 @@ def present(name: str) -> bool:
     return False
 
 
-def line(label: str, is_set: bool) -> str:
-    return f"  [{'set' if is_set else 'missing'}] {label}"
+def builtin_default(name: str) -> str | None:
+    """The built-in default for an optional variable, or ``None`` if it has none.
+
+    Read from ``Settings`` so the report cannot drift from the real defaults.
+    The default is configuration, not a secret, and only its existence is used.
+    """
+    field = Settings.model_fields.get(name.lower())
+    if field is None or field.is_required():
+        return None
+    default = field.default
+    return default if isinstance(default, str) and default else None
+
+
+def line(label: str, status: bool | str) -> str:
+    if isinstance(status, bool):
+        status = "set" if status else "missing"
+    return f"  [{status}] {label}"
+
+
+def var_line(name: str) -> str:
+    """``set``, ``using default`` (optional with a built-in default), or ``missing``."""
+    if present(name):
+        return line(name, "set")
+    if name in AI_DEFAULTED_ENV_VARS and builtin_default(name):
+        return line(name, "using default")
+    return line(name, "missing")
 
 
 def main() -> int:
@@ -97,7 +135,7 @@ def main() -> int:
     print()
     print("AI providers (optional; backend/.env):")
     for name in OPTIONAL_AI_ENV_VARS:
-        print(line(name, present(name)))
+        print(var_line(name))
     ai_ready = present("GROQ_API_KEY") or present("NVIDIA_API_KEY")
     print(
         "AI calls would "
