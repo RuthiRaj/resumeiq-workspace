@@ -71,4 +71,13 @@ describe("sign-in copy", () => {
     expect(screen.getByText(/Supabase Auth/i)).toBeInTheDocument();
     expect(screen.queryByText(/Mock authentication/i)).not.toBeInTheDocument();
   });
+
+  it("explains an expired session", async () => {
+    vi.stubEnv("NEXT_PUBLIC_API_MODE", "mock");
+    navigation.search = "reason=expired";
+    renderForm();
+
+    await waitFor(() => expect(screen.getByLabelText("Email")).toBeInTheDocument());
+    expect(screen.getByRole("alert")).toHaveTextContent(/session expired/i);
+  });
 });

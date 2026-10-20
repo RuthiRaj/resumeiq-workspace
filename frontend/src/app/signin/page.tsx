@@ -27,6 +27,7 @@ export function SigninForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const next = safeNext(searchParams.get("next"));
+  const expired = searchParams.get("reason") === "expired";
   const { status, signIn, signInWithOAuth } = useAuth();
   const [formError, setFormError] = useState<string | null>(null);
   const [oauthPending, setOauthPending] = useState<OAuthProvider | null>(null);
@@ -91,6 +92,14 @@ export function SigninForm() {
       }
     >
       <div className="flex flex-col gap-5">
+        {expired ? (
+          <p
+            role="alert"
+            className="rounded-sm border border-evidence-missing/30 bg-evidence-missing/10 px-3 py-2 text-sm text-text"
+          >
+            Your session expired. Sign in again to continue.
+          </p>
+        ) : null}
         {isLiveMode() ? null : (
           <>
             <OAuthButtons onOAuth={onOAuth} pending={oauthPending} mode="signin" />

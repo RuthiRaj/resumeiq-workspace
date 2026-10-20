@@ -230,5 +230,16 @@ export function createSupabaseAuthClient(): AuthClient {
         // Signing out locally must still succeed when the network is down.
       }
     },
+
+    async subscribe(listener) {
+      const supabase = await getClient();
+      const { data } = supabase.auth.onAuthStateChange((event, session) => {
+        // The provider resolves the persisted session itself on mount; an
+        // initial event would only race that first read.
+        if (event === "INITIAL_SESSION") return;
+        listener(session ? sessionFromSupabase(session) : null);
+      });
+      return () => data.subscription.unsubscribe();
+    },
   };
 }

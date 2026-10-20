@@ -84,6 +84,20 @@ const CODE_FALLBACKS: Record<string, string> = {
     "That feature isn't connected to the live backend yet.",
 };
 
+type UnauthorizedHandler = () => void;
+
+let unauthorizedHandler: UnauthorizedHandler | null = null;
+
+/**
+ * Auth provider seam: a 401 means the Bearer token is no longer valid. The
+ * handler clears the browser session and sends the user to sign-in.
+ */
+export function setUnauthorizedHandler(
+  handler: UnauthorizedHandler | null,
+): void {
+  unauthorizedHandler = handler;
+}
+
 export function apiErrorMessage(error: unknown, fallback: string): string {
   if (error instanceof ApiError) {
     if (error.code && CODE_FALLBACKS[error.code] && !error.message) {
@@ -177,6 +191,7 @@ async function request<T>(
   }
 
   if (!res.ok) {
+    if (res.status === 401) unauthorizedHandler?.();
     const errorBody = await res.json().catch(() => null);
     throw errorFromBody(
       errorBody,

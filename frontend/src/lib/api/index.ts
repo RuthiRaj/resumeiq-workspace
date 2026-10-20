@@ -1,1 +1,6 @@
-export { api, ApiError, apiErrorMessage } from "./client";
+export {
+  api,
+  ApiError,
+  apiErrorMessage,
+  setUnauthorizedHandler,
+} from "./client";
