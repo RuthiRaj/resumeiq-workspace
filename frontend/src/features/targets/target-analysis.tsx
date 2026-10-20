@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Target } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { LinkButton } from "@/components/ui/link-button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/domain/empty-state";
@@ -11,6 +12,7 @@ import { AnalysisTheatre } from "./analysis-theatre";
 import { ConsentGate } from "./consent-gate";
 import { ReportView } from "./report-view";
 import {
+  POLL_FAILURES_BEFORE_NOTICE,
   useAnalysisReport,
   useAnalysisRun,
   useStartAnalysis,
@@ -153,7 +155,29 @@ export function TargetAnalysis({ targetId }: { targetId: string }) {
           ) : null}
         </div>
       ) : running || failed ? (
-        <>
+        <div className="flex flex-col gap-4">
+          {runQuery.isError &&
+          runQuery.failureCount >= POLL_FAILURES_BEFORE_NOTICE ? (
+            <div
+              role="status"
+              data-testid="analysis-poll-error"
+              className="flex flex-wrap items-center justify-between gap-3 rounded-sm border-l-2 border-evidence-attested bg-evidence-attested/[0.06] p-3"
+            >
+              <p className="text-sm text-text">
+                We&apos;ve lost the connection to the analysis. The last known
+                progress is below and it keeps retrying in the background.
+              </p>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => void runQuery.refetch()}
+                disabled={runQuery.isFetching}
+                aria-busy={runQuery.isFetching}
+              >
+                {runQuery.isFetching ? "Checking…" : "Check again"}
+              </Button>
+            </div>
+          ) : null}
           {run ? (
             <AnalysisTheatre
               run={run}
@@ -164,7 +188,7 @@ export function TargetAnalysis({ targetId }: { targetId: string }) {
           ) : (
             <Skeleton className="h-72 w-full" />
           )}
-        </>
+        </div>
       ) : report ? (
         <ReportView
           target={target}
