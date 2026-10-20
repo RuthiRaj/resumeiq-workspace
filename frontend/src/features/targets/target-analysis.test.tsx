@@ -7,11 +7,22 @@ import { TargetAnalysis } from "./target-analysis";
  * run and retried forever with no "connection lost" state. After two
  * consecutive failures the page must say so inline and offer a manual retry,
  * without hiding the theatre or the last known progress.
+ *
+ * S-09: the consent gate used to render before the consent lookup resolved,
+ * which looked like "no consent" on a slow Data API. The page must show a
+ * checking state, and a retryable error if the lookup fails.
  */
 const poll = vi.hoisted(() => ({
   isError: true,
   failureCount: 2,
   refetch: vi.fn(),
+}));
+
+const consent = vi.hoisted(() => ({
+  isLoading: false,
+  isError: false,
+  refetch: vi.fn(),
+  consent: { aiProcessing: true } as { aiProcessing: boolean } | null,
 }));
 
 vi.mock("./use-targets", () => ({
@@ -44,12 +55,15 @@ vi.mock("./use-targets", () => ({
 }));
 
 vi.mock("@/lib/privacy/use-consent", () => ({
-  hasAiConsent: () => true,
+  hasAiConsent: (value: { aiProcessing: boolean } | null | undefined) =>
+    Boolean(value?.aiProcessing),
   useConsent: () => ({
-    data: { consent: { aiProcessing: true } },
-    isLoading: false,
-    isSuccess: true,
-    isError: false,
+    data: consent.consent ? { consent: consent.consent } : undefined,
+    isLoading: consent.isLoading,
+    isSuccess: !consent.isLoading && !consent.isError,
+    isError: consent.isError,
+    isFetching: false,
+    refetch: consent.refetch,
   }),
   useRecordConsent: () => ({ mutate: vi.fn(), isPending: false, isError: false }),
 }));
@@ -63,6 +77,10 @@ afterEach(() => {
   poll.isError = true;
   poll.failureCount = 2;
   poll.refetch.mockReset();
+  consent.isLoading = false;
+  consent.isError = false;
+  consent.refetch.mockReset();
+  consent.consent = { aiProcessing: true };
 });
 
 describe("analysis poll errors", () => {
@@ -84,5 +102,31 @@ describe("analysis poll errors", () => {
     render(<TargetAnalysis targetId="target-1" />);
 
     expect(screen.queryByTestId("analysis-poll-error")).not.toBeInTheDocument();
+  });
+});
+
+describe("consent lookup", () => {
+  it("does not show the consent gate while the lookup is loading", () => {
+    consent.isLoading = true;
+    consent.consent = null;
+    render(<TargetAnalysis targetId="target-1" />);
+
+    expect(screen.queryByTestId("consent-gate")).not.toBeInTheDocument();
+    expect(screen.getByTestId("consent-loading")).toHaveTextContent(
+      /checking your ai-processing consent/i,
+    );
+  });
+
+  it("offers a retry when the consent lookup fails instead of asking again", () => {
+    consent.isError = true;
+    consent.consent = null;
+    render(<TargetAnalysis targetId="target-1" />);
+
+    expect(screen.queryByTestId("consent-gate")).not.toBeInTheDocument();
+    expect(
+      screen.getByText("We couldn’t check your AI-processing consent"),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /try again/i }));
+    expect(consent.refetch).toHaveBeenCalledTimes(1);
   });
 });

@@ -138,7 +138,25 @@ export function TargetAnalysis({ targetId }: { targetId: string }) {
         ) : null}
       </header>
 
-      {!consentGranted ? (
+      {consentQuery.isLoading ? (
+        <div
+          role="status"
+          aria-busy="true"
+          aria-label="Checking your AI-processing consent"
+          data-testid="consent-loading"
+          className="flex flex-col gap-2"
+        >
+          <p className="text-sm text-muted">Checking your AI-processing consent…</p>
+          <Skeleton className="h-20 w-full" />
+        </div>
+      ) : consentQuery.isError ? (
+        <ErrorState
+          title="We couldn’t check your AI-processing consent"
+          description="Nothing has been analysed. Check your connection and try again."
+          onRetry={() => void consentQuery.refetch()}
+          retrying={consentQuery.isFetching}
+        />
+      ) : !consentGranted ? (
         <div className="flex flex-col gap-4">
           <ConsentGate
             busy={recordConsent.isPending}

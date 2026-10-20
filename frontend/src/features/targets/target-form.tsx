@@ -118,6 +118,18 @@ export function TargetForm() {
 
   function createAndAnalyse(values: TargetCreateValues) {
     setSubmitError(null);
+    // The consent lookup can still be in flight. Opening the gate now would
+    // ask for consent that may already be recorded (S-09).
+    if (consentQuery.isLoading) {
+      setSubmitError("We're still checking your AI-processing consent. Try again in a moment.");
+      return;
+    }
+    if (consentQuery.isError) {
+      setSubmitError(
+        "We couldn't check your AI-processing consent. Check your connection and try again.",
+      );
+      return;
+    }
     if (!consentGranted) {
       setPendingValues(values);
       setShowGate(true);
@@ -361,6 +373,16 @@ export function TargetForm() {
         {!consentGranted && consentQuery.isSuccess ? (
           <span className="text-xs text-muted">
             Consent is required to analyse — you&apos;ll be asked to confirm.
+          </span>
+        ) : null}
+        {consentQuery.isLoading ? (
+          <span role="status" className="text-xs text-muted" data-testid="consent-checking">
+            Checking your AI-processing consent…
+          </span>
+        ) : null}
+        {consentQuery.isError ? (
+          <span className="text-xs text-evidence-missing">
+            Couldn&apos;t check AI-processing consent. Try again in a moment.
           </span>
         ) : null}
       </div>
