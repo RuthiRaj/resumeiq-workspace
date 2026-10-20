@@ -82,7 +82,7 @@ function ConsentCard() {
         <p role="status" className="mt-4 font-mono text-xs text-muted">
           {consent
             ? `Recorded ${consent.recordedAt.slice(0, 10)} · ${consent.aiProcessing ? "consented" : "declined"} · v${consent.version}`
-            : "No consent recorded yet — visit onboarding to record one."}
+            : "No consent recorded yet — use the buttons below."}
         </p>
       )}
       <div className="mt-4 flex flex-wrap gap-2">
