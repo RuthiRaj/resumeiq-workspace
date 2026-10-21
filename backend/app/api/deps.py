@@ -35,10 +35,12 @@ from app.core.config import Settings
 from app.core.logging import get_logger
 from app.extraction.engine import DeterministicExtractionEngine, ExtractionEngine
 from app.repositories.imports import ImportRepository, SupabaseImportRepository
+from app.repositories.resumes import ResumeRepository, SupabaseResumeRepository
 from app.repositories.targets import SupabaseTargetRepository, TargetRepository
 from app.repositories.workspace import SupabaseWorkspaceRepository, WorkspaceRepository
 from app.services.analysis_service import AnalysisService
 from app.services.import_service import ImportService
+from app.services.resume_service import ClaimReworder, GatewayReworder, ResumeService
 from app.services.workspace_service import WorkspaceService
 
 logger = get_logger(__name__)
@@ -372,4 +374,57 @@ def get_analysis_service(
         workspace,
         stage_delay_seconds=settings.analysis_stage_delay_seconds,
         enricher=get_analysis_enricher(request),
+    )
+
+
+# --- Resumes (B5) ----------------------------------------------------------
+
+
+def get_resume_repository(request: Request) -> ResumeRepository:
+    """A resume repository bound to the caller's JWT (RLS enforced in Postgres)."""
+    settings: Settings = request.app.state.settings
+    if not settings.data_api_configured:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "code": "data_api_not_configured",
+                "message": "Server data access is not configured.",
+            },
+        )
+    return SupabaseResumeRepository(
+        settings.rest_url,
+        settings.supabase_publishable_key,
+        get_bearer_token(request),
+    )
+
+
+def get_resume_reworder(request: Request) -> ClaimReworder | None:
+    """Optional AI reworder: ``None`` when no provider key is configured.
+
+    Tests pin ``app.state.resume_reworder`` to a fake (or to ``None``) to
+    exercise accepted and rejected rewrites without a network call.
+    """
+    override = getattr(request.app.state, "resume_reworder", _UNSET)
+    if override is not _UNSET:
+        return cast(ClaimReworder | None, override)
+    settings: Settings = request.app.state.settings
+    if not settings.ai_configured:
+        return None
+    reworder = GatewayReworder(get_ai_gateway(request))
+    request.app.state.resume_reworder = reworder
+    return reworder
+
+
+def get_resume_service(
+    resumes: Annotated[ResumeRepository, Depends(get_resume_repository)],
+    workspace: Annotated[WorkspaceRepository, Depends(get_workspace_repository)],
+    targets: Annotated[TargetRepository, Depends(get_target_repository)],
+    request: Request,
+) -> ResumeService:
+    """FastAPI dependency: the resume service over the request's repositories."""
+    return ResumeService(
+        resumes,
+        workspace,
+        targets,
+        reworder=get_resume_reworder(request),
     )

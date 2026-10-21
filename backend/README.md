@@ -127,7 +127,7 @@ uv run python scripts/check_env.py
 uv run python scripts/check_env.py --strict   # exit 1 if an app variable is missing
 ```
 
-## API (B1 + B2)
+## API (B1–B5)
 
 All workspace/resume endpoints require `Authorization: Bearer <Supabase JWT>` and
 mirror the F3 mock contract (`frontend/src/mocks/handlers.ts`):
@@ -167,6 +167,36 @@ damaged, zip bomb or over a cap), `import_file_too_large` (413),
 1-based `sourceLine`; a scanned or empty document returns
 `previewAvailable: false` with no items.
 
+Analysis endpoints (B4, contract in `docs/api/contract-proposals.md` §3–§5):
+
+| Method | Path | Notes |
+|---|---|---|
+| GET/POST | `/api/v1/targets` | list / create (201) |
+| GET | `/api/v1/targets/{id}` | one target |
+| POST | `/api/v1/targets/{id}/analysis` | start a staged run (202); consent-gated |
+| GET | `/api/v1/targets/{id}/analysis/run` | poll the latest run |
+| GET | `/api/v1/targets/{id}/analysis` | latest report |
+
+Resume endpoints (B5, contract §6):
+
+| Method | Path | Notes |
+|---|---|---|
+| POST | `/api/v1/targets/{id}/resume` | generate a tailored resume (201) |
+| GET | `/api/v1/resumes` | standard + tailored summaries |
+| GET | `/api/v1/resumes/{id}` | one resume (`resume-standard` is derived) |
+| PATCH | `/api/v1/resumes/{id}/sections/{key}` | grounded hand edit |
+| GET | `/api/v1/resumes/{id}/versions` | insert-only history |
+| POST | `/api/v1/resumes/{id}/versions/{version_id}/restore` | copy forward, keep history |
+| POST | `/api/v1/resumes/{id}/stale` | set the stale flag |
+| GET | `/api/v1/resumes/{id}/diff` | resume vs current workspace |
+| POST | `/api/v1/resumes/{id}/refresh` | refresh unedited sections |
+
+Generation needs a report at the current workspace version (`analysis_required`
+/ `analysis_stale`). The engine only reorders/trims existing items and every
+claim cites workspace item ids. `rewordWithAi: true` additionally needs a
+configured provider and recorded consent; an ungrounded rewrite falls back to
+the original text. See ADR-039/ADR-040.
+
 ## Tests
 
 ```bash
@@ -174,7 +204,8 @@ cd backend
 uv run pytest            # unit + contract tests (in-memory repo, httpx.MockTransport)
 
 # opt-in integration tests (skipped unless backend/.env.test opts in)
-uv run pytest tests/test_workspace_integration.py tests/test_import_integration.py
+uv run pytest tests/test_workspace_integration.py tests/test_import_integration.py \
+  tests/test_analysis_integration.py tests/test_resumes_integration.py
 ```
 
 Integration tests read `backend/.env.test` (git-ignored; copy

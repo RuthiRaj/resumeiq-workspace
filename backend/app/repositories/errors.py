@@ -69,5 +69,76 @@ class AnalysisAlreadyRunningError(RepositoryError):
         self.target_id = target_id
 
 
+class ResumeNotFoundError(RepositoryError):
+    """The requested resume does not exist (or is not the caller's)."""
+
+    def __init__(self, resume_id: str) -> None:
+        super().__init__("That resume no longer exists.")
+        self.resume_id = resume_id
+
+
+class ResumeVersionNotFoundError(RepositoryError):
+    """The requested resume version does not exist for that resume."""
+
+    def __init__(self, version_id: str) -> None:
+        super().__init__("That resume version no longer exists.")
+        self.version_id = version_id
+
+
+class ResumeSectionNotFoundError(RepositoryError):
+    """The resume has no such section to edit."""
+
+    def __init__(self, section: str) -> None:
+        super().__init__("That resume section does not exist.")
+        self.section = section
+
+
+class ResumeSectionInvalidError(RepositoryError):
+    """A refresh named a section that is not part of the resume contract."""
+
+    def __init__(self, section: str) -> None:
+        super().__init__("That is not a resume section.")
+        self.section = section
+
+
+class ResumeReadOnlyError(RepositoryError):
+    """The standard resume is derived live and cannot be edited or versioned."""
+
+    def __init__(self) -> None:
+        super().__init__("The standard resume is always derived from the workspace.")
+
+
+class ResumeEvidenceNotFoundError(RepositoryError):
+    """An edit cited an item that is not in the caller's current workspace."""
+
+    def __init__(self, item_id: str) -> None:
+        super().__init__("That evidence item is not in your current workspace.")
+        self.item_id = item_id
+
+
+class ResumeClaimUngroundedError(RepositoryError):
+    """A hand-edited or AI-rewritten claim adds facts the evidence lacks."""
+
+    def __init__(self, section: str) -> None:
+        super().__init__("A statement in that section is not supported by its evidence.")
+        self.section = section
+
+
+class AnalysisRequiredError(RepositoryError):
+    """A tailored resume needs a successful analysis report first."""
+
+    def __init__(self, target_id: str) -> None:
+        super().__init__("Run the analysis before generating a tailored resume.")
+        self.target_id = target_id
+
+
+class AnalysisStaleError(RepositoryError):
+    """The analysis predates the current workspace, so selection would be stale."""
+
+    def __init__(self, target_id: str) -> None:
+        super().__init__("The analysis is older than your workspace. Re-run it first.")
+        self.target_id = target_id
+
+
 class DataApiNotConfiguredError(RepositoryError):
     """The Supabase Data API (URL + publishable key) is not configured."""
