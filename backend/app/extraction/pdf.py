@@ -20,6 +20,10 @@ MAX_PDF_PAGES: Final[int] = 50
 
 def extract_pdf_text(data: bytes, deadline: float) -> tuple[str, int]:
     """Extracted text per page (newline-joined) and the page count."""
+    # A deadline that has already been reached must fail even if the parser
+    # would finish within one clock tick (coarse monotonic clocks on Windows).
+    if time.monotonic() >= deadline:
+        raise ExtractionTimeoutError("Reading the PDF took too long.")
     try:
         reader = PdfReader(io.BytesIO(data), strict=False)
     except Exception as exc:  # pypdf raises several unrelated exception types
@@ -39,7 +43,7 @@ def extract_pdf_text(data: bytes, deadline: float) -> tuple[str, int]:
 
     parts: list[str] = []
     for page in pages:
-        if time.monotonic() > deadline:
+        if time.monotonic() >= deadline:
             raise ExtractionTimeoutError("Reading the PDF took too long.")
         try:
             parts.append(page.extract_text() or "")

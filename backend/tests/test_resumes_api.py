@@ -18,6 +18,7 @@ import asyncio
 from typing import Any, cast
 
 import pytest
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from app.ai.consent import ConsentGrant, InMemoryConsentStore
@@ -570,7 +571,7 @@ def test_ungrounded_ai_rewrite_falls_back_to_the_original_text(
     headers = headers_for(TEST_SUBJECT)
     target_id = prepare(resume_client, headers)
     reworder = FakeReworder("Increased revenue by 42%.")
-    resume_client.app.state.resume_reworder = reworder
+    cast(FastAPI, resume_client.app).state.resume_reworder = reworder
 
     resume = generate(resume_client, headers, target_id, rewordWithAi=True)
     assert reworder.calls > 0
@@ -591,7 +592,8 @@ def test_grounded_ai_rewrite_is_used_and_recorded(
     seed_workspace(fake_repo, TEST_SUBJECT, seed_items())
     headers = headers_for(TEST_SUBJECT)
     target_id = prepare(resume_client, headers)
-    resume_client.app.state.resume_reworder = FakeReworder(
+    resume_client_app = cast(FastAPI, resume_client.app)
+    resume_client_app.state.resume_reworder = FakeReworder(
         "Delivered the design system and internal tooling."
     )
 
@@ -622,7 +624,9 @@ def test_ai_requires_configuration_and_consent(
     assert response.status_code == 503
     assert response.json()["detail"]["code"] == "ai_not_configured"
 
-    resume_client.app.state.resume_reworder = FakeReworder("Built the design system.")
+    cast(FastAPI, resume_client.app).state.resume_reworder = FakeReworder(
+        "Built the design system."
+    )
     consent_store.revoke(TEST_SUBJECT)
     response = resume_client.post(
         f"{BASE}/targets/{target_id}/resume",

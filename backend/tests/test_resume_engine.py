@@ -66,8 +66,8 @@ def requirement(
     return Requirement(
         id=requirement_id,
         text=text,
-        kind=kind,  # type: ignore[arg-type]
-        status=status,  # type: ignore[arg-type]
+        kind=kind,
+        status=status,
         evidenceIds=evidence_ids or [],
     )
 
