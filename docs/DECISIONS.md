@@ -1803,3 +1803,81 @@ can carry the test secret is the user's own navigation and that neither the
 console nor the DOM retains it. The README documents opening
 `http://localhost:3000` and the opt-in `allowedDevOrigins` setting for
 same-network phones.
+
+## ADR-039 - 2026-10-21 - B5 resumes: derive the standard, snapshot the tailored
+
+Context: PRD section 6.8 (RG-1..RG-6) needs tailored resumes, history, diff and
+refresh while `resumes`, `resume_versions` and `resume_claims` already exist from
+0001.
+The standard resume must always reflect the current workspace and must never
+keep a deleted item; a tailored resume must not silently change under the user.
+
+Decision:
+
+1. The standard resume is **never persisted**. It is derived from the current,
+   non-deleted workspace on every read (the existing B1 derivation) and keeps the
+   stable id `resume-standard`. `GET /resume/standard` stays as an alias, and the
+   resume list returns the derived standard first. This makes SYN-2 structural:
+   there is no row that could retain a deleted item.
+2. A tailored resume is a persisted snapshot: `sections` JSON is canonical for
+   rendering, and `source_evidence` stores the cited items with a content
+   fingerprint (position excluded). `resume_claims` mirrors each visible claim
+   with its section, position and `ai_rewritten` flag so the evidence link is
+   queryable. Migration `0007_resumes.sql` adds those columns (plus `title`,
+   `ai_used`, `ats`, `edited_sections`); it is committed but not applied here.
+3. `resume_versions` remains insert-only. Generate/edit/refresh append a version
+   with `reason`; restore copies an old snapshot into the current row and appends
+   a new `restored` version. Nothing is deleted or updated in history, and the
+   snapshot's `workspaceVersion` is preserved so restoring pre-change content is
+   reported as stale.
+4. Sections JSON and claim rows are written in two PostgREST calls. On the free
+   single-instance host this is accepted (the doc notes the trade-off); a later
+   `SECURITY INVOKER` function can make the pair atomic without a wire change.
+
+Consequences: listing resumes costs one workspace read for the standard; storing
+the evidence snapshot duplicates some workspace text, but that is what makes
+diff, removal flags and restore work after the source item is edited/deleted.
+The client never receives `source_evidence`.
+
+## ADR-040 - 2026-10-21 - B5 generation, refresh and AI-rewrite rules
+
+Context: tailored generation must be deterministic, visibly different across
+job descriptions, never invent facts, and stay useful after the workspace moves.
+AI rewording is optional and must not become a second source of truth.
+
+Decision:
+
+1. Selection is deterministic and report-driven: within each section, matched
+   required evidence (100) ranks before matched preferred (80), partial required
+   (50), partial preferred (30); ties keep workspace order. Personal items are
+   always kept; remaining items are appended in workspace order when the match
+   is thin, so the resume is never empty. Items are grouped by a fixed tailored
+   section order and bullets are ordered by target-term overlap. Budgets are 28
+   claims/2 bullets per item for one page and 44/3 for two pages. Only
+   reorder/trim: every header and bullet is copied verbatim from the user's item.
+2. Generation requires the report's `workspaceVersion` to equal the current
+   workspace version (`409 analysis_stale` otherwise). A tailored resume records
+   the version it was built from; `stale` is computed on read when the workspace
+   moves on, plus a stored flag set by `POST /resumes/{id}/stale`.
+3. Edits replace one section and must pass the B3 claim validator against the
+   cited active items; rejected claims return `422 resume_claim_ungrounded` and
+   write nothing. Edited sections are recorded and refresh skips them with
+   `reason: "edited"` unless the request names them in
+   `overwriteEditedSections` (which clears the mark). Refresh uses the latest
+   report even if stale -- catching up is its purpose -- rebuilds only unedited
+   sections, drops deleted items from them, and leaves deleted citations in
+   skipped edited sections visible with `removed: true`.
+4. AI rewording is per-request, consent-gated and provider-gated. Only bullet
+   claims are sent (one `rewrite_bullet` call each) with exactly the cited item as
+   evidence. Every candidate is re-validated against that evidence; a failed
+   call or ungrounded candidate keeps the original text. Generation never fails
+   because the optional layer failed, and `aiUsed` is true only when at least one
+   rewritten claim survives.
+5. Logs carry ids, section keys, counts and booleans only. Resume, claim,
+   workspace and job text are never logged.
+
+Consequences: two different postings with different evidence produce different
+item order and bullet order (the tests assert this); a posting with no matches
+still yields a workspace-ordered fallback resume. AI output cannot introduce a
+metric/title/date/technology because the same validator that protects B3 runs
+per claim, and `aiUsed` is evidence of visible output, not of an attempted call.

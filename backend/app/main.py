@@ -37,7 +37,9 @@ from app.extraction.errors import (
 )
 from app.repositories.errors import (
     AnalysisAlreadyRunningError,
+    AnalysisRequiredError,
     AnalysisRunNotFoundError,
+    AnalysisStaleError,
     DataApiNotConfiguredError,
     ImportReviewItemNotFoundError,
     ImportSessionNotFoundError,
@@ -45,6 +47,13 @@ from app.repositories.errors import (
     ItemNotFoundError,
     ReportNotReadyError,
     RepositoryError,
+    ResumeClaimUngroundedError,
+    ResumeEvidenceNotFoundError,
+    ResumeNotFoundError,
+    ResumeReadOnlyError,
+    ResumeSectionInvalidError,
+    ResumeSectionNotFoundError,
+    ResumeVersionNotFoundError,
     TargetNotFoundError,
 )
 from app.services.import_service import ImportFileTooLargeError
@@ -109,6 +118,60 @@ async def _handle_report_not_ready(_request: Request, _exc: Exception) -> JSONRe
 async def _handle_analysis_already_running(_request: Request, _exc: Exception) -> JSONResponse:
     return _error_response(
         409, "analysis_already_running", "An analysis is already running for that target."
+    )
+
+
+async def _handle_analysis_required(_request: Request, _exc: Exception) -> JSONResponse:
+    return _error_response(
+        409, "analysis_required", "Run the analysis before generating a tailored resume."
+    )
+
+
+async def _handle_analysis_stale(_request: Request, _exc: Exception) -> JSONResponse:
+    return _error_response(
+        409,
+        "analysis_stale",
+        "The analysis is older than your workspace. Re-run it before generating.",
+    )
+
+
+async def _handle_resume_not_found(_request: Request, _exc: Exception) -> JSONResponse:
+    return _error_response(404, "resume_not_found", "That resume no longer exists.")
+
+
+async def _handle_resume_version_not_found(_request: Request, _exc: Exception) -> JSONResponse:
+    return _error_response(404, "resume_version_not_found", "That resume version no longer exists.")
+
+
+async def _handle_resume_section_not_found(_request: Request, _exc: Exception) -> JSONResponse:
+    return _error_response(404, "resume_section_not_found", "That resume section does not exist.")
+
+
+async def _handle_resume_section_invalid(_request: Request, _exc: Exception) -> JSONResponse:
+    return _error_response(422, "resume_section_invalid", "That is not a resume section.")
+
+
+async def _handle_resume_read_only(_request: Request, _exc: Exception) -> JSONResponse:
+    return _error_response(
+        409,
+        "resume_not_tailored",
+        "The standard resume is always derived from the workspace.",
+    )
+
+
+async def _handle_resume_evidence_not_found(_request: Request, _exc: Exception) -> JSONResponse:
+    return _error_response(
+        422,
+        "resume_evidence_not_found",
+        "A cited item is not in your current workspace.",
+    )
+
+
+async def _handle_resume_claim_ungrounded(_request: Request, _exc: Exception) -> JSONResponse:
+    return _error_response(
+        422,
+        "resume_claim_ungrounded",
+        "A statement is not supported by the evidence it cites.",
     )
 
 
@@ -235,6 +298,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.add_exception_handler(AnalysisRunNotFoundError, _handle_analysis_run_not_found)
     app.add_exception_handler(ReportNotReadyError, _handle_report_not_ready)
     app.add_exception_handler(AnalysisAlreadyRunningError, _handle_analysis_already_running)
+    # B5 resumes: specific codes before the generic RepositoryError fallback.
+    app.add_exception_handler(AnalysisRequiredError, _handle_analysis_required)
+    app.add_exception_handler(AnalysisStaleError, _handle_analysis_stale)
+    app.add_exception_handler(ResumeNotFoundError, _handle_resume_not_found)
+    app.add_exception_handler(ResumeVersionNotFoundError, _handle_resume_version_not_found)
+    app.add_exception_handler(ResumeSectionNotFoundError, _handle_resume_section_not_found)
+    app.add_exception_handler(ResumeSectionInvalidError, _handle_resume_section_invalid)
+    app.add_exception_handler(ResumeReadOnlyError, _handle_resume_read_only)
+    app.add_exception_handler(ResumeEvidenceNotFoundError, _handle_resume_evidence_not_found)
+    app.add_exception_handler(ResumeClaimUngroundedError, _handle_resume_claim_ungrounded)
 
     # AI gateway errors (B3): typed, stable codes, no prompt/response content.
     app.add_exception_handler(AINotConfiguredError, _handle_ai_not_configured)

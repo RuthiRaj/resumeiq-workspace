@@ -1,0 +1,207 @@
+"""Tailored-resume API (milestone B5).
+
+Endpoints mirror ``docs/api/contract-proposals.md`` §6:
+
+* ``POST   /targets/{target_id}/resume``                     -- generate (201)
+* ``GET    /resumes``                                        -- standard + tailored
+* ``GET    /resumes/{resume_id}``                            -- one resume
+* ``PATCH  /resumes/{resume_id}/sections/{section_key}``     -- hand edit
+* ``GET    /resumes/{resume_id}/versions``                   -- history
+* ``POST   /resumes/{resume_id}/versions/{version_id}/restore``
+* ``POST   /resumes/{resume_id}/stale``                      -- flag stale
+* ``GET    /resumes/{resume_id}/diff``                       -- vs workspace
+* ``POST   /resumes/{resume_id}/refresh``                    -- selective refresh
+
+``GET /resume/standard`` (B1) stays untouched; the standard resume is *also*
+returned by the list and by ``GET /resumes/resume-standard`` with the same id.
+
+AI rewording is opt-in per request. It is refused unless a provider is
+configured (``ai_not_configured``) and the caller has recorded AI-processing
+consent (``ai_consent_required``); otherwise generation is deterministic.
+"""
+
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, Request, status
+
+from app.ai.consent import ConsentGrant
+from app.ai.errors import AINotConfiguredError
+from app.api.deps import (
+    UserClaims,
+    get_current_user,
+    get_resume_reworder,
+    get_resume_service,
+    require_ai_consent,
+)
+from app.schemas.resume import (
+    ResumeDiff,
+    ResumeGenerateRequest,
+    ResumeRefreshRequest,
+    ResumeRefreshResponse,
+    ResumeResponse,
+    ResumeSectionEdit,
+    ResumeSummary,
+    ResumeVersionResponse,
+)
+from app.services.resume_service import ResumeService
+
+router = APIRouter(tags=["resumes"])
+
+CurrentUser = Annotated[UserClaims, Depends(get_current_user)]
+Resumes = Annotated[ResumeService, Depends(get_resume_service)]
+
+
+def _ai_consent(request: Request, user: UserClaims, *, requested: bool) -> ConsentGrant | None:
+    """Return the grant only when AI was requested and every gate passed."""
+    if not requested:
+        return None
+    if get_resume_reworder(request) is None:
+        raise AINotConfiguredError()
+    return require_ai_consent(request, user)
+
+
+@router.post(
+    "/targets/{target_id}/resume",
+    response_model=ResumeResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Generate a tailored resume for a target",
+    responses={
+        403: {"description": "ai_consent_required"},
+        404: {"description": "target_not_found"},
+        409: {"description": "analysis_required | analysis_stale"},
+        503: {"description": "ai_not_configured"},
+    },
+)
+async def generate_resume(
+    target_id: str,
+    body: ResumeGenerateRequest,
+    request: Request,
+    user: CurrentUser,
+    service: Resumes,
+) -> ResumeResponse:
+    consent = _ai_consent(request, user, requested=body.rewordWithAi)
+    return await service.generate(
+        user.sub,
+        target_id,
+        title=body.title,
+        reword_with_ai=body.rewordWithAi,
+        consent=consent,
+    )
+
+
+@router.get(
+    "/resumes",
+    response_model=list[ResumeSummary],
+    summary="List the caller's standard and tailored resumes",
+)
+async def list_resumes(user: CurrentUser, service: Resumes) -> list[ResumeSummary]:
+    return await service.list_resumes(user.sub)
+
+
+@router.get(
+    "/resumes/{resume_id}",
+    response_model=ResumeResponse,
+    summary="Read one resume",
+    responses={404: {"description": "resume_not_found"}},
+)
+async def get_resume(resume_id: str, user: CurrentUser, service: Resumes) -> ResumeResponse:
+    return await service.get_resume(user.sub, resume_id)
+
+
+@router.patch(
+    "/resumes/{resume_id}/sections/{section_key}",
+    response_model=ResumeResponse,
+    summary="Replace one tailored-resume section by hand",
+    responses={
+        404: {"description": "resume_not_found | resume_section_not_found"},
+        409: {"description": "resume_not_tailored"},
+        422: {"description": "resume_evidence_not_found | resume_claim_ungrounded"},
+    },
+)
+async def edit_section(
+    resume_id: str,
+    section_key: str,
+    edit: ResumeSectionEdit,
+    user: CurrentUser,
+    service: Resumes,
+) -> ResumeResponse:
+    return await service.edit_section(user.sub, resume_id, section_key, edit)
+
+
+@router.get(
+    "/resumes/{resume_id}/versions",
+    response_model=list[ResumeVersionResponse],
+    summary="List a tailored resume's insert-only versions",
+    responses={
+        404: {"description": "resume_not_found"},
+        409: {"description": "resume_not_tailored"},
+    },
+)
+async def list_versions(
+    resume_id: str, user: CurrentUser, service: Resumes
+) -> list[ResumeVersionResponse]:
+    return await service.list_versions(user.sub, resume_id)
+
+
+@router.post(
+    "/resumes/{resume_id}/versions/{version_id}/restore",
+    response_model=ResumeResponse,
+    summary="Restore a version as a new version (non-destructive)",
+    responses={
+        404: {"description": "resume_not_found | resume_version_not_found"},
+        409: {"description": "resume_not_tailored"},
+    },
+)
+async def restore_version(
+    resume_id: str,
+    version_id: str,
+    user: CurrentUser,
+    service: Resumes,
+) -> ResumeResponse:
+    return await service.restore(user.sub, resume_id, version_id)
+
+
+@router.post(
+    "/resumes/{resume_id}/stale",
+    response_model=ResumeResponse,
+    summary="Mark a tailored resume stale",
+    responses={
+        404: {"description": "resume_not_found"},
+        409: {"description": "resume_not_tailored"},
+    },
+)
+async def mark_stale(resume_id: str, user: CurrentUser, service: Resumes) -> ResumeResponse:
+    return await service.mark_stale(user.sub, resume_id)
+
+
+@router.get(
+    "/resumes/{resume_id}/diff",
+    response_model=ResumeDiff,
+    summary="Diff a resume against the current workspace",
+    responses={404: {"description": "resume_not_found"}},
+)
+async def diff_resume(resume_id: str, user: CurrentUser, service: Resumes) -> ResumeDiff:
+    return await service.diff(user.sub, resume_id)
+
+
+@router.post(
+    "/resumes/{resume_id}/refresh",
+    response_model=ResumeRefreshResponse,
+    summary="Refresh unedited sections from the current workspace",
+    responses={
+        403: {"description": "ai_consent_required"},
+        404: {"description": "resume_not_found | target_not_found"},
+        409: {"description": "resume_not_tailored | analysis_required"},
+        422: {"description": "resume_section_invalid"},
+        503: {"description": "ai_not_configured"},
+    },
+)
+async def refresh_resume(
+    resume_id: str,
+    body: ResumeRefreshRequest,
+    request: Request,
+    user: CurrentUser,
+    service: Resumes,
+) -> ResumeRefreshResponse:
+    consent = _ai_consent(request, user, requested=body.rewordWithAi)
+    return await service.refresh(user.sub, resume_id, body, consent=consent)
