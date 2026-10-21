@@ -261,7 +261,10 @@ async function signIn(page: Page): Promise<void> {
   await page.getByLabel("Password", { exact: true }).fill(password!);
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page).toHaveURL(/\/workspace/, { timeout: 60_000 });
-  await expect(page.getByRole("heading", { name: "Your workspace" })).toBeVisible({
+  // `exact` matters: the empty-state heading also starts with "Your workspace".
+  await expect(
+    page.getByRole("heading", { name: "Your workspace", exact: true }),
+  ).toBeVisible({
     timeout: 60_000,
   });
 }

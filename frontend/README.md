@@ -126,8 +126,10 @@ npm run e2e:live
 
 Exported `RUN_LIVE_E2E`, `LIVE_E2E_EMAIL` and `LIVE_E2E_PASSWORD` still override
 the file (useful in CI). It starts the backend (8000) and the live dev server
-(3000) itself; the spec signs in with Supabase and loads the workspace from
-FastAPI. Nothing has to be typed into the terminal, and no value is printed.
+(3000) itself. `live.spec.ts` signs in and loads the workspace from FastAPI;
+`auth-flows.spec.ts` also exercises sign-up, a failed sign-in, password reset
+and sign-out, and checks that none of them leave credentials in the URL.
+Nothing has to be typed into the terminal, and no value is printed.
 
 ## Verify
 

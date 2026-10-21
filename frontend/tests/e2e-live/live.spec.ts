@@ -32,8 +32,9 @@ test.describe("live mode", () => {
     await page.getByRole("button", { name: "Sign in" }).click();
 
     await expect(page).toHaveURL(/\/workspace/, { timeout: 60_000 });
+    // `exact` matters: the empty-state heading also starts with "Your workspace".
     await expect(
-      page.getByRole("heading", { name: "Your workspace" }),
+      page.getByRole("heading", { name: "Your workspace", exact: true }),
     ).toBeVisible({ timeout: 60_000 });
   });
 });
