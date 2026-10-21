@@ -1,16 +1,17 @@
-# Contract proposals — imports, targets, analysis and report (F4)
+# Contract proposals — imports, targets, analysis, report and resumes (F4/B5)
 
-Status: **§2 (imports) implemented** by the backend (B2, exported into
-`docs/api/openapi.json`); the rest is still implemented only by the frontend mock
-API (MSW).
-Owner of the next step: backend B4 (targets, analysis, report).
+Status: **§2 (imports) implemented** by the backend (B2), **§3–§5 (targets,
+analysis, report) implemented** by B4 and **§6 (resumes) implemented** by B5;
+all are exported into `docs/api/openapi.json`. The dev-only routes in §7 exist
+only in the frontend mock API (MSW). The frontend Zod schemas + MSW handlers get
+reconciled against that export before the mock layer is removed at B7 (see
+ADR-013, ADR-021, ADR-028, ADR-039).
 
 This document is the contract the F4 frontend already speaks. It complements
 `docs/api/openapi.json`, which contains the B0/B1 routes (`/health`,
-`/api/v1/me`, `/api/v1/workspace*`, `/api/v1/resume/standard`) plus the B2 import
-routes (`/api/v1/imports*`). The remaining proposed paths are exported when B4
-ships, and the frontend Zod schemas + MSW handlers get reconciled against that
-export before the mock layer is removed at B7 (see ADR-013, ADR-021, ADR-028).
+`/api/v1/me`, `/api/v1/workspace*`, `/api/v1/resume/standard`), the B2 import
+routes (`/api/v1/imports*`), the B4 target/analysis routes and the B5 resume
+routes.
 
 Source of truth on the frontend:
 
@@ -18,6 +19,7 @@ Source of truth on the frontend:
 |---|---|---|
 | Uploads + extraction review | `frontend/src/lib/schemas/imports.ts` | `frontend/src/mocks/import-handlers.ts`, `imports-store.ts`, `import-fixtures.ts` |
 | Targets, run, report | `frontend/src/lib/schemas/analysis.ts` | `frontend/src/mocks/target-handlers.ts`, `targets-store.ts` |
+| Resumes | `frontend/src/lib/schemas/resume.ts` | `frontend/src/mocks/handlers.ts`, `fixtures.ts` (B1 standard; B5 tailored arrives at B7) |
 | Analysis engine | — (server-side logic) | `frontend/src/lib/analysis/*` (reference implementation) |
 
 ---
@@ -493,7 +495,212 @@ in `analysis.ts` if an older payload omits them.
 
 ---
 
-## 6. Dev-only endpoints (not part of the backend contract)
+## 6. Resumes (B5)
+
+A *standard* resume is derived from the current workspace on every read and is
+never persisted. A *tailored* resume is a snapshot generated for one job target,
+with the workspace version, the source evidence and an insert-only history. The
+two use the same `Resume` shape; only tailored resumes accept mutations.
+
+### 6.1 Endpoints
+
+| Method | Path | Body | Success | Errors |
+|---|---|---|---|---|
+| `POST` | `/targets/{target_id}/resume` | `ResumeGenerateRequest` | `201 Resume` | `403 ai_consent_required`, `404 target_not_found`, `409 analysis_required \| analysis_stale`, `503 ai_not_configured` |
+| `GET` | `/resumes` | — | `200 ResumeSummary[]` | — |
+| `GET` | `/resumes/{resume_id}` | — | `200 Resume` | `404 resume_not_found` |
+| `PATCH` | `/resumes/{resume_id}/sections/{section_key}` | `ResumeSectionEdit` | `200 Resume` | `404 resume_not_found \| resume_section_not_found`, `409 resume_not_tailored`, `422 resume_evidence_not_found \| resume_claim_ungrounded` |
+| `GET` | `/resumes/{resume_id}/versions` | — | `200 ResumeVersion[]` | `404 resume_not_found` |
+| `POST` | `/resumes/{resume_id}/versions/{version_id}/restore` | — | `200 Resume` | `404 resume_not_found \| resume_version_not_found`, `409 resume_not_tailored` |
+| `POST` | `/resumes/{resume_id}/stale` | — | `200 Resume` | `404 resume_not_found`, `409 resume_not_tailored` |
+| `GET` | `/resumes/{resume_id}/diff` | — | `200 ResumeDiff` | `404 resume_not_found` |
+| `POST` | `/resumes/{resume_id}/refresh` | `ResumeRefreshRequest` | `200 ResumeRefreshResult` | `403 ai_consent_required`, `404 resume_not_found \| target_not_found`, `409 resume_not_tailored \| analysis_required`, `422 resume_section_invalid`, `503 ai_not_configured` |
+
+The standard resume's id is the stable `resume-standard` (the B1
+`GET /resume/standard` route remains available for the same derived resume).
+`GET /resumes` returns it
+first, followed by tailored resumes newest-first. `GET /resumes/resume-standard`
+is always current and `stale: false`; its `/versions` list is empty.
+
+### 6.2 `Resume`
+
+```json
+{
+  "id": "uuid | resume-standard",
+  "kind": "standard | tailored",
+  "targetId": "uuid | null",
+  "title": "Senior Frontend Engineer at Halcyon Systems | null",
+  "workspaceVersion": 12,
+  "stale": false,
+  "sections": [
+    { "key": "experience",
+      "claims": [
+        { "text": "Senior Frontend Engineer · Acme · 2021-01 – 2024-01",
+          "evidenceIds": ["item-uuid"], "confirmed": true,
+          "aiRewritten": false, "removed": false }
+      ] }
+  ],
+  "createdAt": "2026-10-21T10:00:00.000Z",
+  "updatedAt": "2026-10-21T10:00:00.000Z",
+  "aiUsed": false,
+  "ats": { "...": "AtsReport (contract §5.1)" },
+  "editedSections": ["experience"],
+  "removedEvidenceIds": []
+}
+```
+
+* Every claim carries the workspace item id(s) that evidence it; there are no
+  claims without evidence.
+* `confirmed` is true for verified/user-attested evidence (and for a
+  user-authored edit); it is false for related/missing evidence.
+* `aiRewritten` marks the individual line; `aiUsed` is true only if at least one
+  such line survives in the visible resume.
+* `removed` is computed on read: a cited item was deleted after the snapshot.
+  `removedEvidenceIds` lists all such items. Neither the claim nor its text is
+  silently dropped.
+* `stale` is `true` when the stored `stale` flag is set **or**
+  `workspaceVersion` is older than the current workspace version.
+* `editedSections` lists hand-edited section keys; refresh will not touch them
+  without an explicit per-section choice.
+* `ats` is the deterministic `AtsReport` computed at generation/refresh time
+  from the selected items and the report's requirements. It is never a
+  guarantee and always carries the methodology disclaimer.
+
+`ResumeSummary` is the same object without `sections`, `ats` or
+`removedEvidenceIds` (it keeps `id`, `kind`, `targetId`, `title`,
+`workspaceVersion`, `stale`, `aiUsed`, `editedSections`, `createdAt`,
+`updatedAt`).
+
+### 6.3 Generation (deterministic first)
+
+```json
+// POST /targets/{target_id}/resume
+{ "title": "Optional label", "rewordWithAi": false }
+```
+
+Generation requires a successful report whose `workspaceVersion` equals the
+current workspace version; otherwise `409 analysis_required` (no report) or
+`409 analysis_stale` (workspace moved on). Re-run the analysis first.
+
+The engine selects and orders the user's own current items, using the report:
+
+1. within each section, items cited by matched **required** requirements rank
+   first, then matched preferred, partial required, partial preferred; ties keep
+   workspace order;
+2. personal/contact items are always kept, and remaining items are appended in
+   workspace order when the job matches little, so the resume is never empty;
+3. section order is personal, experience, internship, project, education,
+   certificate, course, training, skill, achievement, publication,
+   extracurricular;
+4. bullets inside an item are ordered by how many target-requirement words they
+   contain, then by their original order;
+5. the target `length` caps the result: one page = 28 claims / 2 bullets per
+   item, two pages = 44 claims / 3 bullets per item.
+
+Only reordering and trimming happen: every header value and every bullet is
+copied verbatim from the workspace item. No employer, title, date, metric,
+technology or certificate is ever invented (RG-2). The same target, workspace
+version and report always produce the same resume.
+
+### 6.4 Editing and grounding
+
+```json
+// PATCH /resumes/{id}/sections/experience
+{ "claims": [
+  { "text": "Led the React migration for the customer dashboard.",
+    "evidenceIds": ["item-uuid"] }
+] }
+```
+
+The body **replaces** that section's claims. Every cited id must be an active
+item in the caller's workspace (`422 resume_evidence_not_found`). Every claim is
+run through the B3 claim validator against exactly those items; a new number,
+technology, organization, title or date is rejected with
+`422 resume_claim_ungrounded` and nothing is written. Accepted claims are marked
+`confirmed: true`, the section is added to `editedSections`, and a new version
+with `reason: "edited"` is appended.
+
+### 6.5 Versions and restore
+
+`ResumeVersion` = `{ id, resumeId, workspaceVersion, createdAt, reason, title,
+aiUsed, sections, ats, editedSections }`; `reason` is `generated`, `edited`,
+`restored` or `refreshed`. Versions are insert-only: nothing is updated or
+deleted. `POST …/versions/{version_id}/restore` copies that snapshot into the
+current resume (same resume id, new `updatedAt`) and appends a new version with
+`reason: "restored"`. History therefore grows by one; the restored version's
+`workspaceVersion` is preserved, so a restore from before a workspace change is
+reported as stale.
+
+### 6.6 Stale, diff and refresh
+
+`POST /resumes/{id}/stale` sets the stored stale flag (idempotent). It is not
+needed when the workspace has already moved on, because `stale` is computed on
+every read. The standard resume cannot be marked stale (`409 resume_not_tailored`).
+
+```json
+// GET /resumes/{id}/diff
+{
+  "resumeId": "uuid",
+  "targetId": "uuid",
+  "workspaceVersion": 12,
+  "currentWorkspaceVersion": 14,
+  "stale": true,
+  "added":   [{ "itemId": "uuid", "section": "project", "title": "Design system" }],
+  "removed": [{ "itemId": "uuid", "section": "experience", "title": "Old role" }],
+  "edited":  [{ "itemId": "uuid", "section": "experience", "title": "Renamed role" }],
+  "changedSections": ["experience", "project"],
+  "removedEvidenceIds": ["uuid"]
+}
+```
+
+* `added` = current active items the resume does not cite.
+* `removed` = cited items that are deleted/missing.
+* `edited` = cited items whose content fingerprint changed. Moving an item in
+  the workspace is not an edit (position is excluded from the fingerprint).
+
+```json
+// POST /resumes/{id}/refresh
+{ "sections": [], "overwriteEditedSections": [], "rewordWithAi": false }
+```
+
+`sections: []` means every section. Only sections the user has not edited are
+rebuilt from the current workspace and the latest report (which may itself be
+stale: refresh is how a resume catches up). Edited sections are skipped and
+reported as `{"section": "experience", "reason": "edited"}`; naming a section in
+`overwriteEditedSections` is the explicit choice to replace it, which also
+clears it from `editedSections`. Removed source items disappear from refreshed
+sections; in skipped edited sections their claims stay visible with
+`removed: true`. The response is
+`{ "resume": Resume, "refreshedSections": [...], "skippedSections": [...] }`.
+A targeted refresh always updates `workspaceVersion`, clears the stored stale
+flag and appends a version with `reason: "refreshed"`.
+
+### 6.7 Optional AI rewording
+
+AI is opt-in per request (`"rewordWithAi": true`) and only available when a
+provider is configured **and** `ai_processing` consent is recorded:
+
+* no provider → `503 ai_not_configured` before any call;
+* no consent → `403 ai_consent_required` before any call.
+
+Only bullet claims (never headers or skill names) are sent, one at a time, with
+exactly the cited item as evidence. The task is the B3 `rewrite_bullet` (verb
+choice and concision, no new facts). Each candidate is re-validated against that
+evidence; if it adds a metric, technology, organization, title or date, or the
+provider fails, the original text is kept. Generation still succeeds. `aiUsed`
+is true only when at least one rewritten claim survives. AI is never required
+for a deterministic resume.
+
+### 6.8 Privacy
+
+All reads/writes use the caller's JWT, so Postgres RLS scopes every resume,
+version and claim to `auth.uid()`. The service logger records only resume/target
+ids, section keys, counts and booleans -- never resume, claim, workspace or job
+text.
+
+---
+
+## 7. Dev-only endpoints (not part of the backend contract)
 
 These exist so the three fixtures and failure states are demonstrable in
 `next dev`; they 404 outside development and must never be implemented against
@@ -511,7 +718,7 @@ Sample target ids are stable: `sample-target-strong`, `sample-target-partial`,
 
 ---
 
-## 7. Open questions for B2/B4
+## 8. Open questions for B2/B4/B5/B6
 
 1. **Atomic confirm** (2.5) — implement `POST …/confirm` or accept the
    two-call sequence and idempotency keys?
@@ -528,3 +735,10 @@ Sample target ids are stable: `sample-target-strong`, `sample-target-partial`,
    threshold moves only with a deliberate copy change.
 6. **ATS layout checks** — F5/B6 must add the rendered-PDF checks; until then
    `not_checked` is the honest value.
+7. **Resume-claim rewrite atomicity** (B5) — sections JSON and
+   `resume_claims` rows are written through separate PostgREST calls. The
+   single-instance deployment accepts this; a later SQL function can make the
+   pair transactional without changing the wire contract (ADR-039).
+8. **Resume ATS reuse** — B5 reuses the report's `AtsReport` shape on the resume
+   because it is the same deterministic check over the selected items. If F6
+   needs resume-specific layout checks, add fields rather than a second type.

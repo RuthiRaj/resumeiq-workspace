@@ -304,6 +304,7 @@ test("tailored resume: generate, edit, reject ungrounded text, refresh stale and
     .click();
   await expect(page.getByRole("heading", { name: "Version history" })).toBeVisible();
   const restoreButtons = page.getByTestId(/^restore-version-/);
+  await expect(restoreButtons.first()).toBeVisible({ timeout: NAV_TIMEOUT });
   const before = await restoreButtons.count();
   expect(before).toBeGreaterThan(0);
   await restoreButtons.last().click();

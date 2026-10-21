@@ -27,6 +27,8 @@ MAX_DOCX_BLOCKS: Final[int] = 5_000
 
 def extract_docx_text(data: bytes, deadline: float) -> tuple[str, int]:
     """Extracted text (newline-joined) and ``1`` (DOCX has no page count)."""
+    if time.monotonic() >= deadline:
+        raise ExtractionTimeoutError("Reading the DOCX took too long.")
     try:
         document = docx.Document(io.BytesIO(data))
     except Exception as exc:  # python-docx raises several unrelated types
@@ -34,7 +36,7 @@ def extract_docx_text(data: bytes, deadline: float) -> tuple[str, int]:
 
     lines: list[str] = []
     for block_count, block in enumerate(_iter_blocks(document), start=1):
-        if time.monotonic() > deadline:
+        if time.monotonic() >= deadline:
             raise ExtractionTimeoutError("Reading the DOCX took too long.")
         if block_count > MAX_DOCX_BLOCKS:
             raise DocumentRejectedError("The DOCX has too many blocks.")

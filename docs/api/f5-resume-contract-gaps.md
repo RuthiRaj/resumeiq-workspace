@@ -1,25 +1,12 @@
 # F5 resume-studio contract gaps
 
-Status: F5 consumes the **unmerged** B5 contract on
-`feat/b5-tailored-resume` (commit `a38143f`). These are the places where the
-exported contract is missing, ambiguous, or cannot support the required UI. F5
-does not modify backend code. Each item states the temporary frontend behaviour
-and what should change in the contract.
+Status: B5 is merged into `master` (PR #27, merge commit `a4dbe2f`), and
+`docs/api/openapi.json` contains the resume routes. These are the gaps that
+remain after reconciling F5 against that export. F5 does not modify backend
+code. Each item states the temporary frontend behaviour and what should change
+in the contract.
 
-## 1. `master` has no B5 routes
-
-`docs/api/openapi.json` on `master` contains only the B0/B1 routes and the B2
-imports. It has no `/api/v1/resumes*` and no
-`/api/v1/targets/{target_id}/resume`. The B5 export on the feature branch does.
-
-**Temporary behaviour:** schemas and MSW handlers follow the B5 branch, and the
-live client calls the B5 paths. A live check against `master` returns `404` for
-all of them.
-
-**Resolution:** merge B5, regenerate `docs/api/openapi.json`, then run
-`npm run e2e:live` with `RUN_LIVE_E2E=1`.
-
-## 2. No AI-provider capability endpoint
+## 1. No AI-provider capability endpoint
 
 `ResumeGenerateRequest.rewordWithAi` can return `503 ai_not_configured`, but
 there is no read endpoint that tells the UI whether a provider exists. The
@@ -36,7 +23,7 @@ an explanation when the flag is off.
 `{ "aiRewording": { "configured": true } }` and use it instead of the build
 flag.
 
-## 3. No delete/purge endpoint
+## 2. No delete/purge endpoint
 
 History can restore but cannot delete a resume or a version. B5 says versions
 are insert-only, and the OpenAPI file has no `DELETE /resumes/{id}` or version
@@ -50,7 +37,7 @@ dead control.
 old snapshots, then add the endpoint and document the retention rule before the
 UI adds a control.
 
-## 4. `ResumeSummary` cannot drive the removed-information warning
+## 3. `ResumeSummary` cannot drive the removed-information warning
 
 `ResumeSummary` omits `sections`, `ats` and `removedEvidenceIds`. The history
 list therefore cannot know whether a saved snapshot cites a workspace item that
@@ -63,7 +50,7 @@ costs one request per snapshot.
 **Resolution:** add a cheap `removedCount` (or `hasRemovedEvidence`) to
 `ResumeSummary`, or add an explicit `needsReview` boolean.
 
-## 5. Version rows have no removed/stale summary
+## 4. Version rows have no removed/stale summary
 
 `ResumeVersionResponse` has `workspaceVersion`, `sections`, `ats` and
 `editedSections`, but no `removedEvidenceIds` and no per-version `stale` flag.
@@ -77,7 +64,7 @@ rows describe the snapshot and the restore button is always non-destructive.
 or document that version warnings are intentionally derived from the current
 resume only.
 
-## 6. Version ordering is not specified
+## 5. Version ordering is not specified
 
 `GET /resumes/{resume_id}/versions` returns an array but the contract does not
 say newest-first or oldest-first.

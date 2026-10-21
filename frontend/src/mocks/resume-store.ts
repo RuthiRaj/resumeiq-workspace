@@ -31,10 +31,11 @@ import type { KeyValueStorage } from "./workspace-store";
 /**
  * Persistent tailored-resume store for the mock API (B5 contract, §6).
  *
- * The wire shapes and rules match `docs/api/contract-proposals.md` §6 on the
- * unmerged B5 branch: deterministic generation, evidence snapshots, insert-only
- * versions, grounding-checked edits, computed staleness, and selective refresh
- * that never overwrites hand-edited sections unless explicitly asked.
+ * The wire shapes and rules match `docs/api/contract-proposals.md` §6 and the
+ * merged B5 OpenAPI export: deterministic generation, evidence
+ * snapshots, insert-only versions, grounding-checked edits, computed staleness,
+ * and selective refresh that never overwrites hand-edited sections unless
+ * explicitly asked.
  */
 
 export const RESUMES_KEY_PREFIX = "riq.resumes.";

@@ -5,7 +5,7 @@ import { EvidenceStateSchema, WorkspaceSectionSchema } from "./workspace";
 /**
  * Resume wire schemas (B1 standard resume + B5 tailored resumes).
  *
- * Mirrors `docs/api/contract-proposals.md` §6 on the unmerged B5 branch. A
+ * Mirrors `docs/api/contract-proposals.md` §6 and the merged B5 OpenAPI export. A
  * claim is a single line in the resume that points back at the workspace
  * item(s) that evidence it. The generator only copies the user's own fields;
  * a hand edit or an AI rewrite is rejected unless it is grounded in the cited

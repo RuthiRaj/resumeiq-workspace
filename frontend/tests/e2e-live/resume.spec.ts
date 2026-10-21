@@ -5,15 +5,16 @@ import { liveE2eCredentials, liveE2eEnabled } from "./backend-env";
 /**
  * Opt-in live B5 smoke for F5 (not part of `npm run e2e`).
  *
- * Requires `RUN_LIVE_E2E=1`, user A credentials in `backend/.env.test`, a live
- * backend with the B5 resume routes merged, and no real AI call. The spec is
- * deliberately read-only: it opens the standard resume and the history list,
- * proves `GET /api/v1/resumes` works and that the standard snapshot is present,
- * and never generates, edits, refreshes or restores anything.
+ * Requires `RUN_LIVE_E2E=1`, user A credentials in `backend/.env.test`, a
+ * deployed backend with migration 0007 and the B5 resume routes, and no real AI
+ * call. The spec is deliberately read-only: it opens the standard resume and
+ * the history list, proves `GET /api/v1/resumes` works and that the standard
+ * snapshot is present, and never generates, edits, refreshes or restores
+ * anything.
  *
- * Before B5 merges, `master` has no `/api/v1/resumes` route and this spec fails
- * with the history error state. That is expected; see
- * `docs/api/f5-resume-contract-gaps.md`.
+ * If the deployed backend predates B5, the history error state makes the
+ * missing route unambiguous. See `docs/api/f5-resume-contract-gaps.md` for the
+ * gaps that remain on `master`.
  */
 const { email, password } = liveE2eCredentials();
 
@@ -43,7 +44,7 @@ test.describe("live resume studio (B5)", () => {
       page.getByRole("heading", { name: "Standard resume", exact: true }),
     ).toBeVisible({ timeout: 60_000 });
 
-    // This is the first B5 read. A 404 (B5 not merged) renders the error state
+    // This is the first B5 read. A missing route renders the error state
     // instead of the heading, so the failure is unambiguous.
     await page.goto("/history");
     await expect(

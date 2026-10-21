@@ -6,10 +6,11 @@ Forward-only migrations: `0001_initial.sql` creates the B0 schema (PRD section
 version↔change-log gap (ADR-018); `0004_imports.sql` adds the B2 import tables
 and functions (ADR-028); `0005_analysis.sql` adds the B4 target/run/report
 columns; `0006_fixes.sql` corrects two findings from the B4 live check
-(ADR-034). Apply them in order with the Supabase SQL editor or CLI
-(`supabase db push` once the project is linked). They reference `auth.users` /
-`auth.uid()`, so they only run on Supabase Postgres (or a local Postgres with an
-`auth` schema stub) — not on vanilla local Postgres.
+(ADR-034); `0007_resumes.sql` adds the B5 tailored-resume metadata and claim
+provenance columns (ADR-039). Apply them in order with the Supabase SQL editor
+or CLI (`supabase db push` once the project is linked). They reference
+`auth.users` / `auth.uid()`, so they only run on Supabase Postgres (or a local
+Postgres with an `auth` schema stub) — not on vanilla local Postgres.
 
 ## Migration 0002 — B1 workspace API
 
@@ -185,3 +186,22 @@ The opt-in import suite (`tests/test_import_integration.py`) probes the Data API
 for `import_sessions` before running, so it still skips with that exact reason in
 any project where `0004` has not been applied (the same gate also requires user
 B's credentials in `backend/.env.test`).
+
+## Migration 0007 — B5 resumes (ADR-039)
+
+`0007_resumes.sql` is authored but **not yet applied**. It only adds columns and
+one index; it does not create tables or policies:
+
+- `resumes`: `title`, `ai_used`, `ats`, `edited_sections`, `source_evidence`
+  (the cited items with content fingerprints, never sent to clients);
+- `resume_claims`: `section`, `position`, `ai_rewritten` so each visible claim is
+  queryable and its AI provenance survives;
+- `resumes_user_updated_idx` for the newest-first resume list.
+
+The standard resume is intentionally not stored (it is derived on every read),
+so there is no standard row or standard-version history. `resume_versions`
+remains insert-only; restoring copies a snapshot into a new version.
+
+Apply `0007_resumes.sql` after `0006_fixes.sql`. The opt-in
+`tests/test_resumes_integration.py` probes for these columns and skips with
+"migration 0007_resumes.sql is not applied" until they exist.

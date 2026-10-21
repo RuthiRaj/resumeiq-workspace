@@ -463,6 +463,459 @@
         }
       }
     },
+    "/api/v1/targets/{target_id}/resume": {
+      "post": {
+        "tags": [
+          "resumes"
+        ],
+        "summary": "Generate a tailored resume for a target",
+        "operationId": "generate_resume_api_v1_targets__target_id__resume_post",
+        "parameters": [
+          {
+            "name": "target_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Target Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResumeGenerateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResumeResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ai_consent_required"
+          },
+          "404": {
+            "description": "target_not_found"
+          },
+          "409": {
+            "description": "analysis_required | analysis_stale"
+          },
+          "503": {
+            "description": "ai_not_configured"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/resumes": {
+      "get": {
+        "tags": [
+          "resumes"
+        ],
+        "summary": "List the caller's standard and tailored resumes",
+        "operationId": "list_resumes_api_v1_resumes_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ResumeSummary"
+                  },
+                  "type": "array",
+                  "title": "Response List Resumes Api V1 Resumes Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/resumes/{resume_id}": {
+      "get": {
+        "tags": [
+          "resumes"
+        ],
+        "summary": "Read one resume",
+        "operationId": "get_resume_api_v1_resumes__resume_id__get",
+        "parameters": [
+          {
+            "name": "resume_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Resume Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResumeResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "resume_not_found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/resumes/{resume_id}/sections/{section_key}": {
+      "patch": {
+        "tags": [
+          "resumes"
+        ],
+        "summary": "Replace one tailored-resume section by hand",
+        "operationId": "edit_section_api_v1_resumes__resume_id__sections__section_key__patch",
+        "parameters": [
+          {
+            "name": "resume_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Resume Id"
+            }
+          },
+          {
+            "name": "section_key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Section Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResumeSectionEdit"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResumeResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "resume_not_found | resume_section_not_found"
+          },
+          "409": {
+            "description": "resume_not_tailored"
+          },
+          "422": {
+            "description": "resume_evidence_not_found | resume_claim_ungrounded"
+          }
+        }
+      }
+    },
+    "/api/v1/resumes/{resume_id}/versions": {
+      "get": {
+        "tags": [
+          "resumes"
+        ],
+        "summary": "List a tailored resume's insert-only versions",
+        "operationId": "list_versions_api_v1_resumes__resume_id__versions_get",
+        "parameters": [
+          {
+            "name": "resume_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Resume Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ResumeVersionResponse"
+                  },
+                  "title": "Response List Versions Api V1 Resumes  Resume Id  Versions Get"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "resume_not_found"
+          },
+          "409": {
+            "description": "resume_not_tailored"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/resumes/{resume_id}/versions/{version_id}/restore": {
+      "post": {
+        "tags": [
+          "resumes"
+        ],
+        "summary": "Restore a version as a new version (non-destructive)",
+        "operationId": "restore_version_api_v1_resumes__resume_id__versions__version_id__restore_post",
+        "parameters": [
+          {
+            "name": "resume_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Resume Id"
+            }
+          },
+          {
+            "name": "version_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Version Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResumeResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "resume_not_found | resume_version_not_found"
+          },
+          "409": {
+            "description": "resume_not_tailored"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/resumes/{resume_id}/stale": {
+      "post": {
+        "tags": [
+          "resumes"
+        ],
+        "summary": "Mark a tailored resume stale",
+        "operationId": "mark_stale_api_v1_resumes__resume_id__stale_post",
+        "parameters": [
+          {
+            "name": "resume_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Resume Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResumeResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "resume_not_found"
+          },
+          "409": {
+            "description": "resume_not_tailored"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/resumes/{resume_id}/diff": {
+      "get": {
+        "tags": [
+          "resumes"
+        ],
+        "summary": "Diff a resume against the current workspace",
+        "operationId": "diff_resume_api_v1_resumes__resume_id__diff_get",
+        "parameters": [
+          {
+            "name": "resume_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Resume Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResumeDiff"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "resume_not_found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/resumes/{resume_id}/refresh": {
+      "post": {
+        "tags": [
+          "resumes"
+        ],
+        "summary": "Refresh unedited sections from the current workspace",
+        "operationId": "refresh_resume_api_v1_resumes__resume_id__refresh_post",
+        "parameters": [
+          {
+            "name": "resume_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Resume Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResumeRefreshRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResumeRefreshResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "ai_consent_required"
+          },
+          "404": {
+            "description": "resume_not_found | target_not_found"
+          },
+          "409": {
+            "description": "resume_not_tailored | analysis_required"
+          },
+          "422": {
+            "description": "resume_section_invalid"
+          },
+          "503": {
+            "description": "ai_not_configured"
+          }
+        }
+      }
+    },
     "/api/v1/imports": {
       "get": {
         "tags": [
@@ -1514,6 +1967,16 @@
             "type": "boolean",
             "title": "Confirmed",
             "default": false
+          },
+          "aiRewritten": {
+            "type": "boolean",
+            "title": "Airewritten",
+            "default": false
+          },
+          "removed": {
+            "type": "boolean",
+            "title": "Removed",
+            "default": false
           }
         },
         "type": "object",
@@ -2383,6 +2846,230 @@
         ],
         "title": "Requirement"
       },
+      "ResumeClaimEdit": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "maxLength": 600,
+            "minLength": 1,
+            "title": "Text"
+          },
+          "evidenceIds": {
+            "items": {
+              "type": "string",
+              "maxLength": 64,
+              "minLength": 1
+            },
+            "type": "array",
+            "maxItems": 10,
+            "minItems": 1,
+            "title": "Evidenceids"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "text",
+          "evidenceIds"
+        ],
+        "title": "ResumeClaimEdit"
+      },
+      "ResumeDiff": {
+        "properties": {
+          "resumeId": {
+            "type": "string",
+            "title": "Resumeid"
+          },
+          "targetId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Targetid"
+          },
+          "workspaceVersion": {
+            "type": "integer",
+            "title": "Workspaceversion"
+          },
+          "currentWorkspaceVersion": {
+            "type": "integer",
+            "title": "Currentworkspaceversion"
+          },
+          "stale": {
+            "type": "boolean",
+            "title": "Stale"
+          },
+          "added": {
+            "items": {
+              "$ref": "#/components/schemas/ResumeDiffEntry"
+            },
+            "type": "array",
+            "title": "Added"
+          },
+          "removed": {
+            "items": {
+              "$ref": "#/components/schemas/ResumeDiffEntry"
+            },
+            "type": "array",
+            "title": "Removed"
+          },
+          "edited": {
+            "items": {
+              "$ref": "#/components/schemas/ResumeDiffEntry"
+            },
+            "type": "array",
+            "title": "Edited"
+          },
+          "changedSections": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Changedsections"
+          },
+          "removedEvidenceIds": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Removedevidenceids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "resumeId",
+          "workspaceVersion",
+          "currentWorkspaceVersion",
+          "stale"
+        ],
+        "title": "ResumeDiff",
+        "description": "``GET /resumes/{id}/diff`` \u2014 the resume against the current workspace."
+      },
+      "ResumeDiffEntry": {
+        "properties": {
+          "itemId": {
+            "type": "string",
+            "title": "Itemid"
+          },
+          "section": {
+            "type": "string",
+            "title": "Section"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          }
+        },
+        "type": "object",
+        "required": [
+          "itemId",
+          "section",
+          "title"
+        ],
+        "title": "ResumeDiffEntry"
+      },
+      "ResumeGenerateRequest": {
+        "properties": {
+          "title": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "rewordWithAi": {
+            "type": "boolean",
+            "title": "Rewordwithai",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "ResumeGenerateRequest",
+        "description": "``POST /targets/{target_id}/resume`` body (contract \u00a76.1)."
+      },
+      "ResumeRefreshRequest": {
+        "properties": {
+          "sections": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "title": "Sections"
+          },
+          "overwriteEditedSections": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "title": "Overwriteeditedsections"
+          },
+          "rewordWithAi": {
+            "type": "boolean",
+            "title": "Rewordwithai",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "ResumeRefreshRequest",
+        "description": "``POST /resumes/{id}/refresh`` body (contract \u00a76.6)."
+      },
+      "ResumeRefreshResponse": {
+        "properties": {
+          "resume": {
+            "$ref": "#/components/schemas/ResumeResponse"
+          },
+          "refreshedSections": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Refreshedsections"
+          },
+          "skippedSections": {
+            "items": {
+              "$ref": "#/components/schemas/ResumeRefreshSkip"
+            },
+            "type": "array",
+            "title": "Skippedsections"
+          }
+        },
+        "type": "object",
+        "required": [
+          "resume"
+        ],
+        "title": "ResumeRefreshResponse"
+      },
+      "ResumeRefreshSkip": {
+        "properties": {
+          "section": {
+            "type": "string",
+            "title": "Section"
+          },
+          "reason": {
+            "type": "string",
+            "const": "edited",
+            "title": "Reason",
+            "default": "edited"
+          }
+        },
+        "type": "object",
+        "required": [
+          "section"
+        ],
+        "title": "ResumeRefreshSkip"
+      },
       "ResumeResponse": {
         "properties": {
           "id": {
@@ -2408,6 +3095,17 @@
             ],
             "title": "Targetid"
           },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
           "workspaceVersion": {
             "type": "integer",
             "title": "Workspaceversion"
@@ -2431,6 +3129,35 @@
           "updatedAt": {
             "type": "string",
             "title": "Updatedat"
+          },
+          "aiUsed": {
+            "type": "boolean",
+            "title": "Aiused",
+            "default": false
+          },
+          "ats": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AtsReport"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "editedSections": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Editedsections"
+          },
+          "removedEvidenceIds": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Removedevidenceids"
           }
         },
         "type": "object",
@@ -2462,6 +3189,182 @@
           "key"
         ],
         "title": "ResumeSection"
+      },
+      "ResumeSectionEdit": {
+        "properties": {
+          "claims": {
+            "items": {
+              "$ref": "#/components/schemas/ResumeClaimEdit"
+            },
+            "type": "array",
+            "maxItems": 50,
+            "minItems": 1,
+            "title": "Claims"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "claims"
+        ],
+        "title": "ResumeSectionEdit",
+        "description": "``PATCH /resumes/{id}/sections/{key}`` body: the section's new claims."
+      },
+      "ResumeSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "standard",
+              "tailored"
+            ],
+            "title": "Kind"
+          },
+          "targetId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Targetid"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "workspaceVersion": {
+            "type": "integer",
+            "title": "Workspaceversion"
+          },
+          "stale": {
+            "type": "boolean",
+            "title": "Stale",
+            "default": false
+          },
+          "aiUsed": {
+            "type": "boolean",
+            "title": "Aiused",
+            "default": false
+          },
+          "editedSections": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Editedsections"
+          },
+          "createdAt": {
+            "type": "string",
+            "title": "Createdat"
+          },
+          "updatedAt": {
+            "type": "string",
+            "title": "Updatedat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "workspaceVersion",
+          "createdAt",
+          "updatedAt"
+        ],
+        "title": "ResumeSummary",
+        "description": "List row for ``GET /resumes`` (standard + tailored)."
+      },
+      "ResumeVersionResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "resumeId": {
+            "type": "string",
+            "title": "Resumeid"
+          },
+          "workspaceVersion": {
+            "type": "integer",
+            "title": "Workspaceversion"
+          },
+          "createdAt": {
+            "type": "string",
+            "title": "Createdat"
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "generated",
+              "edited",
+              "restored",
+              "refreshed"
+            ],
+            "title": "Reason"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "aiUsed": {
+            "type": "boolean",
+            "title": "Aiused",
+            "default": false
+          },
+          "sections": {
+            "items": {
+              "$ref": "#/components/schemas/ResumeSection"
+            },
+            "type": "array",
+            "title": "Sections"
+          },
+          "ats": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AtsReport"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "editedSections": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Editedsections"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "resumeId",
+          "workspaceVersion",
+          "createdAt",
+          "reason"
+        ],
+        "title": "ResumeVersionResponse"
       },
       "RoadmapStep": {
         "properties": {
