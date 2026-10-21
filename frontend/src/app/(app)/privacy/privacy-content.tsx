@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { ShieldCheck } from "lucide-react";
 import { PlaceholderPage } from "@/components/placeholder-page";
 import { api } from "@/lib/api";
 import { AI_PROVIDER_DISCLOSURE, type Consent } from "@/lib/privacy/consent";
 import { Button } from "@/components/ui/button";
+import { LinkButton } from "@/components/ui/link-button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/features/ui/toast-store";
 
@@ -82,7 +82,7 @@ function ConsentCard() {
         <p role="status" className="mt-4 font-mono text-xs text-muted">
           {consent
             ? `Recorded ${consent.recordedAt.slice(0, 10)} · ${consent.aiProcessing ? "consented" : "declined"} · v${consent.version}`
-            : "No consent recorded yet — visit onboarding to record one."}
+            : "No consent recorded yet — use the buttons below."}
         </p>
       )}
       <div className="mt-4 flex flex-wrap gap-2">
@@ -92,11 +92,9 @@ function ConsentCard() {
         <Button size="sm" variant="secondary" disabled={loading || saving} onClick={() => update(false)}>
           Decline
         </Button>
-        <Link href="/onboarding">
-          <Button size="sm" variant="ghost">
-            Revisit onboarding
-          </Button>
-        </Link>
+        <LinkButton href="/onboarding" size="sm" variant="ghost">
+          Revisit onboarding
+        </LinkButton>
       </div>
     </section>
   );

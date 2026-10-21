@@ -298,7 +298,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <TooltipProvider delayDuration={300}>
-      <div className="flex min-h-screen bg-bg text-text">
+      <div className="flex h-dvh bg-bg text-text max-md:fixed max-md:inset-0 md:h-auto md:min-h-screen">
         {/* Desktop sidebar */}
         <aside
           data-app-chrome
@@ -349,75 +349,79 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </aside>
 
-        {/* Main column */}
-        <div className="flex min-w-0 flex-1 flex-col pb-20 md:pb-0">
-          <header
-            data-app-chrome
-            className="sticky top-0 z-40 flex h-16 items-center gap-2 border-b border-white/[0.08] bg-bg/80 px-4 backdrop-blur-xl sm:px-6"
-          >
-            <Link
-              href="/workspace"
-              className="flex items-center gap-2 md:hidden"
-              aria-label="R ResumeIQ workspace"
+        {/* Main column. On mobile the column owns the viewport height and the
+            navigator sits below the scrolling area, so no fixed bar can cover
+            a control (S-11). */}
+        <div className="flex min-w-0 flex-1 flex-col">
+          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto md:overflow-visible">
+            <header
+              data-app-chrome
+              className="sticky top-0 z-40 flex h-16 items-center gap-2 border-b border-white/[0.08] bg-bg/80 px-4 backdrop-blur-xl sm:px-6"
             >
-              <span aria-hidden="true" className="flex size-7 items-center justify-center rounded-sm bg-gradient-to-br from-accent-violet to-accent-cyan font-display text-base text-white">
-                R
-              </span>
-            </Link>
-            <Breadcrumbs pathname={pathname ?? "/"} />
-            <div className="flex-1" />
-            <QuickCreate />
-            <IconTooltip label="Open the command palette (Ctrl+K)">
-              <button
-                type="button"
-                onClick={() => setCommandPaletteOpen(true)}
-                className="flex items-center gap-2 rounded-sm border border-white/[0.08] bg-elevated px-3 py-1.5 text-xs text-muted hover:text-text"
-              >
-                <Command className="size-3.5" aria-hidden="true" />
-                <span className="hidden sm:inline">Command palette</span>
-                <span className="sr-only sm:hidden">Command palette</span>
-              </button>
-            </IconTooltip>
-            <UserMenu />
-          </header>
-          <main className="min-w-0 flex-1 px-4 py-6 sm:px-6">{children}</main>
-        </div>
-
-        {/* Mobile bottom navigation */}
-        <nav
-          data-app-chrome
-          aria-label="Mobile navigation"
-          className="fixed inset-x-0 bottom-0 z-40 flex items-stretch justify-around border-t border-white/[0.08] bg-surface/90 px-2 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden"
-        >
-          {MOBILE_NAV.map(({ href, label, icon: Icon }) => {
-            const active = pathname === href || pathname?.startsWith(`${href}/`);
-            return (
               <Link
-                key={href}
-                href={href}
-                aria-label={label}
-                aria-current={active ? "page" : undefined}
-                className={cn(
-                  "flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-sm px-1 py-2 text-[11px]",
-                  active ? "text-text" : "text-muted",
-                )}
+                href="/workspace"
+                className="flex items-center gap-2 md:hidden"
+                aria-label="R ResumeIQ workspace"
               >
-                <Icon className="size-5" aria-hidden="true" />
-                <span aria-hidden="true" className="truncate">{label.split(" ")[0]}</span>
+                <span aria-hidden="true" className="flex size-7 items-center justify-center rounded-sm bg-gradient-to-br from-accent-violet to-accent-cyan font-display text-base text-white">
+                  R
+                </span>
               </Link>
-            );
-          })}
-          <button
-            type="button"
-            onClick={() => setMoreOpen(true)}
-            aria-label="More navigation"
-            aria-haspopup="dialog"
-            className="flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-sm px-1 py-2 text-[11px] text-muted"
+              <Breadcrumbs pathname={pathname ?? "/"} />
+              <div className="flex-1" />
+              <QuickCreate />
+              <IconTooltip label="Open the command palette (Ctrl+K)">
+                <button
+                  type="button"
+                  onClick={() => setCommandPaletteOpen(true)}
+                  className="flex items-center gap-2 rounded-sm border border-white/[0.08] bg-elevated px-3 py-1.5 text-xs text-muted hover:text-text"
+                >
+                  <Command className="size-3.5" aria-hidden="true" />
+                  <span className="hidden sm:inline">Command palette</span>
+                  <span className="sr-only sm:hidden">Command palette</span>
+                </button>
+              </IconTooltip>
+              <UserMenu />
+            </header>
+            <main className="min-w-0 flex-1 px-4 py-6 pb-8 sm:px-6">{children}</main>
+          </div>
+
+          {/* Mobile bottom navigation — a layout row, not an overlay. */}
+          <nav
+            data-app-chrome
+            aria-label="Mobile navigation"
+            className="flex shrink-0 items-stretch justify-around border-t border-white/[0.08] bg-surface/90 px-2 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden"
           >
-            <Menu className="size-5" aria-hidden="true" />
-            <span>More</span>
-          </button>
-        </nav>
+            {MOBILE_NAV.map(({ href, label, icon: Icon }) => {
+              const active = pathname === href || pathname?.startsWith(`${href}/`);
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  aria-label={label}
+                  aria-current={active ? "page" : undefined}
+                  className={cn(
+                    "flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-sm px-1 py-2 text-[11px]",
+                    active ? "text-text" : "text-muted",
+                  )}
+                >
+                  <Icon className="size-5" aria-hidden="true" />
+                  <span aria-hidden="true" className="truncate">{label.split(" ")[0]}</span>
+                </Link>
+              );
+            })}
+            <button
+              type="button"
+              onClick={() => setMoreOpen(true)}
+              aria-label="More navigation"
+              aria-haspopup="dialog"
+              className="flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-sm px-1 py-2 text-[11px] text-muted"
+            >
+              <Menu className="size-5" aria-hidden="true" />
+              <span>More</span>
+            </button>
+          </nav>
+        </div>
 
         {/* Mobile "More" sheet with the full destination list */}
         <Sheet open={moreOpen} onOpenChange={setMoreOpen}>

@@ -1,23 +1,28 @@
 """Standard-resume derivation tests (deterministic, AI-free; PRD SYN-1..3)."""
 
-from app.schemas.workspace import WorkspaceItemResponse, WorkspaceResponse
+from app.schemas.workspace import (
+    EvidenceState,
+    WorkspaceItemResponse,
+    WorkspaceResponse,
+    WorkspaceSection,
+)
 from app.services.standard_resume import build_standard_resume
 
 
 def item(
     item_id: str,
-    section: str,
+    section: WorkspaceSection,
     *,
     title: str = "Title",
     organization: str | None = None,
     start: str | None = None,
     end: str | None = None,
     bullets: list[str] | None = None,
-    evidence: str = "attested",
+    evidence: EvidenceState = "attested",
     order: int = 0,
     deleted_at: str | None = None,
 ) -> WorkspaceItemResponse:
-    return WorkspaceItemResponse(  # type: ignore[arg-type]
+    return WorkspaceItemResponse(
         id=item_id,
         section=section,
         title=title,

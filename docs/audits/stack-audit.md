@@ -233,6 +233,20 @@ regression test that failed before the change and passes after it.
 - S-04 — fixed in `c9dc44c`: live analysis polling is 2s (mock stays 300ms) and a 429 backs off for the server's `Retry-After` (ADR-036).
 - S-05 — fixed in `97dd73f`: the provider follows Supabase auth-state changes; a 401 clears the session and redirects to `/signin?reason=expired` with an on-page notice (ADR-036).
 
+Branch `fix/stack-audit-2` fixes the remaining nine findings (S-06 to S-14) in
+ID order, each with a regression test that failed before the change and passes
+after it.
+
+- S-06 — fixed in `6646daa`: the first client render keeps the "Checking your session" skeleton until mount (`useHydrated`), so it matches the server HTML; the authenticated shell only appears after hydration.
+- S-07 — fixed in `82874e8`: live workspace errors say to check the connection and retry; the dev-bar failure-toggle hint is mock-only.
+- S-08 — fixed in `c06dbb1`: consecutive analysis poll failures show an inline "connection lost" notice with a manual retry while the last run stays visible.
+- S-09 — fixed in `4a42590`: the consent gate shows a lookup skeleton/error instead of assuming "no consent", and live auth/consent calls have deadlines (`withTimeout`).
+- S-10 — fixed in `9c35184`: the empty consent card points at its own buttons, not onboarding.
+- S-11 — fixed in `fd19333`: the mobile navigator is a layout row below the scrolling page area, not a fixed overlay, so no control sits under it at 360px (covered by a unit test and a clipping-aware Playwright check).
+- S-12 — fixed in `a13e051`: placeholder and privacy actions use `LinkButton` (one real link), removing `<button>` inside `<a>`.
+- S-13 — fixed in `e81c94a`: the development fixture picker is also gated on `!isLiveMode()` and stays out of live dev sessions.
+- S-14 — fixed in `49af429`: shared test helpers and doubles are typed, `uv run mypy app tests` is clean (86 → 0 errors), and the backend workflow now runs `mypy app tests` instead of `mypy app` alone.
+
 ### Post-fix live verification (2026-10-20)
 
 - `backend/scripts/check_test_users.py`: A HTTP 200; B HTTP 200.
@@ -247,6 +261,20 @@ regression test that failed before the change and passes after it.
   `/workspace` load redirected to
   `/signin?reason=expired&next=%2Fworkspace` and showed “Your session expired.
   Sign in again to continue.”
+
+### Branch `fix/stack-audit-2` verification (2026-10-20)
+
+- `backend/scripts/check_test_users.py`: A HTTP 200; B HTTP 200.
+- Backend `uv run pytest`: **311 passed, 0 failed, 0 skipped**.
+- `uv run mypy app tests`: **0 errors** (104 files); the backend workflow now runs this target.
+- Endpoint smoke: **42 calls, 0 failed, exit 0**; no HTTP 429 (an earlier run made 50 calls).
+- Frontend gates: lint and typecheck exit 0; **31 files, 174 tests passed**; production build exit 0; dev-only exclusion check pass; landing budget **197.4KB gzip / 215KB**.
+- Mock Playwright suite: **51 passed, 0 failed** in 5.4m against the mock dev server.
+- Live Playwright, final full run after the test fix: **6 passed, 0 failed, 0 skipped** (7.4m). The actions test created the target, skipped the gate because consent was already granted, rendered the report and cleaned up; both route sweeps and both target-detail routes passed.
+- Earlier live attempts explained the failures: one full run lost the Windows dev server mid-sweep (`page.goto: ERR_CONNECTION_REFUSED`), and the actions test submitted the target while the S-09 consent lookup was still in flight. A cleanup rerun later hit the app's honest "Couldn't load this section" state after repeated sweeps had used the per-IP request budget.
+- The live audit now waits for the visible "Checking your AI-processing consent" status to clear before submitting the target (`888cd97`), matching what the S-09 guard expects from a person; that fixed the one-click action run (**33.6s, passed**).
+- The 1280px route sweep logged zero console, page-error, failed-request, axe, overlap and overflow findings on every route.
+- 360px route sweep after S-11: the original `/resume` overlap=4 and `/targets/new` overlap=5 are gone. The remaining single overlap on many routes is `input ∩ button(Show password)`, the password reveal control drawn inside its field — an audit-instrument false positive, not the mobile navigator.
 
 ## Residue and limits
 

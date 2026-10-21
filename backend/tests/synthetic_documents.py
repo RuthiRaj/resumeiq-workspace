@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import io
 import zipfile
+from collections.abc import Sequence
 
 import docx
 
@@ -100,7 +101,7 @@ def build_encrypted_pdf(pages: int = 1) -> bytes:
     return buffer.getvalue()
 
 
-def build_docx(blocks: list[TextBlock]) -> bytes:
+def build_docx(blocks: Sequence[TextBlock]) -> bytes:
     """A DOCX from paragraphs (``str``) and tables (``list[list[str]]``)."""
     document = docx.Document()
     for block in blocks:

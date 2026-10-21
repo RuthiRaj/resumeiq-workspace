@@ -32,7 +32,7 @@ from app.schemas.analysis import (
     JobTarget,
     Requirement,
 )
-from app.schemas.workspace import WorkspaceItemResponse
+from app.schemas.workspace import EvidenceState, WorkspaceItemResponse, WorkspaceSection
 
 UPDATED = "2026-10-17T12:00:00.000Z"
 
@@ -40,9 +40,9 @@ UPDATED = "2026-10-17T12:00:00.000Z"
 def make_item(
     item_id: str,
     *,
-    section: str = "skill",
+    section: WorkspaceSection = "skill",
     title: str = "TypeScript",
-    evidence: str = "verified",
+    evidence: EvidenceState = "verified",
     tags: list[str] | None = None,
     bullets: list[str] | None = None,
     organization: str | None = None,
@@ -51,7 +51,7 @@ def make_item(
 ) -> WorkspaceItemResponse:
     return WorkspaceItemResponse(
         id=item_id,
-        section=section,  # type: ignore[arg-type]
+        section=section,
         title=title,
         organization=organization,
         startDate=start,
@@ -59,7 +59,7 @@ def make_item(
         bullets=bullets or [],
         tags=tags or [],
         links=["https://example.com/proof"] if evidence == "verified" else [],
-        evidence=evidence,  # type: ignore[arg-type]
+        evidence=evidence,
         order=0,
     )
 

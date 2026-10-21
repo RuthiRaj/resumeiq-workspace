@@ -21,6 +21,7 @@ from app.extraction.errors import (
 )
 from app.extraction.pdf import MAX_PDF_PAGES, extract_pdf_text
 from app.extraction.sniffing import declared_type_from_name, sniff_declared_type
+from app.schemas.imports import ExtractionItem
 from tests.synthetic_documents import (
     build_docx,
     build_encrypted_pdf,
@@ -51,10 +52,10 @@ RESUME_LINES = [
 ]
 
 
-def titles(parsed_items: list[object]) -> set[str]:
+def titles(parsed_items: list[ExtractionItem]) -> set[str]:
     found: set[str] = set()
     for item in parsed_items:
-        for extracted in item.fields:  # type: ignore[attr-defined]
+        for extracted in item.fields:
             if extracted.key == "title":
                 found.add(extracted.value)
     return found

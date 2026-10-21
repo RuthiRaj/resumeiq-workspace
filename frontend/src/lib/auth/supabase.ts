@@ -13,6 +13,7 @@
  */
 
 import { supabasePublishableKey, supabaseUrl } from "@/lib/config/mode";
+import { RequestTimeoutError, withTimeout } from "@/lib/async/with-timeout";
 import type { AuthClient, Session, SessionUser, SignupParams } from "./types";
 import { AuthError } from "./types";
 
@@ -83,6 +84,26 @@ export function sessionFromSupabase(
 const NETWORK_MESSAGE =
   "We couldn't reach the sign-in service. Check your connection and try again.";
 
+const AUTH_TIMEOUT_MS = 20_000;
+const AUTH_TIMEOUT_MESSAGE =
+  "The sign-in service took too long. Check your connection and try again.";
+
+/**
+ * Auth calls need a deadline: a hung Supabase request otherwise leaves a
+ * button on "Signing in…" indefinitely (S-09). A timeout is reported like a
+ * network failure so the screens show their existing retry copy.
+ */
+async function withAuthTimeout<T>(work: Promise<T>): Promise<T> {
+  try {
+    return await withTimeout(work, AUTH_TIMEOUT_MS, AUTH_TIMEOUT_MESSAGE);
+  } catch (error) {
+    if (error instanceof RequestTimeoutError) {
+      throw new AuthError(AUTH_TIMEOUT_MESSAGE, "network");
+    }
+    throw error;
+  }
+}
+
 function mapSupabaseError(error: unknown, action: "signin" | "signup" | "reset"): AuthError {
   const candidate = error as { message?: unknown; status?: unknown; code?: unknown };
   const rawMessage =
@@ -133,7 +154,7 @@ function mapSupabaseError(error: unknown, action: "signin" | "signup" | "reset")
 
 async function currentSession(): Promise<SupabaseSession | null> {
   const supabase = await getClient();
-  const { data, error } = await supabase.auth.getSession();
+  const { data, error } = await withAuthTimeout(supabase.auth.getSession());
   if (error) throw mapSupabaseError(error, "signin");
   const session = data.session;
   if (!session) return null;
@@ -142,7 +163,9 @@ async function currentSession(): Promise<SupabaseSession | null> {
   // expired Bearer token (I1 session refresh).
   const expiresAt = session.expires_at ? session.expires_at * 1000 : 0;
   if (expiresAt > 0 && expiresAt - Date.now() < 60_000) {
-    const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
+    const { data: refreshed, error: refreshError } = await withAuthTimeout(
+      supabase.auth.refreshSession(),
+    );
     if (refreshError) return null;
     return refreshed.session;
   }
@@ -173,11 +196,13 @@ export function createSupabaseAuthClient(): AuthClient {
 
     async signUp({ name, email, password }: SignupParams) {
       const supabase = await getClient();
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { data: { name } },
-      });
+      const { data, error } = await withAuthTimeout(
+        supabase.auth.signUp({
+          email,
+          password,
+          options: { data: { name } },
+        }),
+      );
       if (error) throw mapSupabaseError(error, "signup");
       const session = data.session ? sessionFromSupabase(data.session) : null;
       if (!session) {
@@ -191,10 +216,12 @@ export function createSupabaseAuthClient(): AuthClient {
 
     async signIn({ email, password }) {
       const supabase = await getClient();
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      const { data, error } = await withAuthTimeout(
+        supabase.auth.signInWithPassword({
+          email,
+          password,
+        }),
+      );
       if (error) throw mapSupabaseError(error, "signin");
       const session = data.session ? sessionFromSupabase(data.session) : null;
       if (!session) {
@@ -214,7 +241,7 @@ export function createSupabaseAuthClient(): AuthClient {
 
     async requestPasswordReset(email: string) {
       const supabase = await getClient();
-      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      const { error } = await withAuthTimeout(supabase.auth.resetPasswordForEmail(email));
       if (error) throw mapSupabaseError(error, "reset");
       // Same message whether or not the account exists: never disclose accounts.
       return {

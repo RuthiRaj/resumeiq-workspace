@@ -100,7 +100,7 @@ jobs:
         if: needs.detect.outputs.backend != 'false'
       - run: uv run ruff format --check .
         if: needs.detect.outputs.backend != 'false'
-      - run: uv run mypy app
+      - run: uv run mypy app tests
         if: needs.detect.outputs.backend != 'false'
       - run: uv run pytest
         if: needs.detect.outputs.backend != 'false'

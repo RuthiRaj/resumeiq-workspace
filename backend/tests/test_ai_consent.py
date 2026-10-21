@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
-from typing import Annotated
+from typing import Annotated, cast
 
 import httpx
 import pytest
@@ -153,7 +153,14 @@ def test_gateway_refuses_a_grant_for_the_wrong_purpose() -> None:
     gateway, _ = make_gateway([GROQ], handler=handler)
     payload = RewriteBulletInput(bullet="Built a Python service.")
     with pytest.raises(AIConsentRequiredError):
-        asyncio.run(gateway.run("rewrite_bullet", payload, EVIDENCE, consent=WrongPurposeGrant()))
+        asyncio.run(
+            gateway.run(
+                "rewrite_bullet",
+                payload,
+                EVIDENCE,
+                consent=cast(ConsentGrant, WrongPurposeGrant()),
+            )
+        )
     assert seen == []
 
 

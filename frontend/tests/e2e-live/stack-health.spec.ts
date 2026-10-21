@@ -418,10 +418,19 @@ test.describe("live stack audit", () => {
       );
     await page.getByTestId("target-skill-input").fill("Python");
     await page.getByTestId("target-skill-add").click();
+    // S-09: the consent lookup starts on mount. A submit while it is still in
+    // flight is refused with "still checking ... try again", which is correct
+    // but meant this automated run only clicked once. Wait for the lookup like
+    // a person would, then submit.
+    await expect(page.getByTestId("consent-checking")).toBeHidden({ timeout: 60_000 });
     await page.getByTestId("target-submit").click();
 
     const gate = page.getByTestId("consent-gate");
-    if (await gate.isVisible().catch(() => false)) {
+    const gateShown = await gate
+      .waitFor({ state: "visible", timeout: 10_000 })
+      .then(() => true)
+      .catch(() => false);
+    if (gateShown) {
       await page.getByTestId("consent-checkbox").click();
       await page.getByTestId("consent-accept-button").click();
       notes.push("consent: gate shown, consent accepted");

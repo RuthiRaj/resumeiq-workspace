@@ -65,6 +65,12 @@ export function useStartAnalysis(targetId: string) {
 export const LIVE_ANALYSIS_POLL_MS = 2_000;
 const MOCK_ANALYSIS_POLL_MS = 300;
 
+/**
+ * Consecutive failed polls before the theatre shows a "connection lost"
+ * notice. One failure can be a blip; two in a row is worth telling the user.
+ */
+export const POLL_FAILURES_BEFORE_NOTICE = 2;
+
 export function analysisPollDelay(error: unknown, baseMs: number): number {
   if (error instanceof ApiError && error.status === 429) {
     return Math.max(baseMs, error.retryAfterMs ?? baseMs);

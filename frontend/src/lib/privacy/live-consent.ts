@@ -12,6 +12,7 @@
  */
 
 import { getSupabaseClient } from "@/lib/auth/supabase";
+import { withTimeout } from "@/lib/async/with-timeout";
 import {
   AI_PROVIDER_DISCLOSURE,
   CURRENT_CONSENT_VERSION,
@@ -19,6 +20,7 @@ import {
 } from "./consent";
 
 const PURPOSE = "ai_processing";
+const CONSENT_TIMEOUT_MS = 15_000;
 
 interface ConsentRow {
   granted: boolean;
@@ -43,7 +45,15 @@ async function currentUserId(): Promise<string> {
   return data.user.id;
 }
 
-export async function getLiveConsent(): Promise<Consent | null> {
+export function getLiveConsent(): Promise<Consent | null> {
+  return withTimeout(
+    loadLiveConsent(),
+    CONSENT_TIMEOUT_MS,
+    "Checking your AI-processing consent took too long. Check your connection and try again.",
+  );
+}
+
+async function loadLiveConsent(): Promise<Consent | null> {
   const supabase = await getSupabaseClient();
   const { data: auth, error: authError } = await supabase.auth.getUser();
   if (authError || !auth.user) return null;
@@ -61,7 +71,15 @@ export async function getLiveConsent(): Promise<Consent | null> {
   return toConsent((data?.[0] as ConsentRow | undefined) ?? undefined);
 }
 
-export async function recordLiveConsent(aiProcessing: boolean): Promise<Consent> {
+export function recordLiveConsent(aiProcessing: boolean): Promise<Consent> {
+  return withTimeout(
+    saveLiveConsent(aiProcessing),
+    CONSENT_TIMEOUT_MS,
+    "Saving your AI-processing consent took too long. Check your connection and try again.",
+  );
+}
+
+async function saveLiveConsent(aiProcessing: boolean): Promise<Consent> {
   const supabase = await getSupabaseClient();
   const userId = await currentUserId();
   const now = new Date().toISOString();

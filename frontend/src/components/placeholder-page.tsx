@@ -1,6 +1,5 @@
-import Link from "next/link";
 import { Check, Construction } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { LinkButton } from "@/components/ui/link-button";
 
 /**
  * Shared placeholder for app routes whose full UI lands in later milestones
@@ -46,11 +45,9 @@ export function PlaceholderPage({
         </p>
       </div>
 
-      <Link href="/workspace">
-        <Button variant="secondary" size="sm">
-          Back to your workspace
-        </Button>
-      </Link>
+      <LinkButton href="/workspace" variant="secondary" size="sm">
+        Back to your workspace
+      </LinkButton>
     </div>
   );
 }

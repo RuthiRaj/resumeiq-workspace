@@ -33,8 +33,9 @@ from app.schemas.imports import (
     ImportSupportFile,
     ImportSupportLink,
 )
+from app.schemas.workspace import WorkspaceSection
 
-ITEM_ROW = {
+ITEM_ROW: dict[str, object] = {
     "wire_id": "ext-experience-1",
     "section": "experience",
     "extraction": {
@@ -60,7 +61,7 @@ ITEM_ROW = {
     "position": 1,
 }
 
-SESSION_ROW = {
+SESSION_ROW: dict[str, object] = {
     "id": "11111111-1111-1111-1111-111111111111",
     "file_name": "resume.pdf",
     "file_type": "pdf",
@@ -73,7 +74,7 @@ SESSION_ROW = {
     "import_review_items": [ITEM_ROW],
 }
 
-WORKSPACE_ROW = {
+WORKSPACE_ROW: dict[str, object] = {
     "id": "ws-1",
     "section": "experience",
     "title": "Backend Intern",
@@ -103,10 +104,10 @@ def repo(handler: Handler) -> SupabaseImportRepository:
     )
 
 
-def item(section: str = "experience") -> ExtractionItem:
+def item(section: WorkspaceSection = "experience") -> ExtractionItem:
     return ExtractionItem(
         id=f"ext-{section}-1",
-        section=section,  # type: ignore[arg-type]
+        section=section,
         fields=[
             ExtractedField(
                 key="title", label="Role", value="Backend Intern", confidence=0.9, sourceLine=6

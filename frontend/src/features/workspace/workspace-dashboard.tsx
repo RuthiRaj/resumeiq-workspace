@@ -28,6 +28,7 @@ import { ErrorState } from "@/components/domain/error-state";
 import { SyncIndicator } from "@/components/domain/sync-indicator";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { isLiveMode } from "@/lib/config/mode";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -125,7 +126,11 @@ export function WorkspaceDashboard() {
       ) : workspace.isError ? (
         <ErrorState
           title="Couldn’t load your workspace"
-          description="The workspace didn’t respond. Nothing was lost — try again, or check the mock failure toggle in the dev bar."
+          description={
+            isLiveMode()
+              ? "The workspace didn’t respond. Nothing was lost — check your connection and try again."
+              : "The workspace didn’t respond. Nothing was lost — try again, or check the mock failure toggle in the dev bar."
+          }
           onRetry={() => void workspace.refetch()}
           retrying={workspace.isFetching}
         />

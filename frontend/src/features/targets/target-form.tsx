@@ -24,6 +24,7 @@ import {
 } from "@/lib/schemas";
 import type { z } from "zod";
 import { JOB_DESCRIPTION_FIXTURES } from "@/mocks/analysis-fixtures";
+import { isLiveMode } from "@/lib/config/mode";
 import { cn } from "@/lib/utils";
 
 /** Form input type: fields with schema defaults are optional while editing. */
@@ -118,6 +119,18 @@ export function TargetForm() {
 
   function createAndAnalyse(values: TargetCreateValues) {
     setSubmitError(null);
+    // The consent lookup can still be in flight. Opening the gate now would
+    // ask for consent that may already be recorded (S-09).
+    if (consentQuery.isLoading) {
+      setSubmitError("We're still checking your AI-processing consent. Try again in a moment.");
+      return;
+    }
+    if (consentQuery.isError) {
+      setSubmitError(
+        "We couldn't check your AI-processing consent. Check your connection and try again.",
+      );
+      return;
+    }
     if (!consentGranted) {
       setPendingValues(values);
       setShowGate(true);
@@ -193,7 +206,7 @@ export function TargetForm() {
           <FieldError id="target-jd-error" message={errors.jobDescription?.message} />
         </div>
 
-        {process.env.NODE_ENV === "development" ? (
+        {process.env.NODE_ENV === "development" && !isLiveMode() ? (
           <details className="rounded-sm border border-white/[0.08] p-3 text-sm">
             <summary className="flex cursor-pointer items-center gap-2 text-muted">
               <Wand2 className="size-3.5 text-accent-cyan" aria-hidden="true" />
@@ -361,6 +374,16 @@ export function TargetForm() {
         {!consentGranted && consentQuery.isSuccess ? (
           <span className="text-xs text-muted">
             Consent is required to analyse — you&apos;ll be asked to confirm.
+          </span>
+        ) : null}
+        {consentQuery.isLoading ? (
+          <span role="status" className="text-xs text-muted" data-testid="consent-checking">
+            Checking your AI-processing consent…
+          </span>
+        ) : null}
+        {consentQuery.isError ? (
+          <span className="text-xs text-evidence-missing">
+            Couldn&apos;t check AI-processing consent. Try again in a moment.
           </span>
         ) : null}
       </div>
