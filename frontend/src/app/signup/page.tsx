@@ -6,15 +6,15 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { AuthPageProviders } from "@/features/auth/auth-page-providers";
+import { AuthFormProviders } from "@/features/auth/auth-form-providers";
 import { AuthCard } from "@/features/auth/auth-card";
+import { CredentialForm, CredentialSubmitButton } from "@/features/auth/credential-form";
 import { OAuthButtons } from "@/features/auth/oauth-buttons";
 import { PasswordInput } from "@/features/auth/password-input";
 import { useAuth } from "@/lib/auth/context";
 import { isLiveMode } from "@/lib/config/mode";
 import { AuthError } from "@/lib/auth/types";
 import { SignupSchema, type OAuthProvider, type SignupInput } from "@/lib/auth/schemas";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FieldError, Label } from "@/components/ui/field";
 import { toast } from "@/features/ui/toast-store";
@@ -94,7 +94,7 @@ function SignupForm() {
             </div>
           </>
         )}
-        <form noValidate onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+        <CredentialForm onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="name">Full name</Label>
             <Input
@@ -138,10 +138,12 @@ function SignupForm() {
               {formError}
             </p>
           ) : null}
-          <Button type="submit" disabled={busy} aria-busy={busy}>
-            {isSubmitting ? "Creating account…" : "Create account"}
-          </Button>
-        </form>
+          <CredentialSubmitButton
+            pending={busy}
+            idleLabel="Create account"
+            pendingLabel="Creating account…"
+          />
+        </CredentialForm>
       </div>
     </AuthCard>
   );
@@ -149,10 +151,10 @@ function SignupForm() {
 
 export default function SignupPage() {
   return (
-    <AuthPageProviders>
+    <AuthFormProviders>
       <Suspense fallback={<div className="mx-auto max-w-md px-6 py-24 text-sm text-muted">Loading sign up…</div>}>
         <SignupForm />
       </Suspense>
-    </AuthPageProviders>
+    </AuthFormProviders>
   );
 }

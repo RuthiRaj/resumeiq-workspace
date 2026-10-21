@@ -6,15 +6,15 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { AuthPageProviders } from "@/features/auth/auth-page-providers";
+import { AuthFormProviders } from "@/features/auth/auth-form-providers";
 import { AuthCard } from "@/features/auth/auth-card";
+import { CredentialForm, CredentialSubmitButton } from "@/features/auth/credential-form";
 import { OAuthButtons } from "@/features/auth/oauth-buttons";
 import { PasswordInput } from "@/features/auth/password-input";
 import { useAuth } from "@/lib/auth/context";
 import { isLiveMode } from "@/lib/config/mode";
 import { AuthError } from "@/lib/auth/types";
 import { SigninSchema, type OAuthProvider, type SigninInput } from "@/lib/auth/schemas";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FieldError, Label } from "@/components/ui/field";
 import { toast } from "@/features/ui/toast-store";
@@ -110,7 +110,7 @@ export function SigninForm() {
             </div>
           </>
         )}
-        <form noValidate onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+        <CredentialForm onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="email">Email</Label>
             <Input
@@ -144,10 +144,12 @@ export function SigninForm() {
               {formError}
             </p>
           ) : null}
-          <Button type="submit" disabled={busy} aria-busy={busy}>
-            {isSubmitting ? "Signing in…" : "Sign in"}
-          </Button>
-        </form>
+          <CredentialSubmitButton
+            pending={busy}
+            idleLabel="Sign in"
+            pendingLabel="Signing in…"
+          />
+        </CredentialForm>
       </div>
     </AuthCard>
   );
@@ -155,10 +157,10 @@ export function SigninForm() {
 
 export default function SigninPage() {
   return (
-    <AuthPageProviders>
+    <AuthFormProviders>
       <Suspense fallback={<div className="mx-auto max-w-md px-6 py-24 text-sm text-muted">Loading sign in…</div>}>
         <SigninForm />
       </Suspense>
-    </AuthPageProviders>
+    </AuthFormProviders>
   );
 }

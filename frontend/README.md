@@ -14,6 +14,53 @@ npm run dev        # http://localhost:3000
 Mock mode is the default: MSW serves `/api/v1` and the mock auth client runs, so
 no backend or Supabase project is needed for normal UI work.
 
+## Always open http://localhost:3000
+
+Use `http://localhost:3000`, not a LAN address such as
+`http://192.168.1.20:3000`, for normal development. Next.js only serves its
+development assets (`/_next/...`, HMR, the React runtime) to `localhost` and to
+the hostname the dev server was started with. Opening the same server through a
+different IP makes those requests fail, so the page shows its server HTML but
+never hydrates: buttons stay inert, the auth forms stay in their safe
+pre-hydration state, and the app looks broken.
+
+The auth forms are deliberately safe when that happens: every form with an
+email or password field uses `method="post"` with a non-submitting action, and
+its submit button is disabled until hydration, so a broken page cannot send
+credentials as URL query parameters. Auth URLs that arrive with
+credential-looking parameters are redirected to a scrubbed URL by
+`src/proxy.ts` before the route renders, and `CredentialQueryGuard` repeats the
+cleanup with `history.replaceState` for client-side navigations.
+
+Nothing in the app logs request URLs, and the Playwright auth-URL test asserts
+that the browser console and follow-up requests never see the secret. The
+`next dev` terminal still prints the raw request line before the proxy runs
+(server-side, local-only); in production, redact query strings on auth paths in
+the reverse-proxy access log.
+
+### Testing from a phone on the same network
+
+Phones can only reach the dev server at your machine's LAN IP, which is exactly
+the origin Next.js blocks by default. If you need that, opt in **locally** with
+`allowedDevOrigins` in `next.config.ts`:
+
+```ts
+const nextConfig: NextConfig = {
+  // ...existing options
+  allowedDevOrigins: ["192.168.1.20"],
+};
+```
+
+Use only the hostname: no `https://`, no port, no path. The dev server already
+allows `localhost` and the hostname it was started with. Wildcards are limited
+to whole labels (`*.local-origin.dev`, `**.local-origin.dev`), and `**` is only
+valid at the start. Restart `npm run dev` after changing the file.
+
+This setting is intentionally **not enabled by default**: it lets other origins
+request development-only assets and endpoints, so keep it to your own LAN IP,
+do not commit it, and remove it when you are done. See the Next.js
+`allowedDevOrigins` reference for the full matching rules.
+
 ## Live mode (I1)
 
 Live mode talks to the FastAPI backend on **port 8000** and Supabase Auth. It is
@@ -79,8 +126,10 @@ npm run e2e:live
 
 Exported `RUN_LIVE_E2E`, `LIVE_E2E_EMAIL` and `LIVE_E2E_PASSWORD` still override
 the file (useful in CI). It starts the backend (8000) and the live dev server
-(3000) itself; the spec signs in with Supabase and loads the workspace from
-FastAPI. Nothing has to be typed into the terminal, and no value is printed.
+(3000) itself. `live.spec.ts` signs in and loads the workspace from FastAPI;
+`auth-flows.spec.ts` also exercises sign-up, a failed sign-in, password reset
+and sign-out, and checks that none of them leave credentials in the URL.
+Nothing has to be typed into the terminal, and no value is printed.
 
 ## Verify
 

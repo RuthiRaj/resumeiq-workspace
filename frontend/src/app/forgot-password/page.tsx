@@ -4,13 +4,13 @@ import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { AuthPageProviders } from "@/features/auth/auth-page-providers";
+import { AuthFormProviders } from "@/features/auth/auth-form-providers";
 import { AuthCard } from "@/features/auth/auth-card";
+import { CredentialForm, CredentialSubmitButton } from "@/features/auth/credential-form";
 import { useAuth } from "@/lib/auth/context";
 import { isLiveMode } from "@/lib/config/mode";
 import { AuthError } from "@/lib/auth/types";
 import { ForgotPasswordSchema, type ForgotPasswordInput } from "@/lib/auth/schemas";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FieldError, Label } from "@/components/ui/field";
 import { toast } from "@/features/ui/toast-store";
@@ -62,7 +62,7 @@ export function ForgotPasswordForm() {
           {sent}
         </div>
       ) : (
-        <form noValidate onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+        <CredentialForm onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="email">Email</Label>
             <Input
@@ -76,10 +76,12 @@ export function ForgotPasswordForm() {
             />
             <FieldError id="email-error" message={errors.email?.message} />
           </div>
-          <Button type="submit" disabled={isSubmitting} aria-busy={isSubmitting}>
-            {isSubmitting ? "Sending…" : "Send reset link"}
-          </Button>
-        </form>
+          <CredentialSubmitButton
+            pending={isSubmitting}
+            idleLabel="Send reset link"
+            pendingLabel="Sending…"
+          />
+        </CredentialForm>
       )}
     </AuthCard>
   );
@@ -87,10 +89,10 @@ export function ForgotPasswordForm() {
 
 export default function ForgotPasswordPage() {
   return (
-    <AuthPageProviders>
+    <AuthFormProviders>
       <Suspense fallback={<div className="mx-auto max-w-md px-6 py-24 text-sm text-muted">Loading…</div>}>
         <ForgotPasswordForm />
       </Suspense>
-    </AuthPageProviders>
+    </AuthFormProviders>
   );
 }

@@ -42,9 +42,12 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({
   children,
   client,
+  ready = true,
 }: {
   children: React.ReactNode;
   client?: AuthClient;
+  /** False while the mock worker is still starting; keeps the session read from racing it. */
+  ready?: boolean;
 }) {
   // Stabilise the client identity: a fresh object per render would re-fire
   // the session effect below into an infinite getSession loop.
@@ -95,8 +98,10 @@ export function AuthProvider({
   }, [authClient]);
 
   // Resolve the persisted session once on mount (setState runs in promise
-  // callbacks, not synchronously in the effect body).
+  // callbacks, not synchronously in the effect body). Auth forms render before
+  // the mock worker is ready, so they wait for `ready` instead of racing it.
   useEffect(() => {
+    if (!ready) return;
     let cancelled = false;
     authClient.getSession().then(
       (next) => {
@@ -113,7 +118,7 @@ export function AuthProvider({
     return () => {
       cancelled = true;
     };
-  }, [authClient]);
+  }, [authClient, ready]);
 
   // Live transport: follow sign-out and token-refresh events. The mock client
   // has nothing to subscribe to, so this is a no-op there.
