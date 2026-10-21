@@ -298,7 +298,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <TooltipProvider delayDuration={300}>
-      <div className="flex h-dvh bg-bg text-text max-md:fixed max-md:inset-0 md:h-auto md:min-h-screen">
+      <div
+        data-app-shell
+        className="flex h-dvh bg-bg text-text max-md:fixed max-md:inset-0 md:h-auto md:min-h-screen"
+      >
         {/* Desktop sidebar */}
         <aside
           data-app-chrome
@@ -353,7 +356,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             navigator sits below the scrolling area, so no fixed bar can cover
             a control (S-11). */}
         <div className="flex min-w-0 flex-1 flex-col">
-          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto md:overflow-visible">
+          <div
+            data-app-scroll
+            className="flex min-h-0 flex-1 flex-col overflow-y-auto md:overflow-visible"
+          >
             <header
               data-app-chrome
               className="sticky top-0 z-40 flex h-16 items-center gap-2 border-b border-white/[0.08] bg-bg/80 px-4 backdrop-blur-xl sm:px-6"

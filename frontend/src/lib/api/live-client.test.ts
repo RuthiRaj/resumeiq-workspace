@@ -229,15 +229,58 @@ describe("live API client", () => {
     expect(init?.method).toBe("POST");
   });
 
-  it("keeps mock-only features out of live mode", async () => {
-    const mock = fetchMock();
+  it("calls the live B5 resume list with a bearer token", async () => {
+    const resume = {
+      id: "resume-standard",
+      kind: "standard",
+      targetId: null,
+      title: "Standard resume",
+      workspaceVersion: 1,
+      stale: false,
+      aiUsed: false,
+      editedSections: [],
+      createdAt: "2026-10-20T10:00:00.000Z",
+      updatedAt: "2026-10-20T10:00:00.000Z",
+    };
+    const mock = fetchMock().mockResolvedValue(jsonResponse([resume]));
     vi.stubGlobal("fetch", mock);
 
-    const error = (await api.listVersions().catch((err: unknown) => err)) as ApiError;
+    const result = await api.listResumes();
 
-    expect(error.code).toBe("not_available_in_live_mode");
-    expect(error.status).toBe(501);
-    expect(mock).not.toHaveBeenCalled();
+    expect(result).toHaveLength(1);
+    const [url, init] = mock.mock.calls[0]!;
+    expect(url).toBe("http://localhost:8000/api/v1/resumes");
+    expect(new Headers(init?.headers).get("Authorization")).toBe("Bearer access-token");
+  });
+
+  it("generates a tailored resume through the B5 target route", async () => {
+    const resume = {
+      id: "resume-1",
+      kind: "tailored",
+      targetId: "target-1",
+      title: "Engineer at Acme",
+      workspaceVersion: 1,
+      stale: false,
+      sections: [],
+      createdAt: "2026-10-20T10:00:00.000Z",
+      updatedAt: "2026-10-20T10:00:00.000Z",
+      aiUsed: false,
+      ats: null,
+      editedSections: [],
+      removedEvidenceIds: [],
+    };
+    const mock = fetchMock().mockResolvedValue(jsonResponse(resume, 201));
+    vi.stubGlobal("fetch", mock);
+
+    const result = await api.generateResume("target-1", {
+      rewordWithAi: false,
+    });
+
+    expect(result.kind).toBe("tailored");
+    const [url, init] = mock.mock.calls[0]!;
+    expect(url).toBe("http://localhost:8000/api/v1/targets/target-1/resume");
+    expect(init?.method).toBe("POST");
+    expect(JSON.parse(String(init?.body))).toEqual({ rewordWithAi: false });
   });
 
   it("defaults to the mock transport (relative URL, no token)", async () => {

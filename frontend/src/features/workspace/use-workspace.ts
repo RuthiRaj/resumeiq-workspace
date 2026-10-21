@@ -55,6 +55,9 @@ function useInvalidateWorkspace() {
   return () => {
     void queryClient.invalidateQueries({ queryKey: workspaceKeys.root });
     void queryClient.invalidateQueries({ queryKey: workspaceKeys.standardResume() });
+    // Tailored resumes compute staleness against the workspace version, so a
+    // workspace change must refresh their list/detail/diff too.
+    void queryClient.invalidateQueries({ queryKey: ["resume"] });
   };
 }
 

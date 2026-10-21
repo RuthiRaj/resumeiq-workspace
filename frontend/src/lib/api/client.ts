@@ -8,7 +8,11 @@ import {
   ImportSessionSchema,
   ImportSummarySchema,
   JobTargetSchema,
+  ResumeDiffSchema,
+  ResumeRefreshResultSchema,
   ResumeSchema,
+  ResumeSummarySchema,
+  ResumeVersionSchema,
   WorkspaceChangeLogEntrySchema,
   WorkspaceItemSchema,
   WorkspaceSchema,
@@ -23,6 +27,9 @@ import {
   type ImportSupport,
   type JobTarget,
   type Resume,
+  type ResumeGenerateRequest,
+  type ResumeRefreshRequest,
+  type ResumeSectionEdit,
   type TargetCreateValues,
   type Workspace,
   type WorkspaceChangeLogEntry,
@@ -73,9 +80,24 @@ const CODE_FALLBACKS: Record<string, string> = {
   ai_consent_required:
     "Grant AI-processing consent before running an analysis.",
   analysis_not_found: "That analysis no longer exists.",
+  analysis_required:
+    "Run the analysis for this target before generating a resume.",
+  analysis_stale:
+    "Your workspace changed after this analysis. Re-run it before generating a resume.",
   report_not_ready: "The report isn't ready yet. Try again in a moment.",
   analysis_failed: "That analysis failed. Start a new run.",
   target_not_found: "That job target no longer exists.",
+  resume_not_found: "That resume no longer exists.",
+  resume_section_not_found: "That section isn't part of this resume.",
+  resume_not_tailored:
+    "The standard resume is derived from your workspace and cannot be edited.",
+  resume_evidence_not_found:
+    "One of the cited workspace items no longer exists. Cite an item that is still in your workspace.",
+  resume_claim_ungrounded:
+    "This line adds facts that aren't in the cited evidence. Remove or correct the invented detail, or cite stronger evidence.",
+  resume_version_not_found: "That resume version no longer exists.",
+  ai_not_configured:
+    "AI rewording is unavailable until a provider is configured on the server.",
   import_not_found: "That import session no longer exists.",
   import_item_not_found: "That review item no longer exists.",
   unreadable_document:
@@ -355,15 +377,56 @@ export const api = {
     return { items: [result.item], review: result.review };
   },
 
-  // --- Tailored resumes + history (not in the live backend yet) ---
-  getTailoredResume: async (targetId: string): Promise<Resume> => {
-    if (isLiveMode()) unavailable(`/targets/${targetId}/resume`);
-    return request(`/targets/${targetId}/resume`, undefined, ResumeSchema);
-  },
-  listVersions: async (): Promise<Resume[]> => {
-    if (isLiveMode()) unavailable("/resumes");
-    return request("/resumes", undefined, ResumeSchema.array());
-  },
+  // --- Tailored resumes + history (B5 contract §6) ---
+  listResumes: () => request("/resumes", undefined, ResumeSummarySchema.array()),
+  getResume: (resumeId: string) =>
+    request(`/resumes/${encodeURIComponent(resumeId)}`, undefined, ResumeSchema),
+  generateResume: (targetId: string, input: ResumeGenerateRequest) =>
+    request(
+      `/targets/${encodeURIComponent(targetId)}/resume`,
+      { method: "POST", body: JSON.stringify(input) },
+      ResumeSchema,
+    ),
+  editResumeSection: (
+    resumeId: string,
+    sectionKey: string,
+    input: ResumeSectionEdit,
+  ) =>
+    request(
+      `/resumes/${encodeURIComponent(resumeId)}/sections/${encodeURIComponent(sectionKey)}`,
+      { method: "PATCH", body: JSON.stringify(input) },
+      ResumeSchema,
+    ),
+  listResumeVersions: (resumeId: string) =>
+    request(
+      `/resumes/${encodeURIComponent(resumeId)}/versions`,
+      undefined,
+      ResumeVersionSchema.array(),
+    ),
+  restoreResumeVersion: (resumeId: string, versionId: string) =>
+    request(
+      `/resumes/${encodeURIComponent(resumeId)}/versions/${encodeURIComponent(versionId)}/restore`,
+      { method: "POST" },
+      ResumeSchema,
+    ),
+  markResumeStale: (resumeId: string) =>
+    request(
+      `/resumes/${encodeURIComponent(resumeId)}/stale`,
+      { method: "POST" },
+      ResumeSchema,
+    ),
+  getResumeDiff: (resumeId: string) =>
+    request(
+      `/resumes/${encodeURIComponent(resumeId)}/diff`,
+      undefined,
+      ResumeDiffSchema,
+    ),
+  refreshResume: (resumeId: string, input: ResumeRefreshRequest) =>
+    request(
+      `/resumes/${encodeURIComponent(resumeId)}/refresh`,
+      { method: "POST", body: JSON.stringify(input) },
+      ResumeRefreshResultSchema,
+    ),
 
   // --- Privacy (not in the live backend yet) ---
   exportData: async (): Promise<unknown> => {

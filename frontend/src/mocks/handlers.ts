@@ -19,6 +19,7 @@ import {
   workspaceBody,
 } from "./context";
 import { importHandlers } from "./import-handlers";
+import { resumeHandlers } from "./resume-handlers";
 import { targetHandlers } from "./target-handlers";
 import {
   clearSession,
@@ -359,10 +360,11 @@ export const workspaceHandlers = [
   }),
 ];
 
-/** All mock endpoints (workspace + auth + consent + F4). */
+/** All mock endpoints (workspace + auth + consent + F4 + F5). */
 export const handlers = [
   ...workspaceHandlers,
   ...authHandlers,
   ...targetHandlers,
+  ...resumeHandlers,
   ...importHandlers,
 ];

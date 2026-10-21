@@ -1803,3 +1803,77 @@ can carry the test secret is the user's own navigation and that neither the
 console nor the DOM retains it. The README documents opening
 `http://localhost:3000` and the opt-in `allowedDevOrigins` setting for
 same-network phones.
+
+## ADR-041 - 2026-10-21 - F5 consumes the unmerged B5 resume contract
+
+Context: F5 needs tailored resumes, history, diff and refresh. The backend work
+is on `feat/b5-tailored-resume` (B5) but is not merged, so the exported
+`docs/api/openapi.json` on `master` still lacks every B5 route. F5 must not
+modify backend code and must not merge B5.
+
+Decision:
+
+1. The frontend contract is `docs/api/contract-proposals.md` §6 and the B5
+   OpenAPI export on `feat/b5-tailored-resume` (commit `a38143f`), not the
+   `master` export. `frontend/src/lib/schemas/resume.ts` mirrors that shape and
+   the mock handlers use the same paths: `POST /targets/{id}/resume`,
+   `GET /resumes`, `GET /resumes/{id}`,
+   `PATCH /resumes/{id}/sections/{key}`, `GET /resumes/{id}/versions`,
+   restore, stale, diff and refresh.
+2. The standard resume remains derived and read-only with the stable id
+   `resume-standard`. Presentation choices (template, length, section order and
+   visibility) live only in browser storage; they never mutate workspace data
+   and never call the API. The preview is the same `ResumePaper` used for print,
+   so what the user sees is what `window.print()` produces.
+3. Tailored resumes are snapshots. The studio never silently rewrites one:
+   section edits, restores and refreshes always replace server state with a new
+   version, and the diff drawer makes the choice explicit.
+4. ADR numbers `041`/`042` are used instead of `039`/`040` because the unmerged
+   B5 branch already reserves those two numbers. This avoids duplicate ADR
+   numbers when both branches reach `master`.
+5. Contract gaps found while implementing F5 are listed in
+   `docs/api/f5-resume-contract-gaps.md`; they are reported in the F5 pull
+   request instead of being guessed around in production code.
+
+Consequences: until B5 merges, live mode returns 404 for these routes. Mock mode
+is the acceptance path for F5. When B5 merges, regenerate `docs/api/openapi.json`
+and re-run the opt-in live resume spec; no frontend route or schema rename is
+expected.
+
+## ADR-042 - 2026-10-21 - F5 mock grounding, refresh and history semantics
+
+Context: F5 must be demonstrable without a backend while still failing closed
+on invented claims. The mock cannot be more permissive than B5 or the UI would
+look correct only in demo mode.
+
+Decision:
+
+1. The mock mirrors B5 generation: deterministic selection from the current
+   workspace, report-version checks, verbatim source text, evidence ids on every
+   claim, and a fixed section order. There is no random or LLM-generated content.
+2. Hand edits replace one section. Every claim must cite an active workspace
+   item; numbers, technologies, organisations, titles and dates are checked
+   against the cited evidence. The request schema matches B5's `minItems: 1`
+   and `extra="forbid"` rules, and an ungrounded line returns
+   `422 resume_claim_ungrounded` without writing a version. A rejected draft
+   stays in the textarea so the user's text is never lost.
+3. Refresh rebuilds only requested, unedited sections. Hand-edited sections are
+   skipped with `reason: "edited"`; overwriting one requires naming it in
+   `overwriteEditedSections` and confirming in the diff drawer. A skipped
+   section keeps deleted citations visible with `removed: true`; the studio
+   keeps a review banner and a "Review changes" action while
+   `removedEvidenceIds` is non-empty, even after `stale` itself clears.
+4. Restore is non-destructive: it copies a version into the current resume and
+   appends a new `restored` version. History shows the standard resume and saved
+   tailored snapshots separately, warns when a snapshot still cites missing
+   items, and never claims deleted information was recovered.
+5. There is no purge/delete control. B5 has no delete endpoint and versions are
+   insert-only; the UI explains that purge is coming instead of offering a dead
+   button. AI rewording is shown only when both the consent lookup and the
+   provider gate pass; the disabled copy names the missing gate.
+
+Consequences: History performs one detail request per saved tailored resume to
+compute the removed-information warning, because `ResumeSummary` intentionally
+omits `sections` and `removedEvidenceIds`. If that list grows, B5 should add a
+cheap `removedCount` to the summary rather than making the client fetch every
+snapshot.
