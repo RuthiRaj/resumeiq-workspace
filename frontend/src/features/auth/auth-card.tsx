@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { isLiveMode } from "@/lib/config/mode";
+import { CredentialQueryGuard } from "./credential-query-guard";
 
 /**
  * Centered glass auth shell shared by signin/signup/forgot-password.
@@ -39,6 +40,7 @@ export function AuthCard({
           {title}
         </h1>
         <p className="mt-2 text-sm leading-relaxed text-muted">{description}</p>
+        <CredentialQueryGuard />
         <div className="mt-6">{children}</div>
         <div className="mt-6 border-t border-white/[0.08] pt-4 text-sm text-muted">
           {footer}

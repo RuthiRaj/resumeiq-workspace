@@ -576,9 +576,11 @@ test.describe("route sweep", () => {
         // axe: WCAG 2.x A/AA. A streamed client navigation can briefly leave the
         // document without a <title>, so wait (bounded) for one before judging:
         // a page mid-transition is not a defect, a page that never gets a title
-        // still is.
+        // still is. `/signin` redirects an authenticated visitor to `/workspace`
+        // and that route is compiled on demand by the dev server, so allow for a
+        // cold compile after the redirect as well as a streamed transition.
         await page
-          .waitForFunction(() => document.title.trim().length > 0, null, { timeout: 5_000 })
+          .waitForFunction(() => document.title.trim().length > 0, null, { timeout: 10_000 })
           .catch(() => {});
         const axe = await new AxeBuilder({ page })
           .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])

@@ -1763,3 +1763,43 @@ Consequences: mobile uses nested scrolling (a normal app-shell pattern) and
 `window.scrollY` stays 0 inside the shell, so tests must scroll the app region,
 not the window. `NODE_ENV`-only development fixtures are now also gated on
 mock mode, so live `next dev` sessions never offer fictional postings.
+
+## ADR-038 - 2026-10-21 - Auth forms never carry credentials in the URL
+
+Context: opening the dev server through a LAN IP made Next block `/_next`
+resources, so `/signin` rendered its server HTML but never hydrated. The form
+had no method/action and its React submit handler was the only thing preventing
+navigation, so pressing "Sign in" performed a native GET and put the email and
+password in the address bar, browser history and any URL-based logging.
+
+Decision:
+
+1. `CredentialForm` owns every email/password form (sign in, sign up, forgot
+   password). It renders `method="post"`, a non-submitting `action="#"` and
+   `noValidate`, calls `preventDefault()` before React Hook Form, and ignores
+   submits until hydration. `CredentialSubmitButton` is disabled in the server
+   HTML and shows "Preparing a secure form..." only if hydration takes longer
+   than 400 ms.
+2. `src/proxy.ts` redirects auth-page requests with credential-looking query
+   parameters to the same URL without them (plus `notice=credentials`) before
+   the route renders. This is required in addition to `history.replaceState`:
+   the first RSC payload serialises the request URL, so a client-only cleanup
+   would leave the secret inside the document's script tags. `303` is used so a
+   no-JavaScript POST fallback becomes a GET instead of being replayed.
+3. `CredentialQueryGuard` runs inside `AuthCard` for client-side navigations
+   and restored URLs, calls `history.replaceState`, and shows "Never put your
+   password in a link. Change it if you typed it into the address bar." It
+   never stores the removed values.
+4. The scrubber is intentionally broad (password/pass/pwd, token, secret,
+   credential, api key, jwt, otp, session, code, email, including hash
+   fragments). False positives only drop query parameters; false negatives
+   leak. `next`, `reason` and the internal `notice` marker are preserved.
+
+Consequences: social/reset redirects that rely on a token in the URL fragment
+must be handled on a non-auth route before reaching these screens, and
+credential links no longer prefill anything. No analytics or logging code
+records request URLs today; Playwright now asserts that the only request that
+can carry the test secret is the user's own navigation and that neither the
+console nor the DOM retains it. The README documents opening
+`http://localhost:3000` and the opt-in `allowedDevOrigins` setting for
+same-network phones.

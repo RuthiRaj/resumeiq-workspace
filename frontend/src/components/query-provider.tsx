@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { isLiveMode } from "@/lib/config/mode";
+import { useMockBackendReady } from "@/lib/use-mock-backend";
 
 let client: QueryClient | null = null;
 function getQueryClient(): QueryClient {
@@ -16,13 +16,9 @@ function getQueryClient(): QueryClient {
   return client;
 }
 
-/** Live mode talks to the real API, so MSW must stay out of the way (I1). */
-const MOCKS_REQUIRED = process.env.NODE_ENV === "development" && !isLiveMode();
-
 /**
- * App-only data provider (F2+ routes under (app)/ and the auth screens). NOT
- * mounted on marketing routes, so the landing page never ships
- * @tanstack/react-query or the dev MSW starter.
+ * App-only data provider (F2+ routes under (app)/ and onboarding). NOT mounted
+ * on marketing routes, so the landing page never ships @tanstack/react-query.
  *
  * The mock API must be intercepting before any screen fires its first request:
  * React runs child effects before parent effects, so without this gate a
@@ -30,26 +26,14 @@ const MOCKS_REQUIRED = process.env.NODE_ENV === "development" && !isLiveMode();
  * get a passthrough 404, and bounce to `/signin` (PRD §8.4). In development we
  * therefore render nothing until `startMocks()` resolves; production never had
  * a mock API, so it renders immediately.
+ *
+ * The credential screens do not use this provider: they must keep their form
+ * in the server HTML even without JavaScript. They render immediately and wait
+ * on the same readiness flag before enabling submit (see AuthFormProviders).
  */
 export function QueryProvider({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(getQueryClient);
-  const [mocksReady, setMocksReady] = useState(!MOCKS_REQUIRED);
-
-  useEffect(() => {
-    if (!MOCKS_REQUIRED) return;
-    let cancelled = false;
-    void import("@/mocks/start")
-      .then(({ startMocks }) => startMocks())
-      .catch(() => false)
-      .then(() => {
-        // Render either way: if the worker failed to start, screens show their
-        // honest error states (see `startMocks`), never a blank page.
-        if (!cancelled) setMocksReady(true);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const mocksReady = useMockBackendReady();
 
   return (
     <QueryClientProvider client={queryClient}>
