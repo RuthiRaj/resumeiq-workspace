@@ -304,7 +304,7 @@ async def export_resume_pdf(resume_id: str, user: CurrentUser, service: Resumes)
     headers = {
         **check.headers(),
         "Content-Disposition": f'attachment; filename="{pdf_filename(resume)}"',
-        # Generated per request and never stored.
+        # Generated per request, served from memory and never persisted.
         "Cache-Control": "no-store",
     }
     return Response(content=pdf_bytes, media_type="application/pdf", headers=headers)

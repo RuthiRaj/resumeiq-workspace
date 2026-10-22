@@ -143,6 +143,9 @@ def test_resume_delete_and_version_delete_are_owner_scoped() -> None:
     assert seen[0].url.params["id"] == "eq.resume-1"
     assert seen[1].url.params["id"] == "eq.version-1"
     assert seen[1].url.params["resume_id"] == "eq.resume-1"
+    # A plain PostgREST DELETE is 204 with no body; only the representation
+    # preference lets the repository tell a real delete from a no-op.
+    assert all(request.headers["prefer"] == "return=representation" for request in seen)
 
 
 def test_version_purge_calls_the_narrow_rpc_without_a_user_id() -> None:

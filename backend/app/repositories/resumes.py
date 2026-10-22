@@ -537,11 +537,18 @@ class SupabaseResumeRepository:
         return snapshots
 
     async def delete_resume(self, user_id: str, resume_id: str) -> bool:
-        """Delete the resume row; claims/versions cascade inside Postgres."""
+        """Delete the resume row; claims/versions cascade inside Postgres.
+
+        ``return=representation`` is required: PostgREST answers a plain DELETE
+        with ``204`` and no body, which cannot distinguish "deleted one row"
+        from "matched no row" (RLS or a foreign id). The explicit preference
+        makes the caller's row count observable without a second query.
+        """
         response = await self._request(
             "DELETE",
             "/resumes",
             params={"id": f"eq.{resume_id}", "user_id": f"eq.{user_id}"},
+            prefer="return=representation",
         )
         self._raise_for_status(response)
         return bool(_as_list(_safe_json(response)))
@@ -555,6 +562,7 @@ class SupabaseResumeRepository:
                 "resume_id": f"eq.{resume_id}",
                 "user_id": f"eq.{user_id}",
             },
+            prefer="return=representation",
         )
         self._raise_for_status(response)
         return bool(_as_list(_safe_json(response)))

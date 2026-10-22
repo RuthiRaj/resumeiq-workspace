@@ -407,8 +407,6 @@ class ResumeService:
             if not version_removed:
                 continue
             sections, count, ids = _purge_sections(snapshot.version.sections, version_removed)
-            if count == 0:
-                continue
             surviving = {section.key for section in sections}
             version = snapshot.version.model_copy(
                 update={
@@ -421,6 +419,9 @@ class ResumeService:
                     ),
                 }
             )
+            # Rewrite even when no surviving claim cites the deleted item: the
+            # snapshot's evidence list must drop it too, otherwise the version
+            # would keep reporting ``removedEvidenceIds`` after a no-op purge.
             await self._resumes.purge_version(
                 user_id,
                 resume_id,
@@ -430,10 +431,12 @@ class ResumeService:
             purged_versions += 1
             removed_claims += count
             removed_ids.extend(item_id for item_id in ids if item_id not in removed_ids)
+            removed_ids.extend(item_id for item_id in version_removed if item_id not in removed_ids)
 
         sections, current_removed, current_ids = _purge_sections(entry.resume.sections, removed)
         removed_ids.extend(item_id for item_id in current_ids if item_id not in removed_ids)
-        if current_removed == 0:
+        removed_ids.extend(item_id for item_id in removed if item_id not in removed_ids)
+        if not removed:
             return ResumePurgeResult(
                 resume=self._decorate(entry, workspace),
                 purgedVersions=purged_versions,
@@ -673,7 +676,9 @@ class ResumeService:
         return entry.version.model_copy(
             update={
                 "sections": sections,
-                "stale": entry.version.workspaceVersion != workspace.version,
+                # Contract §6.5: a version is stale only when it predates the
+                # current workspace (a future version is not treated as stale).
+                "stale": entry.version.workspaceVersion < workspace.version,
                 "removedEvidenceIds": removed,
             }
         )

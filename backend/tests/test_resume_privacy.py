@@ -307,3 +307,40 @@ def test_purge_one_version_does_not_touch_the_others_or_the_current_resume(
     )
     assert standard.status_code == 409
     assert standard.json()["detail"]["code"] == "resume_not_tailored"
+
+
+def test_other_user_cannot_delete_or_purge_a_resume_or_version(
+    client: TestClient,
+    fake_repo: InMemoryWorkspaceRepository,
+) -> None:
+    seed_workspace(fake_repo, TEST_SUBJECT, seed_items())
+    headers = headers_for(TEST_SUBJECT)
+    target_id = prepare(client, headers)
+    resume = generate(client, headers, target_id)
+    version_id = client.get(f"{BASE}/resumes/{resume['id']}/versions", headers=headers).json()[0][
+        "id"
+    ]
+    experience = workspace_item(client, headers, "Senior Frontend Engineer")
+    asyncio.run(fake_repo.soft_delete_item(TEST_SUBJECT, experience["id"]))
+
+    other = headers_for(USER_B)
+    purge = client.post(f"{BASE}/resumes/{resume['id']}/purge", headers=other)
+    assert purge.status_code == 404
+    assert purge.json()["detail"]["code"] == "resume_not_found"
+    purge_version = client.post(
+        f"{BASE}/resumes/{resume['id']}/versions/{version_id}/purge", headers=other
+    )
+    assert purge_version.status_code == 404
+    assert purge_version.json()["detail"]["code"] == "resume_not_found"
+    delete_version = client.delete(
+        f"{BASE}/resumes/{resume['id']}/versions/{version_id}", headers=other
+    )
+    assert delete_version.status_code == 404
+
+    # A's data is untouched and still warns about the deleted item.
+    owned = client.get(f"{BASE}/resumes/{resume['id']}", headers=headers)
+    assert owned.status_code == 200
+    assert owned.json()["removedEvidenceIds"] == [experience["id"]]
+    versions = client.get(f"{BASE}/resumes/{resume['id']}/versions", headers=headers).json()
+    assert [row["id"] for row in versions] == [version_id]
+    assert versions[0]["removedEvidenceIds"] == [experience["id"]]

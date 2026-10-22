@@ -1972,6 +1972,19 @@ Decision:
    resumes; import items → sessions; requirements/reports/jobs → targets;
    evidence → workspace; relations → skills; then versions, change log, consent,
    audit, profile) and returns per-table counts.
+
+   Privileges required, and why: the function must be created by the migration
+   role (the schema owner, normally `postgres`/`supabase_admin`) because it is
+   `SECURITY DEFINER` and must delete from `resume_versions`, `change_log`,
+   `analysis_reports` and `audit_events`, which intentionally have no DELETE
+   policy. It needs only DELETE/SELECT on the `public` tables it names -- no
+   role membership, no `auth` schema write and no service-role key. EXECUTE is
+   revoked from `PUBLIC`/`anon` and granted only to `authenticated`, so the
+   definer rights are reachable only through a verified user token, and the
+   no-argument signature means the caller cannot choose whose rows are removed.
+   Deleting the `auth.users` identity additionally needs the Supabase Admin API
+   with a `service_role` key; that key is held by an operator outside this
+   service and never enters the repository, the backend process or the frontend.
 3. The function cannot touch `auth.users` and takes no user id, so it cannot
    select another account. It exists because four history tables intentionally
    have no DELETE policy; the function is the only path that can remove them.
