@@ -8,8 +8,9 @@ Tables reused (``db/migrations/0001_initial.sql`` + ``0007_resumes.sql``):
 
 * ``resumes``         -- one live row per tailored resume (the standard resume
   is derived from the workspace on every read and is never persisted);
-* ``resume_versions`` -- insert-only snapshots (generated/edited/restored/
-  refreshed), never updated or deleted;
+* ``resume_versions`` -- snapshots appended on create/edit/restore/refresh.
+  Normal mutations never rewrite history; only the explicit B6 delete/purge
+  calls remove a version or rewrite one ``snapshot`` through the 0008 RPC;
 * ``resume_claims``   -- one row per visible statement, including its evidence
   ids and section, so the evidence link survives independently of the JSON.
 
@@ -95,7 +96,7 @@ def _version_from_row(row: dict[str, object]) -> ResumeVersionResponse | None:
     except ValueError:
         return None
     reason = str(snapshot.get("reason", "generated"))
-    if reason not in ("generated", "edited", "restored", "refreshed"):
+    if reason not in ("generated", "edited", "restored", "refreshed", "purged"):
         reason = "generated"
     return ResumeVersionResponse(
         id=str(row.get("id")),
@@ -118,6 +119,37 @@ def _snapshot(
         "resume": resume.model_dump(mode="json"),
         "evidence": [entry.model_dump(mode="json") for entry in evidence],
         "reason": reason,
+    }
+
+
+def _snapshot_from_version(
+    version: ResumeVersionResponse, evidence: list[ResumeEvidence]
+) -> dict[str, object]:
+    """Rebuild a ``resume_versions.snapshot`` after a purge.
+
+    The original ``reason`` is preserved: purging a generated snapshot does not
+    turn it into a new generation, and the version list must keep telling the
+    user how the snapshot came to exist.
+    """
+    resume = ResumeResponse(
+        id=version.resumeId,
+        kind="tailored",
+        targetId=None,
+        title=version.title,
+        workspaceVersion=version.workspaceVersion,
+        stale=version.stale,
+        sections=version.sections,
+        createdAt=version.createdAt,
+        updatedAt=version.createdAt,
+        aiUsed=version.aiUsed,
+        ats=version.ats,
+        editedSections=version.editedSections,
+        removedEvidenceIds=[],
+    )
+    return {
+        "resume": resume.model_dump(mode="json"),
+        "evidence": [entry.model_dump(mode="json") for entry in evidence],
+        "reason": version.reason,
     }
 
 
@@ -160,6 +192,20 @@ class ResumeRepository(Protocol):
     async def get_version_snapshot(
         self, user_id: str, resume_id: str, version_id: str
     ) -> StoredVersion | None: ...
+
+    async def list_version_snapshots(self, user_id: str, resume_id: str) -> list[StoredVersion]: ...
+
+    async def delete_resume(self, user_id: str, resume_id: str) -> bool: ...
+
+    async def delete_version(self, user_id: str, resume_id: str, version_id: str) -> bool: ...
+
+    async def purge_version(
+        self,
+        user_id: str,
+        resume_id: str,
+        version: ResumeVersionResponse,
+        evidence: list[ResumeEvidence],
+    ) -> StoredVersion: ...
 
 
 class SupabaseResumeRepository:
@@ -461,4 +507,82 @@ class SupabaseResumeRepository:
         snapshot = _as_dict(rows[0].get("snapshot"))
         return StoredVersion(
             version=version, evidence=_evidence_from_json(snapshot.get("evidence"))
+        )
+
+    async def list_version_snapshots(self, user_id: str, resume_id: str) -> list[StoredVersion]:
+        response = await self._request(
+            "GET",
+            "/resume_versions",
+            params={
+                "user_id": f"eq.{user_id}",
+                "resume_id": f"eq.{resume_id}",
+                "select": "id,resume_id,workspace_version,snapshot,created_at",
+                "order": "created_at.desc",
+            },
+        )
+        self._raise_for_status(response)
+        rows = [_as_dict(row) for row in _as_list(_safe_json(response))]
+        snapshots: list[StoredVersion] = []
+        for row in rows:
+            version = _version_from_row(row)
+            if version is None:
+                continue
+            snapshot = _as_dict(row.get("snapshot"))
+            snapshots.append(
+                StoredVersion(
+                    version=version,
+                    evidence=_evidence_from_json(snapshot.get("evidence")),
+                )
+            )
+        return snapshots
+
+    async def delete_resume(self, user_id: str, resume_id: str) -> bool:
+        """Delete the resume row; claims/versions cascade inside Postgres."""
+        response = await self._request(
+            "DELETE",
+            "/resumes",
+            params={"id": f"eq.{resume_id}", "user_id": f"eq.{user_id}"},
+        )
+        self._raise_for_status(response)
+        return bool(_as_list(_safe_json(response)))
+
+    async def delete_version(self, user_id: str, resume_id: str, version_id: str) -> bool:
+        response = await self._request(
+            "DELETE",
+            "/resume_versions",
+            params={
+                "id": f"eq.{version_id}",
+                "resume_id": f"eq.{resume_id}",
+                "user_id": f"eq.{user_id}",
+            },
+        )
+        self._raise_for_status(response)
+        return bool(_as_list(_safe_json(response)))
+
+    async def purge_version(
+        self,
+        user_id: str,
+        resume_id: str,
+        version: ResumeVersionResponse,
+        evidence: list[ResumeEvidence],
+    ) -> StoredVersion:
+        """Rewrite one snapshot through the narrow ``0008`` RPC.
+
+        ``resume_versions`` has no UPDATE policy on purpose; the function checks
+        ``auth.uid()`` and the resume id and updates only the snapshot column.
+        """
+        response = await self._request(
+            "POST",
+            "/rpc/api_resume_version_purge",
+            json={
+                "p_resume_id": resume_id,
+                "p_version_id": version.id,
+                "p_snapshot": _snapshot_from_version(version, evidence),
+            },
+            prefer="return=minimal",
+        )
+        self._raise_for_status(response)
+        return StoredVersion(
+            version=version.model_copy(deep=True),
+            evidence=[entry.model_copy(deep=True) for entry in evidence],
         )

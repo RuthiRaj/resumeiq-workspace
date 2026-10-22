@@ -22,7 +22,7 @@ consent (``ai_consent_required``); otherwise generation is deterministic.
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Request, status
+from fastapi import APIRouter, Depends, Request, Response, status
 
 from app.ai.consent import ConsentGrant
 from app.ai.errors import AINotConfiguredError
@@ -33,14 +33,18 @@ from app.api.deps import (
     get_resume_service,
     require_ai_consent,
 )
+from app.export.errors import ExportVerificationError
+from app.export.pdf import pdf_filename, render_and_verify
 from app.schemas.resume import (
     ResumeDiff,
     ResumeGenerateRequest,
+    ResumePurgeResult,
     ResumeRefreshRequest,
     ResumeRefreshResponse,
     ResumeResponse,
     ResumeSectionEdit,
     ResumeSummary,
+    ResumeVersionPurgeResult,
     ResumeVersionResponse,
 )
 from app.services.resume_service import ResumeService
@@ -205,3 +209,102 @@ async def refresh_resume(
 ) -> ResumeRefreshResponse:
     consent = _ai_consent(request, user, requested=body.rewordWithAi)
     return await service.refresh(user.sub, resume_id, body, consent=consent)
+
+
+# --- Deletion, purge and PDF export (B6) ------------------------------------
+
+
+@router.delete(
+    "/resumes/{resume_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_class=Response,
+    summary="Permanently delete a tailored resume and its history",
+    responses={
+        404: {"description": "resume_not_found"},
+        409: {"description": "resume_not_tailored"},
+    },
+)
+async def delete_resume(resume_id: str, user: CurrentUser, service: Resumes) -> Response:
+    await service.delete_resume(user.sub, resume_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.delete(
+    "/resumes/{resume_id}/versions/{version_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_class=Response,
+    summary="Delete one saved resume version",
+    responses={
+        404: {"description": "resume_not_found | resume_version_not_found"},
+        409: {"description": "resume_not_tailored"},
+    },
+)
+async def delete_version(
+    resume_id: str,
+    version_id: str,
+    user: CurrentUser,
+    service: Resumes,
+) -> Response:
+    await service.delete_version(user.sub, resume_id, version_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post(
+    "/resumes/{resume_id}/purge",
+    response_model=ResumePurgeResult,
+    summary="Remove claims that cite deleted workspace items",
+    responses={
+        404: {"description": "resume_not_found"},
+        409: {"description": "resume_not_tailored"},
+    },
+)
+async def purge_resume(resume_id: str, user: CurrentUser, service: Resumes) -> ResumePurgeResult:
+    return await service.purge(user.sub, resume_id)
+
+
+@router.post(
+    "/resumes/{resume_id}/versions/{version_id}/purge",
+    response_model=ResumeVersionPurgeResult,
+    summary="Remove removed-item claims from one saved version",
+    responses={
+        404: {"description": "resume_not_found | resume_version_not_found"},
+        409: {"description": "resume_not_tailored"},
+    },
+)
+async def purge_version(
+    resume_id: str,
+    version_id: str,
+    user: CurrentUser,
+    service: Resumes,
+) -> ResumeVersionPurgeResult:
+    return await service.purge_version(user.sub, resume_id, version_id)
+
+
+@router.get(
+    "/resumes/{resume_id}/export.pdf",
+    response_class=Response,
+    response_model=None,
+    summary="Stream a single-column, text-selectable resume PDF",
+    responses={
+        200: {
+            "content": {"application/pdf": {}},
+            "description": (
+                "The generated PDF. X-Export-* headers report the text-extraction check."
+            ),
+        },
+        404: {"description": "resume_not_found"},
+        502: {"description": "export_verification_failed"},
+    },
+)
+async def export_resume_pdf(resume_id: str, user: CurrentUser, service: Resumes) -> Response:
+    resume = await service.get_resume(user.sub, resume_id)
+    pdf_bytes, check = render_and_verify(resume)
+    if not check.passed:
+        raise ExportVerificationError(check)
+    headers = {
+        **check.headers(),
+        "Content-Disposition": f'attachment; filename="{pdf_filename(resume)}"',
+        # Generated per request and never stored.
+        "Cache-Control": "no-store",
+    }
+    return Response(content=pdf_bytes, media_type="application/pdf", headers=headers)

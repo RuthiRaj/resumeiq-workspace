@@ -1881,3 +1881,107 @@ item order and bullet order (the tests assert this); a posting with no matches
 still yields a workspace-ordered fallback resume. AI output cannot introduce a
 metric/title/date/technology because the same validator that protects B3 runs
 per claim, and `aiUsed` is evidence of visible output, not of an attempted call.
+
+## ADR-041 - 2026-10-21 - B6 capabilities, resume summaries, deletion and purge
+
+Context: the F5 resume studio needs to know which optional features exist, needs
+to see "contains removed information" without fetching every full resume, and
+needs explicit delete/purge actions for a historical snapshot that cites a
+workspace item the user has since deleted (PRD §6.8 RG-6, PRD §6.9).
+
+Decision:
+
+1. `GET /capabilities` reports booleans only: AI configured (and the two AI-backed
+   features), PDF export, data export and account data deletion. No provider
+   name, model id, base URL, key or key length is returned. The AI flags mean
+   "at least one key is configured", never "the provider is healthy".
+2. `ResumeSummary` and `ResumeVersion` expose `removedEvidenceIds`; versions also
+   expose `stale`. Both are computed on read against the current workspace (they
+   are not stored), so the list and the history screen can warn and offer purge
+   without a second request. `GET /resumes/{id}/versions` is contractually
+   newest-first (`createdAt` descending).
+3. Normal mutations stay append-only. `DELETE /resumes/{id}` removes a tailored
+   resume (claims/versions cascade in Postgres). `DELETE …/versions/{id}` removes
+   one saved version and leaves the current resume untouched. The standard
+   resume is rejected with `409 resume_not_tailored`.
+4. `POST …/purge` and `POST …/versions/{id}/purge` remove only claims whose cited
+   item no longer exists. Surviving statements are copied verbatim (no rewrite or
+   reorder), empty sections and newly unused evidence are dropped,
+   `editedSections` keeps survivors, and a `purged` version is appended only when
+   the current resume changed. The operation is idempotent and a no-op reports
+   zero counts.
+5. `resume_versions` keeps its insert-only default; migration 0008 adds one
+   owner-scoped DELETE policy for the explicit version delete and a narrow
+   `SECURITY DEFINER` `api_resume_version_purge` that changes only `snapshot`
+   after checking `auth.uid()` and the resume id. Broad UPDATE on a history table
+   is deliberately not granted.
+
+Consequences: the UI can offer accurate, scoped deletion/purge actions, and a
+deleted workspace item can never be silently republished by a restore or an
+export. The purge response says exactly how many claims and versions changed.
+
+## ADR-042 - 2026-10-21 - B6 PDF export: licence, layout and round-trip check
+
+Context: PRD §6.9 EX-1 requires a server-generated, ATS-safe, text-selectable PDF
+with no fabricated content, no storage and no AGPL dependency.
+
+Decision:
+
+1. Rendering uses `reportlab` (BSD-3-Clause); verification uses `pypdf`
+   (BSD-3-Clause) to extract the text back. The bundled `DejaVuSans.ttf` font is
+   Bitstream Vera / public-domain DejaVu, with its licence file next to it. No
+   AGPL component is used, and the PDF is never written to disk or object storage.
+2. The layout is deliberately minimal: A4, single column, plain paragraphs,
+   conventional section headings (`Contact`, `Experience`, `Projects`,
+   `Education`, `Skills`, …), black text, no tables, images, columns, watermark
+   or branding. The only body content is `resume.sections[].claims` text.
+3. Claims flagged `removed` (their workspace item was deleted) are omitted: the
+   export must not republish deleted information. This is the same rule as purge,
+   applied at render time.
+4. After rendering, the bytes are read back with `pypdf`; every rendered heading
+   and claim must be found in the extracted, whitespace-normalised text. The
+   counts are returned in `X-Export-*` headers. A failed check returns
+   `502 export_verification_failed` and never serves the PDF. Headers carry counts
+   only, never claim text.
+5. The standard resume (`resume-standard`) and tailored resumes both export
+   through the same route; the derived standard is never persisted by this path.
+
+Consequences: an export either round-trips its own text layer or fails loudly.
+Adding a decorative element means extending the verification, which keeps the
+ATS guarantee honest rather than aspirational.
+
+## ADR-043 - 2026-10-21 - B6 data export and account deletion: no service-role key
+
+Context: PRD §6.9 EX-2 requires a complete data export and account deletion.
+Supabase's self-service API has no "delete my auth user" call for a normal access
+token. Adding a service-role key to the backend only to finish that step would
+put an RLS-bypassing credential in every request process.
+
+Decision:
+
+1. `GET /export` returns `resumeiq.data-export.v1`: one `select=*` query per
+   public table that can hold the caller's data, plus the profile row. Keys are
+   explicit; adding a user-owned table requires adding it to `EXPORT_TABLES` and
+   to contract §9. `userId`/`email` come from the verified token, not from
+   `auth.users`. No auth row, token, key or other user's row is included.
+2. `DELETE /account` requires the trimmed, case-insensitive phrase
+   `delete my account`; anything else is `400 account_confirmation_required` and
+   deletes nothing. It calls migration 0008's
+   `api_account_delete_data()`: SECURITY DEFINER, no arguments, resolves
+   `auth.uid()`, deletes public rows in dependency order (claims → versions →
+   resumes; import items → sessions; requirements/reports/jobs → targets;
+   evidence → workspace; relations → skills; then versions, change log, consent,
+   audit, profile) and returns per-table counts.
+3. The function cannot touch `auth.users` and takes no user id, so it cannot
+   select another account. It exists because four history tables intentionally
+   have no DELETE policy; the function is the only path that can remove them.
+4. `authUserDeleted` is `false` and `remainingStep: "auth_user"` on every B6
+   response. Completing the auth-identity deletion is a documented operator step
+   using a privileged admin API outside this service. The process holds no
+   service-role key and the frontend receives none.
+5. Neither route logs row contents, the confirmation phrase or a token. Failures
+   use the standard error envelope.
+
+Consequences: the API never claims a complete account deletion it did not
+perform. Data deletion is real, idempotent and isolated, while the remaining
+identity step is explicit in the response and in the operator documentation.
