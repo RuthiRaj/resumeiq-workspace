@@ -140,5 +140,17 @@ class AnalysisStaleError(RepositoryError):
         self.target_id = target_id
 
 
+class AccountConfirmationError(RepositoryError):
+    """The account-deletion body did not carry the explicit confirmation phrase."""
+
+
+class DataExportUnavailableError(RepositoryError):
+    """The complete-data export could not be read from the store."""
+
+
+class AccountDeletionUnavailableError(RepositoryError):
+    """The destructive account RPC is missing or the store is unavailable."""
+
+
 class DataApiNotConfiguredError(RepositoryError):
     """The Supabase Data API (URL + publishable key) is not configured."""

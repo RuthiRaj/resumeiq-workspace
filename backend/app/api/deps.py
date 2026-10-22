@@ -34,12 +34,14 @@ from app.analysis.enrichment import AnalysisEnricher
 from app.core.config import Settings
 from app.core.logging import get_logger
 from app.extraction.engine import DeterministicExtractionEngine, ExtractionEngine
+from app.repositories.data_export import DataExportRepository, SupabaseDataExportRepository
 from app.repositories.imports import ImportRepository, SupabaseImportRepository
 from app.repositories.resumes import ResumeRepository, SupabaseResumeRepository
 from app.repositories.targets import SupabaseTargetRepository, TargetRepository
 from app.repositories.workspace import SupabaseWorkspaceRepository, WorkspaceRepository
 from app.services.analysis_service import AnalysisService
 from app.services.import_service import ImportService
+from app.services.privacy_service import PrivacyService
 from app.services.resume_service import ClaimReworder, GatewayReworder, ResumeService
 from app.services.workspace_service import WorkspaceService
 
@@ -428,3 +430,31 @@ def get_resume_service(
         targets,
         reworder=get_resume_reworder(request),
     )
+
+
+# --- Privacy: export, capabilities, account deletion (B6) -------------------
+
+
+def get_data_export_repository(request: Request) -> DataExportRepository:
+    """An export/deletion repository bound to the caller's JWT (RLS enforced)."""
+    settings: Settings = request.app.state.settings
+    if not settings.data_api_configured:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "code": "data_api_not_configured",
+                "message": "Server data access is not configured.",
+            },
+        )
+    return SupabaseDataExportRepository(
+        settings.rest_url,
+        settings.supabase_publishable_key,
+        get_bearer_token(request),
+    )
+
+
+def get_privacy_service(
+    repository: Annotated[DataExportRepository, Depends(get_data_export_repository)],
+) -> PrivacyService:
+    """FastAPI dependency: export and account-data deletion for one caller."""
+    return PrivacyService(repository)

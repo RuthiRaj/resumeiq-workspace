@@ -7,7 +7,8 @@ version↔change-log gap (ADR-018); `0004_imports.sql` adds the B2 import tables
 and functions (ADR-028); `0005_analysis.sql` adds the B4 target/run/report
 columns; `0006_fixes.sql` corrects two findings from the B4 live check
 (ADR-034); `0007_resumes.sql` adds the B5 tailored-resume metadata and claim
-provenance columns (ADR-039). Apply them in order with the Supabase SQL editor
+provenance columns (ADR-039); `0008_privacy.sql` adds B6 deletion/purge
+policies and the account-data RPC (ADR-041/043). Apply them in order with the Supabase SQL editor
 or CLI (`supabase db push` once the project is linked). They reference
 `auth.users` / `auth.uid()`, so they only run on Supabase Postgres (or a local
 Postgres with an `auth` schema stub) — not on vanilla local Postgres.
@@ -150,9 +151,13 @@ items; unsupported statements are removed or flagged `needs confirmation`
 
 - RLS is enabled on **every** table. Policies restrict all access to
   `auth.uid() = user_id` — users can only read/write their own rows.
-- `change_log`, `audit_events`, `workspace_versions`, `analysis_reports`,
-  `resume_versions` are **insert-only**: they have SELECT + INSERT policies
-  and no UPDATE/DELETE policies, so updates/deletes are denied.
+- `change_log`, `audit_events`, `workspace_versions`, `analysis_reports` are
+  **insert-only**: they have SELECT + INSERT policies and no UPDATE/DELETE
+  policies, so updates/deletes are denied.
+- `resume_versions` is insert-only except for one owner-scoped DELETE policy
+  added by 0008 (B6 explicit version deletion). It still has no UPDATE policy:
+  purging a snapshot goes through the narrow `api_resume_version_purge`
+  function, which changes only `snapshot`.
 - The backend authenticates with the caller's Supabase JWT
   (`app/api/deps.py`), so Postgres sees the real `auth.uid()` and RLS
   applies end to end. The `service_role` key (bypasses RLS) is never used
@@ -205,3 +210,51 @@ remains insert-only; restoring copies a snapshot into a new version.
 Apply `0007_resumes.sql` after `0006_fixes.sql`. The opt-in
 `tests/test_resumes_integration.py` probes for these columns and skips with
 "migration 0007_resumes.sql is not applied" until they exist.
+
+## Migration 0008 — B6 privacy: delete, purge and account-data removal
+
+`0008_privacy.sql` is authored but **not yet applied**. It adds:
+
+- `resume_versions_owner_delete` — the first DELETE policy on that history
+  table, so `DELETE /resumes/{id}/versions/{id}` can work. It is owner-scoped
+  with `(select auth.uid()) = user_id` and adds no UPDATE policy.
+- `api_resume_version_purge(p_resume_id, p_version_id, p_snapshot)` — a
+  `SECURITY DEFINER` function with a pinned `search_path` that rewrites exactly
+  one owned snapshot (PRD RG-6). It takes no user id, resolves `auth.uid()`,
+  checks the resume id, validates that the payload is a JSON object, and changes
+  only `snapshot`. EXECUTE is revoked from `PUBLIC`/`anon` and granted to
+  `authenticated`.
+- `api_account_delete_data()` — a `SECURITY DEFINER` function with no arguments
+  that deletes every public row owned by `auth.uid()` in dependency order
+  (claims → versions → resumes; import items → sessions; requirements, reports
+  and jobs → targets; evidence → workspace items; relations → skills; then
+  workspace versions, change log, consent records, audit events and the
+  profile) and returns per-table counts. EXECUTE is granted to `authenticated`
+  only.
+
+The function cannot touch `auth.users`. The API therefore returns
+`authUserDeleted: false` and `remainingStep: "auth_user"`; completing that step
+is an operator action (see below).
+
+### Remaining account step: delete the auth identity
+
+The backend deliberately holds no `service_role` key, so `DELETE /account`
+removes all app data and stops. To finish an account deletion, an operator with
+access to the Supabase project:
+
+1. Confirms the request out-of-band and records the user's id (the API response
+   does not return it).
+2. Deletes the identity through the Supabase dashboard (Authentication → Users →
+   Delete user) or the Admin API
+   (`DELETE {SUPABASE_URL}/auth/v1/admin/users/{user_id}` with the
+   `service_role` key held only in the operator's environment).
+3. Verifies no `public` rows remain for that id:
+   `select count(*) from public.profiles where user_id = '<id>';` (expects `0`).
+
+Because every `public` foreign key to `auth.users` is `ON DELETE CASCADE`, step
+2 is a safety net rather than the only cleanup. Never commit or expose the
+`service_role` key, and never send it to the frontend.
+
+Apply `0008_privacy.sql` after `0007_resumes.sql`. The opt-in
+`tests/test_privacy_integration.py` skips with "migration 0008_privacy.sql is not
+applied" until the RPCs exist, and it never deletes real test users.

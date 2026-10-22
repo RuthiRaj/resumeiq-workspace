@@ -127,7 +127,7 @@ uv run python scripts/check_env.py
 uv run python scripts/check_env.py --strict   # exit 1 if an app variable is missing
 ```
 
-## API (B1–B5)
+## API (B1–B6)
 
 All workspace/resume endpoints require `Authorization: Bearer <Supabase JWT>` and
 mirror the F3 mock contract (`frontend/src/mocks/handlers.ts`):
@@ -185,17 +185,36 @@ Resume endpoints (B5, contract §6):
 | GET | `/api/v1/resumes` | standard + tailored summaries |
 | GET | `/api/v1/resumes/{id}` | one resume (`resume-standard` is derived) |
 | PATCH | `/api/v1/resumes/{id}/sections/{key}` | grounded hand edit |
-| GET | `/api/v1/resumes/{id}/versions` | insert-only history |
+| GET | `/api/v1/resumes/{id}/versions` | history, newest first |
 | POST | `/api/v1/resumes/{id}/versions/{version_id}/restore` | copy forward, keep history |
 | POST | `/api/v1/resumes/{id}/stale` | set the stale flag |
 | GET | `/api/v1/resumes/{id}/diff` | resume vs current workspace |
 | POST | `/api/v1/resumes/{id}/refresh` | refresh unedited sections |
+| DELETE | `/api/v1/resumes/{id}` | delete a tailored resume + history (204) |
+| DELETE | `/api/v1/resumes/{id}/versions/{version_id}` | delete one version (204) |
+| POST | `/api/v1/resumes/{id}/purge` | remove claims citing deleted items |
+| POST | `/api/v1/resumes/{id}/versions/{version_id}/purge` | purge one snapshot |
+| GET | `/api/v1/resumes/{id}/export.pdf` | streamed, text-checked PDF |
 
 Generation needs a report at the current workspace version (`analysis_required`
 / `analysis_stale`). The engine only reorders/trims existing items and every
 claim cites workspace item ids. `rewordWithAi: true` additionally needs a
 configured provider and recorded consent; an ungrounded rewrite falls back to
 the original text. See ADR-039/ADR-040.
+
+Privacy/export endpoints (B6, contract §9):
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/api/v1/capabilities` | booleans only; no provider name or key |
+| GET | `/api/v1/export` | complete caller JSON, `no-store` |
+| DELETE | `/api/v1/account` | explicit `delete my account` confirmation |
+
+`DELETE /account` removes every public row for the caller in dependency order and
+returns `authUserDeleted: false` with `remainingStep: "auth_user"`: the auth
+identity needs an operator-held admin key this process deliberately does not
+have (ADR-043 and `db/README.md`). PDF export is rendered per request, never
+stored, and its extracted text is verified before it is served (ADR-042).
 
 ## Tests
 
