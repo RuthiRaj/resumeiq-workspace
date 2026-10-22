@@ -54,7 +54,7 @@ from app.repositories.errors import (
     ResumeVersionNotFoundError,
     TargetNotFoundError,
 )
-from app.repositories.resumes import ResumeRepository, StoredResume
+from app.repositories.resumes import ResumeRepository, StoredResume, StoredVersion
 from app.repositories.targets import TargetRepository
 from app.repositories.workspace import WorkspaceRepository
 from app.schemas.analysis import AnalysisReport, AtsReport, JobTarget
@@ -62,6 +62,7 @@ from app.schemas.resume import (
     Claim,
     ResumeDiff,
     ResumeEvidence,
+    ResumePurgeResult,
     ResumeRefreshRequest,
     ResumeRefreshResponse,
     ResumeRefreshSkip,
@@ -69,6 +70,7 @@ from app.schemas.resume import (
     ResumeSection,
     ResumeSectionEdit,
     ResumeSummary,
+    ResumeVersionPurgeResult,
     ResumeVersionResponse,
 )
 from app.schemas.workspace import WorkspaceResponse
@@ -95,6 +97,36 @@ STANDARD_RESUME_ID = "resume-standard"
 STANDARD_TITLE = "Standard resume"
 
 _SECTION_KEYS = frozenset(TAILORED_SECTION_ORDER)
+
+
+def _purge_sections(
+    sections: list[ResumeSection], removed: set[str]
+) -> tuple[list[ResumeSection], int, list[str]]:
+    """Drop claims citing a removed item; return ``(sections, count, ids)``.
+
+    Surviving claims are copied verbatim and keep their order. A section left
+    with no claims is dropped rather than rendered as an empty heading.
+    """
+    kept: list[ResumeSection] = []
+    removed_claims = 0
+    cited: list[str] = []
+    for section in sections:
+        claims: list[Claim] = []
+        for claim in section.claims:
+            if any(item_id in removed for item_id in claim.evidenceIds):
+                removed_claims += 1
+                for item_id in claim.evidenceIds:
+                    if item_id in removed and item_id not in cited:
+                        cited.append(item_id)
+                continue
+            claims.append(claim.model_copy(deep=True))
+        if claims:
+            kept.append(ResumeSection(key=section.key, claims=claims))
+    return kept, removed_claims, cited
+
+
+def _surviving_evidence(evidence: list[ResumeEvidence], removed: set[str]) -> list[ResumeEvidence]:
+    return [entry.model_copy(deep=True) for entry in evidence if entry.itemId not in removed]
 
 
 class ClaimReworder(Protocol):
@@ -177,7 +209,9 @@ class ResumeService:
         if resume_id == STANDARD_RESUME_ID:
             return []
         await self._require_tailored(user_id, resume_id)
-        return await self._resumes.list_versions(user_id, resume_id)
+        workspace = await self._workspace.get_workspace(user_id)
+        snapshots = await self._resumes.list_version_snapshots(user_id, resume_id)
+        return [self._decorate_version(entry, workspace) for entry in snapshots]
 
     async def diff(self, user_id: str, resume_id: str) -> ResumeDiff:
         workspace = await self._workspace.get_workspace(user_id)
@@ -335,6 +369,155 @@ class ResumeService:
         logger.info("resume_marked_stale", extra={"resume_id": resume_id})
         return self._decorate(stored, workspace)
 
+    async def delete_resume(self, user_id: str, resume_id: str) -> None:
+        """Permanently delete a tailored resume, its claims and its versions."""
+        await self._require_tailored(user_id, resume_id)
+        deleted = await self._resumes.delete_resume(user_id, resume_id)
+        if not deleted:
+            raise ResumeNotFoundError(resume_id)
+        logger.info("resume_deleted", extra={"resume_id": resume_id})
+
+    async def delete_version(self, user_id: str, resume_id: str, version_id: str) -> None:
+        """Delete one saved version; the current resume is left untouched."""
+        await self._require_tailored(user_id, resume_id)
+        deleted = await self._resumes.delete_version(user_id, resume_id, version_id)
+        if not deleted:
+            raise ResumeVersionNotFoundError(version_id)
+        logger.info(
+            "resume_version_deleted",
+            extra={"resume_id": resume_id, "version_id": version_id},
+        )
+
+    async def purge(self, user_id: str, resume_id: str) -> ResumePurgeResult:
+        """Remove every claim that cites an item deleted after the snapshot.
+
+        Rewrites the current resume and every saved version in place. Surviving
+        statements are copied verbatim; a new ``purged`` version is appended
+        only when the current resume itself changed.
+        """
+        entry = await self._require_tailored(user_id, resume_id)
+        workspace = await self._workspace.get_workspace(user_id)
+        removed = set(removed_item_ids(entry.evidence, workspace))
+
+        purged_versions = 0
+        removed_claims = 0
+        removed_ids: list[str] = []
+        for snapshot in await self._resumes.list_version_snapshots(user_id, resume_id):
+            version_removed = set(removed_item_ids(snapshot.evidence, workspace))
+            if not version_removed:
+                continue
+            sections, count, ids = _purge_sections(snapshot.version.sections, version_removed)
+            surviving = {section.key for section in sections}
+            version = snapshot.version.model_copy(
+                update={
+                    "sections": sections,
+                    "editedSections": [
+                        key for key in snapshot.version.editedSections if key in surviving
+                    ],
+                    "aiUsed": any(
+                        claim.aiRewritten for section in sections for claim in section.claims
+                    ),
+                }
+            )
+            # Rewrite even when no surviving claim cites the deleted item: the
+            # snapshot's evidence list must drop it too, otherwise the version
+            # would keep reporting ``removedEvidenceIds`` after a no-op purge.
+            await self._resumes.purge_version(
+                user_id,
+                resume_id,
+                version,
+                _surviving_evidence(snapshot.evidence, version_removed),
+            )
+            purged_versions += 1
+            removed_claims += count
+            removed_ids.extend(item_id for item_id in ids if item_id not in removed_ids)
+            removed_ids.extend(item_id for item_id in version_removed if item_id not in removed_ids)
+
+        sections, current_removed, current_ids = _purge_sections(entry.resume.sections, removed)
+        removed_ids.extend(item_id for item_id in current_ids if item_id not in removed_ids)
+        removed_ids.extend(item_id for item_id in removed if item_id not in removed_ids)
+        if not removed:
+            return ResumePurgeResult(
+                resume=self._decorate(entry, workspace),
+                purgedVersions=purged_versions,
+                removedClaims=removed_claims,
+                removedEvidenceIds=removed_ids,
+            )
+
+        surviving = {section.key for section in sections}
+        resume = entry.resume.model_copy(
+            update={
+                "sections": sections,
+                "editedSections": [key for key in entry.resume.editedSections if key in surviving],
+                "aiUsed": any(
+                    claim.aiRewritten for section in sections for claim in section.claims
+                ),
+                "updatedAt": self._clock(),
+            }
+        )
+        stored = await self._resumes.update_resume(
+            user_id,
+            resume,
+            _surviving_evidence(entry.evidence, removed),
+            reason="purged",
+        )
+        logger.info(
+            "resume_purged",
+            extra={
+                "resume_id": resume_id,
+                "versions": purged_versions,
+                "claims": removed_claims + current_removed,
+            },
+        )
+        return ResumePurgeResult(
+            resume=self._decorate(stored, workspace),
+            purgedVersions=purged_versions,
+            removedClaims=removed_claims + current_removed,
+            removedEvidenceIds=removed_ids,
+        )
+
+    async def purge_version(
+        self, user_id: str, resume_id: str, version_id: str
+    ) -> ResumeVersionPurgeResult:
+        """Remove removed-item claims from exactly one saved snapshot."""
+        await self._require_tailored(user_id, resume_id)
+        snapshot = await self._resumes.get_version_snapshot(user_id, resume_id, version_id)
+        if snapshot is None:
+            raise ResumeVersionNotFoundError(version_id)
+        workspace = await self._workspace.get_workspace(user_id)
+        removed = set(removed_item_ids(snapshot.evidence, workspace))
+        sections, count, ids = _purge_sections(snapshot.version.sections, removed)
+        if count == 0:
+            return ResumeVersionPurgeResult(
+                version=self._decorate_version(snapshot, workspace),
+                removedClaims=0,
+                removedEvidenceIds=[],
+            )
+        surviving = {section.key for section in sections}
+        version = snapshot.version.model_copy(
+            update={
+                "sections": sections,
+                "editedSections": [
+                    key for key in snapshot.version.editedSections if key in surviving
+                ],
+                "aiUsed": any(
+                    claim.aiRewritten for section in sections for claim in section.claims
+                ),
+            }
+        )
+        purged = await self._resumes.purge_version(
+            user_id, resume_id, version, _surviving_evidence(snapshot.evidence, removed)
+        )
+        logger.info(
+            "resume_version_purged",
+            extra={"resume_id": resume_id, "version_id": version_id, "claims": count},
+        )
+        return ResumeVersionPurgeResult(
+            version=self._decorate_version(purged, workspace),
+            removedClaims=count,
+            removedEvidenceIds=ids,
+        )
+
     async def restore(self, user_id: str, resume_id: str, version_id: str) -> ResumeResponse:
         entry = await self._require_tailored(user_id, resume_id)
         snapshot = await self._resumes.get_version_snapshot(user_id, resume_id, version_id)
@@ -465,8 +648,39 @@ class ResumeService:
             stale=resume.stale,
             aiUsed=resume.aiUsed,
             editedSections=list(resume.editedSections),
+            removedEvidenceIds=list(resume.removedEvidenceIds),
             createdAt=resume.createdAt,
             updatedAt=resume.updatedAt,
+        )
+
+    def _decorate_version(
+        self, entry: StoredVersion, workspace: WorkspaceResponse
+    ) -> ResumeVersionResponse:
+        """Compute the read-only flags a saved snapshot needs."""
+        removed = removed_item_ids(entry.evidence, workspace)
+        removed_set = set(removed)
+        sections = [
+            ResumeSection(
+                key=section.key,
+                claims=[
+                    claim.model_copy(
+                        update={
+                            "removed": any(item_id in removed_set for item_id in claim.evidenceIds)
+                        }
+                    )
+                    for claim in section.claims
+                ],
+            )
+            for section in entry.version.sections
+        ]
+        return entry.version.model_copy(
+            update={
+                "sections": sections,
+                # Contract §6.5: a version is stale only when it predates the
+                # current workspace (a future version is not treated as stale).
+                "stale": entry.version.workspaceVersion < workspace.version,
+                "removedEvidenceIds": removed,
+            }
         )
 
     def _decorate(self, entry: StoredResume, workspace: WorkspaceResponse) -> ResumeResponse:

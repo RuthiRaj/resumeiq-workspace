@@ -21,7 +21,9 @@ from app.schemas.analysis import AtsReport
 from app.schemas.workspace import EvidenceState
 
 ResumeKind = Literal["standard", "tailored"]
-ResumeVersionReason = Literal["generated", "edited", "restored", "refreshed"]
+#: ``purged`` is only used by the B6 "remove deleted information" operation. The
+#: snapshot is rewritten without claims that cited a deleted workspace item.
+ResumeVersionReason = Literal["generated", "edited", "restored", "refreshed", "purged"]
 
 TitleText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)]
 ClaimText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=600)]
@@ -101,11 +103,22 @@ class ResumeSummary(BaseModel):
     stale: bool = False
     aiUsed: bool = False
     editedSections: list[str] = Field(default_factory=list)
+    #: Cited item ids that no longer exist in the current workspace. B6 exposes
+    #: this on list rows so the history screen can offer "purge removed info".
+    removedEvidenceIds: list[str] = Field(default_factory=list)
     createdAt: str
     updatedAt: str
 
 
 class ResumeVersionResponse(BaseModel):
+    """One saved snapshot.
+
+    Versions are returned **newest first** by every endpoint. ``stale`` is
+    computed on read against the current workspace version (it is not stored),
+    and ``removedEvidenceIds`` lists cited items that no longer exist, so a
+    historical snapshot can be flagged before it is restored or purged.
+    """
+
     id: str
     resumeId: str
     workspaceVersion: int
@@ -116,6 +129,10 @@ class ResumeVersionResponse(BaseModel):
     sections: list[ResumeSection] = Field(default_factory=list)
     ats: AtsReport | None = None
     editedSections: list[str] = Field(default_factory=list)
+    #: Computed on read: the snapshot predates the current workspace version.
+    stale: bool = False
+    #: Computed on read: cited item ids deleted since this snapshot was saved.
+    removedEvidenceIds: list[str] = Field(default_factory=list)
 
 
 # --- Requests ---------------------------------------------------------------
@@ -191,3 +208,28 @@ class ResumeRefreshResponse(BaseModel):
     resume: ResumeResponse
     refreshedSections: list[str] = Field(default_factory=list)
     skippedSections: list[ResumeRefreshSkip] = Field(default_factory=list)
+
+
+# --- Delete / purge results (B6) -------------------------------------------
+
+
+class ResumePurgeResult(BaseModel):
+    """``POST /resumes/{id}/purge``: removed information was rewritten away.
+
+    The current resume is updated and every saved version is rewritten in place;
+    no claim that cited a deleted workspace item survives. A new ``purged``
+    version is appended only when the current resume itself changed.
+    """
+
+    resume: ResumeResponse
+    purgedVersions: int = 0
+    removedClaims: int = 0
+    removedEvidenceIds: list[str] = Field(default_factory=list)
+
+
+class ResumeVersionPurgeResult(BaseModel):
+    """``POST /resumes/{id}/versions/{version_id}/purge`` result."""
+
+    version: ResumeVersionResponse
+    removedClaims: int = 0
+    removedEvidenceIds: list[str] = Field(default_factory=list)

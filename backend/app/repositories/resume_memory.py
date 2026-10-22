@@ -3,8 +3,9 @@
 Mirrors the Supabase rules the service relies on:
 
 * every read/write is scoped to one ``user_id`` (isolation tests assert it);
-* creating, editing, restoring or refreshing appends a version (insert-only);
-* versions are never removed, so a restore is non-destructive;
+* creating, editing, restoring or refreshing appends a version, so a restore
+  is non-destructive;
+* only the explicit B6 delete/purge calls remove or rewrite a version;
 * the stored sections/evidence snapshots survive a workspace change, which is
   what makes diff and the removed-item flag possible.
 """
@@ -15,7 +16,7 @@ from collections.abc import Callable
 from datetime import UTC, datetime
 from uuid import uuid4
 
-from app.repositories.errors import ResumeNotFoundError
+from app.repositories.errors import ResumeNotFoundError, ResumeVersionNotFoundError
 from app.repositories.resumes import StoredResume, StoredVersion
 from app.schemas.resume import (
     ResumeEvidence,
@@ -117,6 +118,53 @@ class InMemoryResumeRepository:
                     evidence=[item.model_copy(deep=True) for item in entry.evidence],
                 )
         return None
+
+    async def list_version_snapshots(self, user_id: str, resume_id: str) -> list[StoredVersion]:
+        versions = self._versions.get(user_id, {}).get(resume_id, [])
+        return [
+            StoredVersion(
+                version=entry.version.model_copy(deep=True),
+                evidence=[item.model_copy(deep=True) for item in entry.evidence],
+            )
+            for entry in reversed(versions)
+        ]
+
+    async def delete_resume(self, user_id: str, resume_id: str) -> bool:
+        resumes = self._resumes.get(user_id, {})
+        if resume_id not in resumes:
+            return False
+        del resumes[resume_id]
+        self._versions.get(user_id, {}).pop(resume_id, None)
+        return True
+
+    async def delete_version(self, user_id: str, resume_id: str, version_id: str) -> bool:
+        versions = self._versions.get(user_id, {}).get(resume_id, [])
+        for index, entry in enumerate(versions):
+            if entry.version.id == version_id:
+                del versions[index]
+                return True
+        return False
+
+    async def purge_version(
+        self,
+        user_id: str,
+        resume_id: str,
+        version: ResumeVersionResponse,
+        evidence: list[ResumeEvidence],
+    ) -> StoredVersion:
+        versions = self._versions.get(user_id, {}).get(resume_id, [])
+        for index, entry in enumerate(versions):
+            if entry.version.id == version.id:
+                replaced = StoredVersion(
+                    version=version.model_copy(deep=True),
+                    evidence=[item.model_copy(deep=True) for item in evidence],
+                )
+                versions[index] = replaced
+                return StoredVersion(
+                    version=replaced.version.model_copy(deep=True),
+                    evidence=[item.model_copy(deep=True) for item in replaced.evidence],
+                )
+        raise ResumeVersionNotFoundError(version.id)
 
     # -- internals -----------------------------------------------------------
 

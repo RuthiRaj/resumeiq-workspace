@@ -595,6 +595,45 @@
             }
           }
         }
+      },
+      "delete": {
+        "tags": [
+          "resumes"
+        ],
+        "summary": "Permanently delete a tailored resume and its history",
+        "operationId": "delete_resume_api_v1_resumes__resume_id__delete",
+        "parameters": [
+          {
+            "name": "resume_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Resume Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "resume_not_found"
+          },
+          "409": {
+            "description": "resume_not_tailored"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/resumes/{resume_id}/sections/{section_key}": {
@@ -912,6 +951,205 @@
           },
           "503": {
             "description": "ai_not_configured"
+          }
+        }
+      }
+    },
+    "/api/v1/resumes/{resume_id}/versions/{version_id}": {
+      "delete": {
+        "tags": [
+          "resumes"
+        ],
+        "summary": "Delete one saved resume version",
+        "operationId": "delete_version_api_v1_resumes__resume_id__versions__version_id__delete",
+        "parameters": [
+          {
+            "name": "resume_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Resume Id"
+            }
+          },
+          {
+            "name": "version_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Version Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "resume_not_found | resume_version_not_found"
+          },
+          "409": {
+            "description": "resume_not_tailored"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/resumes/{resume_id}/purge": {
+      "post": {
+        "tags": [
+          "resumes"
+        ],
+        "summary": "Remove claims that cite deleted workspace items",
+        "operationId": "purge_resume_api_v1_resumes__resume_id__purge_post",
+        "parameters": [
+          {
+            "name": "resume_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Resume Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResumePurgeResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "resume_not_found"
+          },
+          "409": {
+            "description": "resume_not_tailored"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/resumes/{resume_id}/versions/{version_id}/purge": {
+      "post": {
+        "tags": [
+          "resumes"
+        ],
+        "summary": "Remove removed-item claims from one saved version",
+        "operationId": "purge_version_api_v1_resumes__resume_id__versions__version_id__purge_post",
+        "parameters": [
+          {
+            "name": "resume_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Resume Id"
+            }
+          },
+          {
+            "name": "version_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Version Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResumeVersionPurgeResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "resume_not_found | resume_version_not_found"
+          },
+          "409": {
+            "description": "resume_not_tailored"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/resumes/{resume_id}/export.pdf": {
+      "get": {
+        "tags": [
+          "resumes"
+        ],
+        "summary": "Stream a single-column, text-selectable resume PDF",
+        "operationId": "export_resume_pdf_api_v1_resumes__resume_id__export_pdf_get",
+        "parameters": [
+          {
+            "name": "resume_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Resume Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The generated PDF. X-Export-* headers report the text-extraction check.",
+            "content": {
+              "application/pdf": {}
+            }
+          },
+          "404": {
+            "description": "resume_not_found"
+          },
+          "502": {
+            "description": "export_verification_failed"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
           }
         }
       }
@@ -1425,10 +1663,212 @@
           }
         }
       }
+    },
+    "/api/v1/capabilities": {
+      "get": {
+        "tags": [
+          "privacy"
+        ],
+        "summary": "Report which optional features this server can offer",
+        "description": "Feature switches only: no provider, model, URL or key is disclosed.",
+        "operationId": "capabilities_api_v1_capabilities_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Capabilities"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/export": {
+      "get": {
+        "tags": [
+          "privacy"
+        ],
+        "summary": "Download every record this account owns",
+        "operationId": "export_data_api_v1_export_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserDataExport"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "data_export_unavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/account": {
+      "delete": {
+        "tags": [
+          "privacy"
+        ],
+        "summary": "Delete this account's data after an explicit confirmation",
+        "operationId": "delete_account_api_v1_account_delete",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccountDeleteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountDeletionResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "account_confirmation_required"
+          },
+          "503": {
+            "description": "account_deletion_unavailable"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "AccountDeleteRequest": {
+        "properties": {
+          "confirmation": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Confirmation",
+            "examples": [
+              "delete my account"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "confirmation"
+        ],
+        "title": "AccountDeleteRequest",
+        "description": "Explicit confirmation; a typo must never delete an account."
+      },
+      "AccountDeletionCapability": {
+        "properties": {
+          "dataDeletion": {
+            "type": "boolean",
+            "title": "Datadeletion",
+            "default": true
+          },
+          "authUserDeletion": {
+            "type": "boolean",
+            "title": "Authuserdeletion",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "AccountDeletionCapability",
+        "description": "Two-step truth: public data is removable here; the auth row is not.\n\nSupabase's self-service API has no \"delete my auth user\" call for a normal\naccess token. Adding a service-role key to this process only to finish that\nstep would give every request path an RLS-bypassing credential, so B6 stops\nafter deleting every public row and exposes the remaining step explicitly."
+      },
+      "AccountDeletionResult": {
+        "properties": {
+          "dataDeleted": {
+            "type": "boolean",
+            "title": "Datadeleted"
+          },
+          "authUserDeleted": {
+            "type": "boolean",
+            "title": "Authuserdeleted"
+          },
+          "remainingStep": {
+            "anyOf": [
+              {
+                "type": "string",
+                "const": "auth_user"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remainingstep"
+          },
+          "deletedAt": {
+            "type": "string",
+            "title": "Deletedat"
+          },
+          "deletedCounts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Deletedcounts"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "dataDeleted",
+          "authUserDeleted",
+          "deletedAt",
+          "message"
+        ],
+        "title": "AccountDeletionResult",
+        "description": "What was actually removed.\n\n``authUserDeleted`` is false in B6 on purpose. The response says so rather\nthan claiming a complete account deletion. ``remainingStep`` is ``None``\nonly when an auth-user deletion path was actually available and succeeded."
+      },
+      "AiCapabilities": {
+        "properties": {
+          "configured": {
+            "type": "boolean",
+            "title": "Configured"
+          },
+          "analysisEnrichment": {
+            "type": "boolean",
+            "title": "Analysisenrichment"
+          },
+          "resumeRewording": {
+            "type": "boolean",
+            "title": "Resumerewording"
+          }
+        },
+        "type": "object",
+        "required": [
+          "configured",
+          "analysisEnrichment",
+          "resumeRewording"
+        ],
+        "title": "AiCapabilities",
+        "description": "What the server can do with AI, without naming a provider or a model."
+      },
       "AnalysisFailure": {
         "properties": {
           "code": {
@@ -1897,6 +2337,33 @@
         },
         "type": "object",
         "title": "Body_create_import_api_v1_imports_post"
+      },
+      "Capabilities": {
+        "properties": {
+          "ai": {
+            "$ref": "#/components/schemas/AiCapabilities"
+          },
+          "pdfExport": {
+            "type": "boolean",
+            "title": "Pdfexport",
+            "default": true
+          },
+          "dataExport": {
+            "type": "boolean",
+            "title": "Dataexport",
+            "default": true
+          },
+          "accountDeletion": {
+            "$ref": "#/components/schemas/AccountDeletionCapability"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ai",
+          "accountDeletion"
+        ],
+        "title": "Capabilities",
+        "description": "``GET /capabilities`` \u2014 feature switches, never provider names or keys."
       },
       "ChangeLogEntryResponse": {
         "properties": {
@@ -2997,6 +3464,36 @@
         "title": "ResumeGenerateRequest",
         "description": "``POST /targets/{target_id}/resume`` body (contract \u00a76.1)."
       },
+      "ResumePurgeResult": {
+        "properties": {
+          "resume": {
+            "$ref": "#/components/schemas/ResumeResponse"
+          },
+          "purgedVersions": {
+            "type": "integer",
+            "title": "Purgedversions",
+            "default": 0
+          },
+          "removedClaims": {
+            "type": "integer",
+            "title": "Removedclaims",
+            "default": 0
+          },
+          "removedEvidenceIds": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Removedevidenceids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "resume"
+        ],
+        "title": "ResumePurgeResult",
+        "description": "``POST /resumes/{id}/purge``: removed information was rewritten away.\n\nThe current resume is updated and every saved version is rewritten in place;\nno claim that cited a deleted workspace item survives. A new ``purged``\nversion is appended only when the current resume itself changed."
+      },
       "ResumeRefreshRequest": {
         "properties": {
           "sections": {
@@ -3267,6 +3764,13 @@
             "type": "array",
             "title": "Editedsections"
           },
+          "removedEvidenceIds": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Removedevidenceids"
+          },
           "createdAt": {
             "type": "string",
             "title": "Createdat"
@@ -3286,6 +3790,31 @@
         ],
         "title": "ResumeSummary",
         "description": "List row for ``GET /resumes`` (standard + tailored)."
+      },
+      "ResumeVersionPurgeResult": {
+        "properties": {
+          "version": {
+            "$ref": "#/components/schemas/ResumeVersionResponse"
+          },
+          "removedClaims": {
+            "type": "integer",
+            "title": "Removedclaims",
+            "default": 0
+          },
+          "removedEvidenceIds": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Removedevidenceids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "version"
+        ],
+        "title": "ResumeVersionPurgeResult",
+        "description": "``POST /resumes/{id}/versions/{version_id}/purge`` result."
       },
       "ResumeVersionResponse": {
         "properties": {
@@ -3311,7 +3840,8 @@
               "generated",
               "edited",
               "restored",
-              "refreshed"
+              "refreshed",
+              "purged"
             ],
             "title": "Reason"
           },
@@ -3354,6 +3884,18 @@
             },
             "type": "array",
             "title": "Editedsections"
+          },
+          "stale": {
+            "type": "boolean",
+            "title": "Stale",
+            "default": false
+          },
+          "removedEvidenceIds": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Removedevidenceids"
           }
         },
         "type": "object",
@@ -3364,7 +3906,8 @@
           "createdAt",
           "reason"
         ],
-        "title": "ResumeVersionResponse"
+        "title": "ResumeVersionResponse",
+        "description": "One saved snapshot.\n\nVersions are returned **newest first** by every endpoint. ``stale`` is\ncomputed on read against the current workspace version (it is not stored),\nand ``removedEvidenceIds`` lists cited items that no longer exist, so a\nhistorical snapshot can be flagged before it is restored or purged."
       },
       "RoadmapStep": {
         "properties": {
@@ -3614,6 +4157,190 @@
         ],
         "title": "TargetCreate",
         "description": "``POST /targets`` body (contract \u00a73.3)."
+      },
+      "UserDataExport": {
+        "properties": {
+          "format": {
+            "type": "string",
+            "const": "resumeiq.data-export.v1",
+            "title": "Format",
+            "default": "resumeiq.data-export.v1"
+          },
+          "exportedAt": {
+            "type": "string",
+            "title": "Exportedat"
+          },
+          "userId": {
+            "type": "string",
+            "title": "Userid"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "workspace": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Workspace"
+          },
+          "workspaceVersions": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Workspaceversions"
+          },
+          "evidenceLinks": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Evidencelinks"
+          },
+          "changeLog": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Changelog"
+          },
+          "targets": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Targets"
+          },
+          "jdRequirements": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Jdrequirements"
+          },
+          "reports": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Reports"
+          },
+          "analysisRuns": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Analysisruns"
+          },
+          "resumes": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Resumes"
+          },
+          "resumeVersions": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Resumeversions"
+          },
+          "resumeClaims": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Resumeclaims"
+          },
+          "consentRecords": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Consentrecords"
+          },
+          "imports": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Imports"
+          },
+          "importReviewItems": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Importreviewitems"
+          },
+          "profile": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile"
+          },
+          "skills": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Skills"
+          },
+          "skillRelations": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Skillrelations"
+          },
+          "auditEvents": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Auditevents"
+          }
+        },
+        "type": "object",
+        "required": [
+          "exportedAt",
+          "userId"
+        ],
+        "title": "UserDataExport",
+        "description": "``GET /export`` \u2014 every public row owned by the caller, as stored JSON."
       },
       "ValidationError": {
         "properties": {
