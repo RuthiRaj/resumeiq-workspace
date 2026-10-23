@@ -125,6 +125,38 @@ export function createMockAuthClient(): AuthClient {
         throw toAuthError(err);
       }
     },
+    async signOutEverywhere(): Promise<void> {
+      // Mock mode has one session per browser; the same endpoint clears it.
+      try {
+        await request<void>("/signout", { method: "POST" });
+      } catch (err) {
+        throw toAuthError(err);
+      }
+    },
+    async changePassword(
+      currentPassword: string,
+      newPassword: string,
+    ): Promise<void> {
+      try {
+        await request<void>("/password", {
+          method: "POST",
+          body: JSON.stringify({ currentPassword, newPassword }),
+        });
+      } catch (err) {
+        throw toAuthError(err);
+      }
+    },
+    async updateDisplayName(name: string): Promise<Session> {
+      try {
+        const data = await request<{ session: Session }>("/profile", {
+          method: "PATCH",
+          body: JSON.stringify({ name }),
+        });
+        return data.session;
+      } catch (err) {
+        throw toAuthError(err);
+      }
+    },
   };
 }
 

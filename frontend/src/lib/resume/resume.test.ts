@@ -108,7 +108,11 @@ describe("buildResumeDiff", () => {
 
 describe("aiRewordAvailability", () => {
   it("stays disabled and explains the missing consent gate", () => {
-    const availability = aiRewordAvailability(null);
+    const availability = aiRewordAvailability(null, {
+      configured: true,
+      analysisEnrichment: true,
+      resumeRewording: true,
+    });
 
     expect(availability.enabled).toBe(false);
     expect(availability.consentGranted).toBe(false);
@@ -117,12 +121,15 @@ describe("aiRewordAvailability", () => {
   });
 
   it("enables rewording only after consent is recorded", () => {
-    const availability = aiRewordAvailability({
-      aiProcessing: true,
-      provider: "test-provider",
-      recordedAt: "2026-10-21T09:00:00.000Z",
-      version: 1,
-    });
+    const availability = aiRewordAvailability(
+      {
+        aiProcessing: true,
+        provider: "test-provider",
+        recordedAt: "2026-10-21T09:00:00.000Z",
+        version: 1,
+      },
+      { configured: true, analysisEnrichment: true, resumeRewording: true },
+    );
 
     expect(availability.enabled).toBe(true);
     expect(availability.reason).toContain("Only bullet lines are sent");

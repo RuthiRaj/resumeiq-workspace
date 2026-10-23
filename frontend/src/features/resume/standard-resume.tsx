@@ -24,6 +24,7 @@ import {
   orderedSectionKeys,
   sectionLabel,
 } from "./resume-preferences";
+import { PdfExportButton } from "./pdf-export-button";
 import { ResumePaper } from "./resume-paper";
 import { useResumePreferences } from "./use-resume-preferences";
 
@@ -98,6 +99,7 @@ export function StandardResumePage() {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <SyncIndicator syncing={sync.syncing} syncedAt={sync.syncedAt} />
+            <PdfExportButton resumeId={data.id} />
             <Button
               variant="secondary"
               size="sm"

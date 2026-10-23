@@ -34,6 +34,9 @@ function client(): AuthClient {
     signInWithOAuth: async () => SESSION,
     requestPasswordReset: async () => ({ message: "If that email has an account, a reset link is on its way." }),
     signOut: async () => {},
+    signOutEverywhere: async () => {},
+    changePassword: async () => {},
+    updateDisplayName: async () => SESSION,
   };
 }
 

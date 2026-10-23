@@ -6,6 +6,13 @@ remain after reconciling F5 against that export. F5 does not modify backend
 code. Each item states the temporary frontend behaviour and what should change
 in the contract.
 
+> Historical note (F6): B6 resolved all five gaps below. Capabilities now
+> report AI availability, delete/purge routes exist, `ResumeSummary` and
+> `ResumeVersion` carry `removedEvidenceIds`/`stale`, and the OpenAPI version
+> description documents newest-first ordering. F6 removes the temporary
+> behaviours described here; remaining B6 gaps live in
+> `docs/api/f6-privacy-contract-gaps.md`.
+
 ## 1. No AI-provider capability endpoint
 
 `ResumeGenerateRequest.rewordWithAi` can return `503 ai_not_configured`, but

@@ -1,5 +1,5 @@
 import type { Consent } from "@/lib/privacy/consent";
-import { isLiveMode } from "@/lib/config/mode";
+import type { AiCapabilities } from "@/lib/schemas";
 
 /**
  * AI rewording availability (PRD §6.9 EX-3, B5 §6.7).
@@ -7,12 +7,12 @@ import { isLiveMode } from "@/lib/config/mode";
  * Generation is deterministic and never needs AI. Rewording is optional and
  * only enabled when both gates pass:
  *  1. the user has recorded AI-processing consent;
- *  2. an AI provider is configured on the server.
+ *  2. `GET /capabilities` says the server has AI and `resumeRewording` on.
  *
- * The B5 contract has no capability endpoint, so live mode exposes gate 2 as
- * the build-time `NEXT_PUBLIC_AI_REWORDING_CONFIGURED` flag (default false).
- * Mock mode has a deterministic stand-in provider, so it reports configured.
- * See docs/DECISIONS.md ADR-041.
+ * Capabilities are the source of truth (`NEXT_PUBLIC_AI_REWORDING_CONFIGURED`
+ * is gone). While the call is loading, or if it fails, `capabilities` is null
+ * and the safe answer is "AI unavailable" — never an optimistic guess.
+ * See docs/DECISIONS.md ADR-046.
  */
 
 export interface AiRewordAvailability {
@@ -22,23 +22,39 @@ export interface AiRewordAvailability {
   reason: string;
 }
 
-export function aiProviderConfigured(): boolean {
-  if (!isLiveMode()) return true;
-  return process.env.NEXT_PUBLIC_AI_REWORDING_CONFIGURED === "true";
-}
-
 export function aiRewordAvailability(
   consent: Consent | null | undefined,
+  capabilities: AiCapabilities | null | undefined,
 ): AiRewordAvailability {
   const consentGranted = Boolean(consent?.aiProcessing);
-  const providerConfigured = aiProviderConfigured();
-  if (!providerConfigured) {
+  const providerConfigured = Boolean(
+    capabilities?.configured && capabilities.resumeRewording,
+  );
+  if (!capabilities) {
     return {
       enabled: false,
       consentGranted,
-      providerConfigured,
+      providerConfigured: false,
       reason:
-        "AI rewording is off because this build has no AI provider configured. Your resume is generated deterministically without it.",
+        "AI availability couldn't be confirmed, so AI rewording is off. Your resume is generated deterministically without it.",
+    };
+  }
+  if (!capabilities.configured) {
+    return {
+      enabled: false,
+      consentGranted,
+      providerConfigured: false,
+      reason:
+        "AI rewording is off because no AI provider is configured on the server. Your resume is generated deterministically without it.",
+    };
+  }
+  if (!capabilities.resumeRewording) {
+    return {
+      enabled: false,
+      consentGranted,
+      providerConfigured: false,
+      reason:
+        "This server supports AI analysis but not AI rewording. Your resume is generated deterministically without it.",
     };
   }
   if (!consentGranted) {

@@ -9,7 +9,7 @@ import { EvidenceStateSchema, WorkspaceSectionSchema } from "./workspace";
  * claim is a single line in the resume that points back at the workspace
  * item(s) that evidence it. The generator only copies the user's own fields;
  * a hand edit or an AI rewrite is rejected unless it is grounded in the cited
- * evidence. See docs/DECISIONS.md ADR-041/ADR-042.
+ * evidence. See docs/DECISIONS.md ADR-044/ADR-045 (F5) and ADR-046+ (F6).
  */
 
 export const ResumeKindSchema = z.enum(["standard", "tailored"]);
@@ -20,6 +20,8 @@ export const ResumeVersionReasonSchema = z.enum([
   "edited",
   "restored",
   "refreshed",
+  /** B6: a purge rewrote a version to drop claims that cited deleted items. */
+  "purged",
 ]);
 export type ResumeVersionReason = z.infer<typeof ResumeVersionReasonSchema>;
 
@@ -69,7 +71,7 @@ export const ResumeSchema = z.object({
 });
 export type Resume = z.infer<typeof ResumeSchema>;
 
-/** `GET /resumes` list row: a Resume without sections/ATS/removed ids. */
+/** `GET /resumes` list row (B6 adds the removed-evidence and stale flags). */
 export const ResumeSummarySchema = z.object({
   id: z.string(),
   kind: ResumeKindSchema,
@@ -79,6 +81,8 @@ export const ResumeSummarySchema = z.object({
   stale: z.boolean().default(false),
   aiUsed: z.boolean().default(false),
   editedSections: z.array(z.string()).default([]),
+  /** Cited item ids that no longer exist; lets History warn without detail reads. */
+  removedEvidenceIds: z.array(z.string()).default([]),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
@@ -96,6 +100,10 @@ export const ResumeVersionSchema = z.object({
   sections: z.array(ResumeSectionSchema).default([]),
   ats: AtsReportSchema.nullish(),
   editedSections: z.array(z.string()).default([]),
+  /** Computed on read against the current workspace (B6). */
+  stale: z.boolean().default(false),
+  /** Cited item ids that no longer exist (B6). */
+  removedEvidenceIds: z.array(z.string()).default([]),
 });
 export type ResumeVersion = z.infer<typeof ResumeVersionSchema>;
 
@@ -193,3 +201,24 @@ export const ResumeRefreshResultSchema = z.object({
   skippedSections: z.array(ResumeRefreshSkipSchema).default([]),
 });
 export type ResumeRefreshResult = z.infer<typeof ResumeRefreshResultSchema>;
+
+/* ----------------------------------------------------------- deletion / purge */
+
+/** `POST /resumes/{id}/purge` (B6): rewritten resume, never a delete. */
+export const ResumePurgeResultSchema = z.object({
+  resume: ResumeSchema,
+  purgedVersions: z.number().int().nonnegative().default(0),
+  removedClaims: z.number().int().nonnegative().default(0),
+  removedEvidenceIds: z.array(z.string()).default([]),
+});
+export type ResumePurgeResult = z.infer<typeof ResumePurgeResultSchema>;
+
+/** `POST /resumes/{id}/versions/{version_id}/purge` (B6). */
+export const ResumeVersionPurgeResultSchema = z.object({
+  version: ResumeVersionSchema,
+  removedClaims: z.number().int().nonnegative().default(0),
+  removedEvidenceIds: z.array(z.string()).default([]),
+});
+export type ResumeVersionPurgeResult = z.infer<
+  typeof ResumeVersionPurgeResultSchema
+>;

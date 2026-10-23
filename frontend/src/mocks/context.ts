@@ -1,6 +1,6 @@
 import { HttpResponse } from "msw";
 import { loadSession } from "@/lib/auth/store";
-import { failuresEnabled } from "./dev-state";
+import { shouldFail, type FailureScope } from "./dev-state";
 import { activeItems, loadWorkspace } from "./workspace-store";
 
 /**
@@ -33,8 +33,8 @@ export function currentUserId(): string {
 }
 
 /** Dev-only failure simulation (PRD §7.7 error states, §8.4). */
-export function failIfEnabled() {
-  if (failuresEnabled()) {
+export function failIfEnabled(scope: FailureScope = "all") {
+  if (shouldFail(scope)) {
     return HttpResponse.json(
       {
         error:

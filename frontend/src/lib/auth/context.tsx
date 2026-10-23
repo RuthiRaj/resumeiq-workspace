@@ -30,6 +30,9 @@ interface AuthContextValue {
   signInWithOAuth: (provider: "google" | "github") => Promise<Session>;
   requestPasswordReset: (email: string) => Promise<{ message: string }>;
   signOut: () => Promise<void>;
+  signOutEverywhere: () => Promise<void>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
+  updateDisplayName: (name: string) => Promise<Session>;
   refresh: () => Promise<void>;
 }
 
@@ -197,6 +200,28 @@ export function AuthProvider({
     setStatus("unauthenticated");
   }, [authClient]);
 
+  const signOutEverywhere = useCallback(async () => {
+    await authClient.signOutEverywhere();
+    setSession(null);
+    setStatus("unauthenticated");
+  }, [authClient]);
+
+  const changePassword = useCallback(
+    (currentPassword: string, newPassword: string) =>
+      authClient.changePassword(currentPassword, newPassword),
+    [authClient],
+  );
+
+  const updateDisplayName = useCallback(
+    async (name: string) => {
+      const next = await authClient.updateDisplayName(name);
+      setSession(next);
+      setStatus("authenticated");
+      return next;
+    },
+    [authClient],
+  );
+
   const value = useMemo<AuthContextValue>(
     () => ({
       status,
@@ -207,9 +232,24 @@ export function AuthProvider({
       signInWithOAuth,
       requestPasswordReset,
       signOut,
+      signOutEverywhere,
+      changePassword,
+      updateDisplayName,
       refresh,
     }),
-    [status, session, signUp, signIn, signInWithOAuth, requestPasswordReset, signOut, refresh],
+    [
+      status,
+      session,
+      signUp,
+      signIn,
+      signInWithOAuth,
+      requestPasswordReset,
+      signOut,
+      signOutEverywhere,
+      changePassword,
+      updateDisplayName,
+      refresh,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

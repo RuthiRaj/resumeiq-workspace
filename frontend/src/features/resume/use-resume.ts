@@ -1,8 +1,9 @@
 "use client";
 
-import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useConsent } from "@/lib/privacy/use-consent";
+import { useCapabilities } from "@/lib/privacy/use-capabilities";
 import { aiRewordAvailability } from "@/lib/resume";
 import type {
   Resume,
@@ -62,17 +63,6 @@ export function useResumeDiff(
     queryKey: resumeKeys.diff(resumeId ?? ""),
     queryFn: () => api.getResumeDiff(resumeId as string),
     enabled: Boolean(resumeId) && enabled,
-  });
-}
-
-/** Fetch full snapshots for a list of saved resumes (History warnings). */
-export function useResumeDetails(resumeIds: string[]) {
-  return useQueries({
-    queries: resumeIds.map((resumeId) => ({
-      queryKey: resumeKeys.detail(resumeId),
-      queryFn: () => api.getResume(resumeId),
-      enabled: Boolean(resumeId),
-    })),
   });
 }
 
@@ -173,14 +163,67 @@ export function useResumeForTarget(targetId: string) {
   return { ...list, resume: matches[0] ?? null, matches };
 }
 
-/** Both availability gates for the optional AI reworder. */
+/** Both availability gates for the optional AI reworder (capabilities, B6). */
 export function useAiRewordAvailability() {
   const consent = useConsent();
+  const capabilities = useCapabilities();
   return {
-    ...aiRewordAvailability(consent.data?.consent),
-    loading: consent.isLoading,
+    ...aiRewordAvailability(consent.data?.consent, capabilities.ai),
+    loading: consent.isLoading || capabilities.isLoading,
+    capabilities,
     query: consent,
   };
+}
+
+/* -------------------------------------------------- B6 delete + purge hooks */
+
+export function useDeleteResume() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (resumeId: string) => api.deleteResume(resumeId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: resumeKeys.all });
+    },
+  });
+}
+
+export function useDeleteResumeVersion(resumeId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (versionId: string) =>
+      api.deleteResumeVersion(resumeId, versionId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: resumeKeys.versions(resumeId),
+      });
+      void queryClient.invalidateQueries({ queryKey: resumeKeys.list() });
+    },
+  });
+}
+
+export function usePurgeResume(resumeId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.purgeResume(resumeId),
+    onSuccess: (result) => {
+      queryClient.setQueryData(resumeKeys.detail(resumeId), result.resume);
+      void queryClient.invalidateQueries({ queryKey: resumeKeys.all });
+    },
+  });
+}
+
+export function usePurgeResumeVersion(resumeId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (versionId: string) =>
+      api.purgeResumeVersion(resumeId, versionId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: resumeKeys.versions(resumeId),
+      });
+      void queryClient.invalidateQueries({ queryKey: resumeKeys.list() });
+    },
+  });
 }
 
 export type ResumeDiffData = ResumeDiff;

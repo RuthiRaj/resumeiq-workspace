@@ -368,18 +368,26 @@ test.describe("defect 3 — shared chrome, placeholder routes and form labels", 
     expect(problems, "the design-system route must render without errors").toEqual([]);
   });
 
-  test("/privacy renders its placeholder and live consent without instant-navigation errors", async ({
+  test("/privacy renders the privacy centre and live consent without instant-navigation errors", async ({
     page,
   }) => {
     const problems = collectConsoleProblems(page);
     await signUpToWorkspace(page, "privacy");
     await gotoReady(page, "/privacy");
 
-    await expect(page.getByRole("heading", { name: "Privacy", exact: true })).toBeVisible({
+    await expect(page.getByTestId("privacy-centre")).toBeVisible({
       timeout: NAV_TIMEOUT,
     });
-    await expect(page.getByRole("heading", { name: "AI processing consent" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Back to your workspace" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Privacy centre", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "AI-processing consent" }),
+    ).toBeVisible();
+    await expect(page.getByTestId("privacy-export-button")).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "What is kept, and for how long" }),
+    ).toBeVisible();
     expect(problems.filter((line) => /instant navigation/i.test(line))).toEqual([]);
   });
 
