@@ -185,28 +185,6 @@ function decorate(stored: StoredResume, workspaceVersion: number, items: ReturnT
   };
 }
 
-function decorateVersion(
-  stored: StoredVersion,
-  workspaceVersion: number,
-  items: ReturnType<typeof loadWorkspace>["items"],
-): ResumeVersion {
-  const removed = new Set(removedItemIds(stored.evidence, items));
-  return {
-    ...stored.version,
-    stale:
-      stored.version.stale ||
-      stored.version.workspaceVersion !== workspaceVersion,
-    sections: stored.version.sections.map((section) => ({
-      ...section,
-      claims: section.claims.map((claim) => ({
-        ...claim,
-        removed: claim.evidenceIds.some((id) => removed.has(id)),
-      })),
-    })),
-    removedEvidenceIds: [...removed],
-  };
-}
-
 function summaryOf(resume: Resume): ResumeSummary {
   return {
     id: resume.id,

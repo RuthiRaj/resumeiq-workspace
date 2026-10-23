@@ -296,28 +296,6 @@ export const authHandlers = [
   }),
 ];
 
-/**
- * `GET /capabilities` (B6 §9.1). Mock mode has a deterministic stand-in
- * reworder, so `ai` reports configured. The export/PDF/deletion flags stay
- * false: the mock does not implement those routes yet, and a capability must
- * never advertise a control that would fail (F6 wires them).
- */
-export const capabilityHandlers = [
-  http.get("/api/v1/capabilities", async () => {
-    await latency();
-    return HttpResponse.json({
-      ai: {
-        configured: true,
-        analysisEnrichment: false,
-        resumeRewording: true,
-      },
-      pdfExport: false,
-      dataExport: false,
-      accountDeletion: { dataDeletion: false, authUserDeletion: false },
-    });
-  }),
-];
-
 export const workspaceHandlers = [
   http.get("/api/v1/workspace", async () => {
     await latency();
@@ -461,7 +439,6 @@ export const workspaceHandlers = [
 export const handlers = [
   ...workspaceHandlers,
   ...authHandlers,
-  ...capabilityHandlers,
   ...targetHandlers,
   ...resumeHandlers,
   ...importHandlers,

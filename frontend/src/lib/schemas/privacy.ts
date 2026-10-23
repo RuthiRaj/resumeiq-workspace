@@ -3,35 +3,12 @@ import { z } from "zod";
 /**
  * B6 privacy wire schemas.
  *
- * Mirrors `docs/api/openapi.json` (`Capabilities`, `UserDataExport`,
- * `AccountDeletionResult`) and `docs/api/contract-proposals.md` section 9. The
- * capabilities response deliberately contains feature switches only: no
- * provider name, model id, URL or key ever reaches the browser.
+ * Mirrors `docs/api/openapi.json` (`UserDataExport`, `AccountDeletionResult`) and
+ * `docs/api/contract-proposals.md` section 9. The capabilities response lives in
+ * `./capabilities` because the resume studio reads it too; it deliberately
+ * contains feature switches only: no provider name, model id, URL or key ever
+ * reaches the browser.
  */
-
-export const AiCapabilitiesSchema = z.object({
-  configured: z.boolean(),
-  analysisEnrichment: z.boolean(),
-  resumeRewording: z.boolean(),
-});
-export type AiCapabilities = z.infer<typeof AiCapabilitiesSchema>;
-
-export const AccountDeletionCapabilitySchema = z.object({
-  dataDeletion: z.boolean().default(true),
-  /** False in B6: the auth identity needs an operator (ADR-043). */
-  authUserDeletion: z.boolean().default(false),
-});
-export type AccountDeletionCapability = z.infer<
-  typeof AccountDeletionCapabilitySchema
->;
-
-export const CapabilitiesSchema = z.object({
-  ai: AiCapabilitiesSchema,
-  pdfExport: z.boolean().default(true),
-  dataExport: z.boolean().default(true),
-  accountDeletion: AccountDeletionCapabilitySchema,
-});
-export type Capabilities = z.infer<typeof CapabilitiesSchema>;
 
 /** Stored rows are opaque to the UI; only the envelope is validated. */
 const ExportRowsSchema = z.array(z.record(z.string(), z.unknown())).default([]);

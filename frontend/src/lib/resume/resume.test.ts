@@ -143,12 +143,16 @@ describe("aiRewordAvailability", () => {
         recordedAt: "2026-10-21T09:00:00.000Z",
         version: 1,
       },
-      false,
+      {
+        configured: false,
+        analysisEnrichment: false,
+        resumeRewording: false,
+      },
     );
 
     expect(availability.enabled).toBe(false);
     expect(availability.providerConfigured).toBe(false);
-    expect(availability.reason).toContain("no AI provider configured");
+    expect(availability.reason).toContain("no AI provider is configured");
   });
 });
 
