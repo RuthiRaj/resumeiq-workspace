@@ -3,6 +3,7 @@ import { apiBaseUrl, isLiveMode } from "@/lib/config/mode";
 import {
   AnalysisReportSchema,
   AnalysisRunResponseSchema,
+  CapabilitiesSchema,
   ImportConfirmResponseSchema,
   ImportReviewItemSchema,
   ImportSessionSchema,
@@ -428,7 +429,15 @@ export const api = {
       ResumeRefreshResultSchema,
     ),
 
-  // --- Privacy (not in the live backend yet) ---
+  // --- Capabilities (B6 contract §9.1) ---
+  /**
+   * Feature switches only. Used to decide whether the optional AI reworder can
+   * be offered; a failed read is handled by the caller as "unavailable".
+   */
+  getCapabilities: () =>
+    request("/capabilities", undefined, CapabilitiesSchema),
+
+  // --- Privacy placeholders (F6 replaces these with /export and /account) ---
   exportData: async (): Promise<unknown> => {
     if (isLiveMode()) unavailable("/privacy/export");
     return request<unknown>("/privacy/export");

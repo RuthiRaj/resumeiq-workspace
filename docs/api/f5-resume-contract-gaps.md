@@ -1,78 +1,91 @@
 # F5 resume-studio contract gaps
 
-Status: B5 is merged into `master` (PR #27, merge commit `a4dbe2f`), and
-`docs/api/openapi.json` contains the resume routes. These are the gaps that
-remain after reconciling F5 against that export. F5 does not modify backend
-code. Each item states the temporary frontend behaviour and what should change
-in the contract.
+Status: closed. F5 was built against the merged B5 export; the five gaps it
+recorded were all resolved by B6, which is now on `master` (PR #29, merge commit
+`52cba07`) and exported in `docs/api/openapi.json`. This branch merged that
+`master`, so each gap below records what the contract now contains, what the
+frontend does instead of the old workaround, and what is deliberately left to
+F6. F5 does not modify backend code.
+
+Endpoints added by B6 that are relevant here: `GET /api/v1/capabilities`,
+`DELETE /api/v1/resumes/{resume_id}`,
+`DELETE /api/v1/resumes/{resume_id}/versions/{version_id}`,
+`POST /api/v1/resumes/{resume_id}/purge`,
+`POST /api/v1/resumes/{resume_id}/versions/{version_id}/purge`,
+`GET /api/v1/resumes/{resume_id}/export.pdf`, `GET /api/v1/export` and
+`DELETE /api/v1/account` (ADR-041 to ADR-043).
 
 ## 1. No AI-provider capability endpoint
 
-`ResumeGenerateRequest.rewordWithAi` can return `503 ai_not_configured`, but
-there is no read endpoint that tells the UI whether a provider exists. The
-client cannot know before the user opts in, and the consent gate must not be
-bypassed to discover it.
+**Was:** `ResumeGenerateRequest.rewordWithAi` can return `503 ai_not_configured`,
+but there was no read endpoint telling the UI whether a provider exists, so live
+mode used the build-time `NEXT_PUBLIC_AI_REWORDING_CONFIGURED` flag.
 
-**Temporary behaviour:** live mode reads the build-time
-`NEXT_PUBLIC_AI_REWORDING_CONFIGURED` flag (default `false`) and mock mode
-reports a deterministic stand-in provider. The optional switch is disabled with
-an explanation when the flag is off.
-
-**Resolution:** add a capability field to `GET /api/v1/me` (or
-`GET /api/v1/resumes/capabilities`) such as
-`{ "aiRewording": { "configured": true } }` and use it instead of the build
-flag.
+**Now:** `GET /api/v1/capabilities` reports `ai.configured`,
+`ai.analysisEnrichment` and `ai.resumeRewording` as booleans (never a provider
+name, model id, URL or key). The frontend calls it through
+`api.getCapabilities()` with `CapabilitiesSchema`
+(`frontend/src/lib/schemas/capabilities.ts`) and `useCapabilities()`
+(`frontend/src/features/resume/use-resume.ts`). The environment flag is gone.
+`aiRewordAvailability(consent, providerConfigured)` now takes the capability
+value, and a failed or missing read is treated as all-false, so the switch stays
+disabled with an explanation instead of guessing. Mock mode answers the same
+route with its deterministic stand-in reworder.
 
 ## 2. No delete/purge endpoint
 
-History can restore but cannot delete a resume or a version. B5 says versions
-are insert-only, and the OpenAPI file has no `DELETE /resumes/{id}` or version
-purge route.
+**Was:** history could restore but not delete a resume or a version, so the page
+said "Purge is coming" and rendered no control.
 
-**Temporary behaviour:** no purge button is rendered. The history panel says
-"Purge is coming" and explains that restore is non-destructive. This avoids a
-dead control.
+**Now:** `DELETE /resumes/{id}`, `DELETE /resumes/{id}/versions/{version_id}`,
+`POST /resumes/{id}/purge` and `POST /resumes/{id}/versions/{version_id}/purge`
+exist. Purge removes only claims whose cited workspace item is gone, copies
+survivors verbatim, and reports what changed (ADR-041).
 
-**Resolution:** decide whether users may delete a whole resume or only purge
-old snapshots, then add the endpoint and document the retention rule before the
-UI adds a control.
+**Left for F6:** the delete/purge controls and their confirmation dialogs. This
+page states that deletion/purge is coming in F6 rather than rendering a dead
+button; no F5 code calls these routes yet. The `purged` version reason is
+accepted by `ResumeVersionSchema` now so a live history read cannot fail on a
+version that B6 already purged.
 
-## 3. `ResumeSummary` cannot drive the removed-information warning
+## 3. `ResumeSummary` could not drive the removed-information warning
 
-`ResumeSummary` omits `sections`, `ats` and `removedEvidenceIds`. The history
-list therefore cannot know whether a saved snapshot cites a workspace item that
-was deleted unless it fetches the full resume.
+**Was:** `ResumeSummary` omitted `sections`, `ats` and `removedEvidenceIds`, so
+`/history` fetched the detail of every saved tailored resume (one request per
+snapshot) just to count removed sources.
 
-**Temporary behaviour:** `/history` fetches the detail of every saved tailored
-resume and computes the warning from `removedEvidenceIds`. This is correct but
-costs one request per snapshot.
+**Now:** `ResumeSummary` carries `removedEvidenceIds` (and `stale`) in the
+exported schema. `ResumeSummarySchema` mirrors it, the mock computes it on read,
+and `/history` renders its warnings from the list response. The per-resume
+detail fan-out (`useResumeDetails`) was removed; History now makes one list
+request plus one versions request for the selected resume.
 
-**Resolution:** add a cheap `removedCount` (or `hasRemovedEvidence`) to
-`ResumeSummary`, or add an explicit `needsReview` boolean.
+## 4. Version rows had no removed/stale summary
 
-## 4. Version rows have no removed/stale summary
+**Was:** `ResumeVersionResponse` had no `removedEvidenceIds` and no per-version
+`stale` flag, so an old snapshot could not warn until it was restored.
 
-`ResumeVersionResponse` has `workspaceVersion`, `sections`, `ats` and
-`editedSections`, but no `removedEvidenceIds` and no per-version `stale` flag.
-A restored snapshot can legitimately be stale, so a version list cannot warn
-without reading the current resume.
+**Now:** the exported `ResumeVersionResponse` has `stale` and
+`removedEvidenceIds`, computed on read against the current workspace (not
+stored). `ResumeVersionSchema` mirrors both, the mock decorates every version
+the same way, and each version row in the history panel shows "Older workspace
+version" and/or "N cited item(s) removed" without a second request.
 
-**Temporary behaviour:** the current resume detail drives the warning; version
-rows describe the snapshot and the restore button is always non-destructive.
+## 5. Version ordering was not specified
 
-**Resolution:** add `removedEvidenceIds` and `stale` to `ResumeVersionResponse`,
-or document that version warnings are intentionally derived from the current
-resume only.
+**Was:** the contract did not say whether `GET /resumes/{id}/versions` returned
+newest-first or oldest-first, so the UI rendered the array as received and
+relied on the mock's order.
 
-## 5. Version ordering is not specified
+**Now:** the exported `ResumeVersionResponse` description states that versions
+are returned newest-first by every endpoint (`createdAt` descending); the mock
+sorts that way and `listVersions` is covered by a unit test. The UI relies on
+the documented order instead of guessing.
 
-`GET /resumes/{resume_id}/versions` returns an array but the contract does not
-say newest-first or oldest-first.
+## Left for F6 (not F5 workarounds)
 
-**Temporary behaviour:** the mock returns newest-first and the UI renders the
-array as received, then restores the version the user clicked. A live server
-that returns oldest-first would not break correctness, but the first row would
-change meaning.
-
-**Resolution:** document `createdAt` descending (newest first) in §6.5 and
-assert it in the backend tests.
+* Delete/purge UI (gap 2 above).
+* Server PDF export (`GET /resumes/{id}/export.pdf`) — F5's print view stays the
+  client-side path; the PDF button and its `X-Export-*` feedback belong to F6.
+* Data export and account deletion (`GET /export`, `DELETE /account`); the
+  privacy settings placeholders still say "Coming in F6".

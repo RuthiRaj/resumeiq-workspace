@@ -32,10 +32,11 @@ import type { KeyValueStorage } from "./workspace-store";
  * Persistent tailored-resume store for the mock API (B5 contract, §6).
  *
  * The wire shapes and rules match `docs/api/contract-proposals.md` §6 and the
- * merged B5 OpenAPI export: deterministic generation, evidence
- * snapshots, insert-only versions, grounding-checked edits, computed staleness,
- * and selective refresh that never overwrites hand-edited sections unless
- * explicitly asked.
+ * `docs/api/openapi.json` export on `master` (B5 plus B6's
+ * `removedEvidenceIds`/`stale` on summaries and versions): deterministic
+ * generation, evidence snapshots, insert-only versions, grounding-checked
+ * edits, computed staleness, and selective refresh that never overwrites
+ * hand-edited sections unless explicitly asked.
  */
 
 export const RESUMES_KEY_PREFIX = "riq.resumes.";
@@ -192,8 +193,35 @@ function summaryOf(resume: Resume): ResumeSummary {
     stale: resume.stale,
     aiUsed: resume.aiUsed,
     editedSections: [...resume.editedSections],
+    removedEvidenceIds: [...resume.removedEvidenceIds],
     createdAt: resume.createdAt,
     updatedAt: resume.updatedAt,
+  };
+}
+
+/**
+ * B6 decorates every version on read: `stale` compares the snapshot's
+ * workspace version with the current one, and `removedEvidenceIds` comes from
+ * the evidence captured in that snapshot, not from the current resume. This
+ * mirrors the backend and means a version row can warn on its own.
+ */
+function decorateVersion(
+  stored: StoredVersion,
+  workspaceVersion: number,
+  items: ReturnType<typeof loadWorkspace>["items"],
+): ResumeVersion {
+  const removed = new Set(removedItemIds(stored.evidence, items));
+  return {
+    ...stored.version,
+    stale: stored.version.workspaceVersion !== workspaceVersion,
+    sections: stored.version.sections.map((section) => ({
+      ...section,
+      claims: section.claims.map((claim) => ({
+        ...claim,
+        removed: claim.evidenceIds.some((id) => removed.has(id)),
+      })),
+    })),
+    removedEvidenceIds: [...removed],
   };
 }
 
@@ -256,6 +284,9 @@ function appendVersion(
     sections: deepClone(resume.sections),
     ats: resume.ats ? deepClone(resume.ats) : null,
     editedSections: [...resume.editedSections],
+    // Stored placeholders: both fields are recomputed on every read (B6).
+    stale: false,
+    removedEvidenceIds: [],
   };
   state.versions[resume.id] = [
     ...existing,
@@ -298,8 +329,9 @@ export function listVersions(
 ): ResumeVersion[] {
   if (resumeId === STANDARD_RESUME_ID || resumeId === standardResumeId()) return [];
   requireTailored(storage, userId, resumeId);
+  const ws = loadWorkspace(storage, userId);
   return [...(loadResumes(storage, userId).versions[resumeId] ?? [])]
-    .map((entry) => entry.version)
+    .map((entry) => decorateVersion(entry, ws.version, ws.items))
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 

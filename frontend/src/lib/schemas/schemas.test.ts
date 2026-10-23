@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   AnalysisReportSchema,
+  CapabilitiesSchema,
   EvidenceStateSchema,
   RequirementSchema,
   ResumeSchema,
+  ResumeSummarySchema,
+  ResumeVersionSchema,
   WorkspaceChangeLogEntrySchema,
   WorkspaceItemFormSchema,
   WorkspaceItemSchema,
@@ -169,5 +172,41 @@ describe("contract schemas (PRD §8.3)", () => {
     expect(
       WorkspaceItemFormSchema.safeParse({ ...form, startDate: "", endDate: "" }).success,
     ).toBe(true);
+  });
+
+  it("parses the B6 capabilities envelope and defaults the missing flags", () => {
+    const parsed = CapabilitiesSchema.safeParse({
+      ai: { configured: true, analysisEnrichment: false, resumeRewording: true },
+      accountDeletion: { dataDeletion: true, authUserDeletion: false },
+    });
+    expect(parsed.success).toBe(true);
+    expect(parsed.success && parsed.data.pdfExport).toBe(true);
+    expect(
+      CapabilitiesSchema.safeParse({ ai: { configured: true } }).success,
+    ).toBe(false);
+  });
+
+  it("accepts B6 summary/version fields and the purged reason", () => {
+    const summary = ResumeSummarySchema.safeParse({
+      id: "r-1",
+      kind: "tailored",
+      workspaceVersion: 2,
+      removedEvidenceIds: ["ws-1"],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+    expect(summary.success && summary.data.removedEvidenceIds).toEqual(["ws-1"]);
+
+    const version = ResumeVersionSchema.safeParse({
+      id: "r-1-v2",
+      resumeId: "r-1",
+      workspaceVersion: 1,
+      reason: "purged",
+      stale: true,
+      removedEvidenceIds: ["ws-1"],
+      createdAt: new Date().toISOString(),
+    });
+    expect(version.success).toBe(true);
+    expect(version.success && version.data.reason).toBe("purged");
   });
 });

@@ -1,10 +1,11 @@
 "use client";
 
-import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useConsent } from "@/lib/privacy/use-consent";
 import { aiRewordAvailability } from "@/lib/resume";
 import type {
+  Capabilities,
   Resume,
   ResumeDiff,
   ResumeGenerateRequest,
@@ -65,15 +66,39 @@ export function useResumeDiff(
   });
 }
 
-/** Fetch full snapshots for a list of saved resumes (History warnings). */
-export function useResumeDetails(resumeIds: string[]) {
-  return useQueries({
-    queries: resumeIds.map((resumeId) => ({
-      queryKey: resumeKeys.detail(resumeId),
-      queryFn: () => api.getResume(resumeId),
-      enabled: Boolean(resumeId),
-    })),
+/**
+ * Deliberately all-false: a failed capabilities read must never look like a
+ * working feature, and `data` stays `null` so callers can tell "off" from
+ * "could not check".
+ */
+const CAPABILITIES_UNAVAILABLE: Capabilities = {
+  ai: { configured: false, analysisEnrichment: false, resumeRewording: false },
+  pdfExport: false,
+  dataExport: false,
+  accountDeletion: { dataDeletion: false, authUserDeletion: false },
+};
+
+export const capabilitiesKeys = {
+  all: ["capabilities"] as const,
+};
+
+/** `GET /capabilities` (B6 §9.1): the only source of truth for AI gating. */
+export function useCapabilities() {
+  const query = useQuery({
+    queryKey: capabilitiesKeys.all,
+    queryFn: () => api.getCapabilities(),
+    staleTime: 60_000,
+    retry: 1,
   });
+  return {
+    ...(query.data ?? CAPABILITIES_UNAVAILABLE),
+    data: query.data ?? null,
+    isLoading: query.isLoading,
+    isError: query.isError,
+    error: query.error,
+    refetch: query.refetch,
+    query,
+  };
 }
 
 function useInvalidateResume(resumeId?: string) {
@@ -176,10 +201,15 @@ export function useResumeForTarget(targetId: string) {
 /** Both availability gates for the optional AI reworder. */
 export function useAiRewordAvailability() {
   const consent = useConsent();
+  const capabilities = useCapabilities();
   return {
-    ...aiRewordAvailability(consent.data?.consent),
-    loading: consent.isLoading,
+    ...aiRewordAvailability(
+      consent.data?.consent,
+      capabilities.ai.resumeRewording,
+    ),
+    loading: consent.isLoading || capabilities.isLoading,
     query: consent,
+    capabilities,
   };
 }
 

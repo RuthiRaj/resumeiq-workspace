@@ -25,7 +25,6 @@ import { cn } from "@/lib/utils";
 import { useTargets } from "@/features/targets/use-targets";
 import { useWorkspace } from "@/features/workspace/use-workspace";
 import {
-  useResumeDetails,
   useResumeList,
   useResumeVersions,
   useRestoreResumeVersion,
@@ -36,6 +35,7 @@ const REASON_LABEL: Record<ResumeVersion["reason"], string> = {
   edited: "Hand edit saved",
   restored: "Restored from an earlier version",
   refreshed: "Refreshed from the workspace",
+  purged: "Purged (removed sources dropped)",
 };
 
 function formatDate(value: string): string {
@@ -49,14 +49,12 @@ function ResumeCard({
   resume,
   selected,
   removedCount,
-  detailLoading,
   targetLabel,
   onSelect,
 }: {
   resume: ResumeSummary;
   selected: boolean;
   removedCount: number;
-  detailLoading: boolean;
   targetLabel?: string;
   onSelect: () => void;
 }) {
@@ -85,9 +83,7 @@ function ResumeCard({
         <Badge variant="outline">{resume.editedSections.length} edited</Badge>
       </div>
 
-      {detailLoading ? (
-        <Skeleton className="h-4 w-2/3" />
-      ) : removedCount > 0 ? (
+      {removedCount > 0 ? (
         <p
           className="flex items-start gap-1.5 rounded-sm border-l-2 border-evidence-missing bg-evidence-missing/10 p-2 text-[11px] leading-relaxed text-text"
           data-testid="removed-information-warning"
@@ -126,8 +122,11 @@ function ResumeCard({
 
 /**
  * `/history`: the live standard resume versus saved tailored snapshots, with
- * non-destructive restore. Purge is not offered because the B5 backend has no
- * delete-resume endpoint (documented contract gap, ADR-041).
+ * non-destructive restore. Deleted-source warnings come straight from
+ * `ResumeSummary.removedEvidenceIds` and `ResumeVersion.removedEvidenceIds`
+ * (B6), so no per-snapshot detail requests are needed. Delete/purge controls
+ * belong to F6; this page states that instead of rendering dead buttons
+ * (ADR-045).
  */
 export function ResumeHistoryPage() {
   const list = useResumeList();
@@ -139,12 +138,6 @@ export function ResumeHistoryPage() {
     () => (list.data ?? []).filter((resume) => resume.kind === "tailored"),
     [list.data],
   );
-  const details = useResumeDetails(tailored.map((resume) => resume.id));
-  const detailById = useMemo(() => {
-    const map = new Map<string, (typeof details)[number]>();
-    tailored.forEach((resume, index) => map.set(resume.id, details[index]));
-    return map;
-  }, [details, tailored]);
 
   const selected =
     tailored.find((resume) => resume.id === selectedId) ?? tailored[0] ?? null;
@@ -178,8 +171,7 @@ export function ResumeHistoryPage() {
   }
 
   const standard = (list.data ?? []).find((resume) => resume.kind === "standard");
-  const selectedDetail = selected ? detailById.get(selected.id)?.data : undefined;
-  const selectedRemoved = selectedDetail?.removedEvidenceIds.length ?? 0;
+  const selectedRemoved = selected?.removedEvidenceIds.length ?? 0;
   const restoreError = restore.error
     ? apiErrorMessage(
         restore.error,
@@ -259,15 +251,13 @@ export function ResumeHistoryPage() {
             </div>
             <div className="mt-3 flex flex-col gap-3">
               {tailored.map((resume) => {
-                const query = detailById.get(resume.id);
                 const target = resume.targetId ? targetById.get(resume.targetId) : null;
                 return (
                   <ResumeCard
                     key={resume.id}
                     resume={resume}
                     selected={selected?.id === resume.id}
-                    removedCount={query?.data?.removedEvidenceIds.length ?? 0}
-                    detailLoading={query?.isLoading ?? false}
+                    removedCount={resume.removedEvidenceIds.length}
                     targetLabel={
                       target
                         ? `${target.role}${target.company ? ` · ${target.company}` : ""}`
@@ -301,7 +291,7 @@ export function ResumeHistoryPage() {
                   {selected.title || "Tailored resume"} · workspace v
                   {selected.workspaceVersion}
                 </p>
-                {selectedDetail && selectedRemoved > 0 ? (
+                {selectedRemoved > 0 ? (
                   <p
                     className="flex items-start gap-1.5 rounded-sm border-l-2 border-evidence-missing bg-evidence-missing/10 p-2.5 text-[11px] leading-relaxed text-text"
                     data-testid="selected-removed-warning"
@@ -361,6 +351,26 @@ export function ResumeHistoryPage() {
                               {version.editedSections.length} hand-edited
                               {version.aiUsed ? " · AI rewording" : ""}
                             </p>
+                            {version.stale || version.removedEvidenceIds.length > 0 ? (
+                              <p
+                                className="mt-1 flex items-start gap-1 text-[11px] text-evidence-missing"
+                                data-testid={`version-warning-${version.id}`}
+                              >
+                                <AlertTriangle
+                                  className="mt-0.5 size-3 shrink-0"
+                                  aria-hidden="true"
+                                />
+                                {version.stale ? "Older workspace version" : null}
+                                {version.stale && version.removedEvidenceIds.length > 0
+                                  ? " · "
+                                  : null}
+                                {version.removedEvidenceIds.length > 0
+                                  ? `${version.removedEvidenceIds.length} cited item${
+                                      version.removedEvidenceIds.length === 1 ? "" : "s"
+                                    } removed`
+                                  : null}
+                              </p>
+                            ) : null}
                           </div>
                           <Button
                             variant="secondary"
@@ -396,9 +406,10 @@ export function ResumeHistoryPage() {
                   and adds a new version. It never deletes the versions in between.
                 </p>
                 <p className="rounded-sm border border-white/[0.06] p-2 text-[11px] leading-relaxed text-muted">
-                  Purge is coming: the B5 backend has no delete-resume endpoint
-                  yet. Saved snapshots are insert-only, so nothing is removed
-                  automatically.
+                  Deleting a snapshot or purging removed information is coming in
+                  F6. The API already supports it; these controls are deliberately
+                  not rendered until that screen ships, so nothing here is a dead
+                  button. Snapshots stay insert-only until then.
                 </p>
               </>
             ) : (

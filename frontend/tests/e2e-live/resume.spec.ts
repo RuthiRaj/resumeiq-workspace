@@ -13,8 +13,9 @@ import { liveE2eCredentials, liveE2eEnabled } from "./backend-env";
  * anything.
  *
  * If the deployed backend predates B5, the history error state makes the
- * missing route unambiguous. See `docs/api/f5-resume-contract-gaps.md` for the
- * gaps that remain on `master`.
+ * missing route unambiguous. `docs/api/f5-resume-contract-gaps.md` records the
+ * B6 additions this branch now consumes (capabilities, summary/version
+ * removed-evidence fields, version ordering).
  */
 const { email, password } = liveE2eCredentials();
 

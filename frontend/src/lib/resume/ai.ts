@@ -1,5 +1,4 @@
 import type { Consent } from "@/lib/privacy/consent";
-import { isLiveMode } from "@/lib/config/mode";
 
 /**
  * AI rewording availability (PRD §6.9 EX-3, B5 §6.7).
@@ -7,12 +6,12 @@ import { isLiveMode } from "@/lib/config/mode";
  * Generation is deterministic and never needs AI. Rewording is optional and
  * only enabled when both gates pass:
  *  1. the user has recorded AI-processing consent;
- *  2. an AI provider is configured on the server.
+ *  2. the server reports `ai.resumeRewording` through `GET /capabilities`.
  *
- * The B5 contract has no capability endpoint, so live mode exposes gate 2 as
- * the build-time `NEXT_PUBLIC_AI_REWORDING_CONFIGURED` flag (default false).
- * Mock mode has a deterministic stand-in provider, so it reports configured.
- * See docs/DECISIONS.md ADR-041.
+ * The capability read replaced the old build-time
+ * `NEXT_PUBLIC_AI_REWORDING_CONFIGURED` flag once B6 merged the endpoint. A
+ * missing or failed read is treated as "not configured", never as "yes".
+ * See docs/DECISIONS.md ADR-044 and docs/api/f5-resume-contract-gaps.md.
  */
 
 export interface AiRewordAvailability {
@@ -22,23 +21,18 @@ export interface AiRewordAvailability {
   reason: string;
 }
 
-export function aiProviderConfigured(): boolean {
-  if (!isLiveMode()) return true;
-  return process.env.NEXT_PUBLIC_AI_REWORDING_CONFIGURED === "true";
-}
-
 export function aiRewordAvailability(
   consent: Consent | null | undefined,
+  providerConfigured: boolean,
 ): AiRewordAvailability {
   const consentGranted = Boolean(consent?.aiProcessing);
-  const providerConfigured = aiProviderConfigured();
   if (!providerConfigured) {
     return {
       enabled: false,
       consentGranted,
       providerConfigured,
       reason:
-        "AI rewording is off because this build has no AI provider configured. Your resume is generated deterministically without it.",
+        "AI rewording is off because this server has no AI provider configured. Your resume is generated deterministically without it.",
     };
   }
   if (!consentGranted) {
