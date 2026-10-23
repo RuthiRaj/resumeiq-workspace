@@ -10,7 +10,12 @@ import {
   softDeleteItem,
   updateItem,
 } from "./workspace-store";
-import { failuresEnabled, setFailures } from "./dev-state";
+import {
+  currentFailureScope,
+  failuresEnabled,
+  setFailures,
+  type FailureScope,
+} from "./dev-state";
 import {
   currentUserId,
   failIfEnabled,
@@ -19,6 +24,7 @@ import {
   workspaceBody,
 } from "./context";
 import { importHandlers } from "./import-handlers";
+import { privacyHandlers } from "./privacy-handlers";
 import { resumeHandlers } from "./resume-handlers";
 import { targetHandlers } from "./target-handlers";
 import {
@@ -72,6 +78,13 @@ const OAuthBody = z.object({ provider: OAuthProviderSchema });
 
 const ResetBody = z.object({ email: EmailSchema });
 
+const PasswordBody = z.object({
+  currentPassword: z.string().min(1).max(128),
+  newPassword: z.string().min(8).max(128),
+});
+
+const ProfileBody = z.object({ name: NameSchema });
+
 const ConsentBody = z.object({ aiProcessing: z.boolean() });
 
 const CreateItemBody = WorkspaceItemSchema.omit({
@@ -83,7 +96,10 @@ const CreateItemBody = WorkspaceItemSchema.omit({
 const UpdateItemBody = WorkspaceItemSchema.omit({ id: true }).partial();
 
 const PersonaBody = z.object({ persona: WorkspacePersonaSchema });
-const FailuresBody = z.object({ enabled: z.boolean() });
+const FailuresBody = z.object({
+  enabled: z.boolean(),
+  scope: z.enum(["all", "capabilities", "export"]).default("all"),
+});
 
 function sessionResponse(user: StoredUser) {
   return {
@@ -201,6 +217,61 @@ export const authHandlers = [
     return HttpResponse.json({ ok: true });
   }),
 
+  /**
+   * Password change (settings). The mock keeps a plain-text stand-in, so this
+   * is the only place the current password is compared; live mode re-verifies
+   * with Supabase before calling `updateUser`.
+   */
+  http.post("/api/v1/auth/password", async ({ request }) => {
+    await latency();
+    const parsed = PasswordBody.safeParse(await request.json().catch(() => null));
+    if (!parsed.success) {
+      return HttpResponse.json(
+        { error: "Check the password fields and try again." },
+        { status: 400 },
+      );
+    }
+    const store = storage();
+    const session = loadSession(store);
+    const user = session ? findUserByEmail(store, session.user.email) : null;
+    if (!user) {
+      return HttpResponse.json({ error: "Sign in again to change your password." }, { status: 401 });
+    }
+    if (!user.password) {
+      return HttpResponse.json(
+        { error: "This account signs in with a provider, so it has no password to change." },
+        { status: 400 },
+      );
+    }
+    if (user.password !== parsed.data.currentPassword) {
+      return HttpResponse.json(
+        { error: "Current password is incorrect. Nothing was changed." },
+        { status: 400 },
+      );
+    }
+    upsertUser(store, { ...user, password: parsed.data.newPassword });
+    return HttpResponse.json({ ok: true });
+  }),
+
+  http.patch("/api/v1/auth/profile", async ({ request }) => {
+    await latency();
+    const parsed = ProfileBody.safeParse(await request.json().catch(() => null));
+    if (!parsed.success) {
+      return HttpResponse.json({ error: "Enter a name up to 80 characters." }, { status: 400 });
+    }
+    const store = storage();
+    const session = loadSession(store);
+    const user = session ? findUserByEmail(store, session.user.email) : null;
+    if (!session || !user) {
+      return HttpResponse.json({ error: "Sign in again to change your profile." }, { status: 401 });
+    }
+    const next: StoredUser = { ...user, name: parsed.data.name.trim() };
+    upsertUser(store, next);
+    const body = sessionResponse(next);
+    saveSession(store, body.session);
+    return HttpResponse.json(body);
+  }),
+
   http.get("/api/v1/privacy/consent", async () => {
     return HttpResponse.json({ consent: loadConsent(storage()) });
   }),
@@ -222,28 +293,6 @@ export const authHandlers = [
   http.delete("/api/v1/privacy/consent", async () => {
     clearConsentRecord(storage());
     return HttpResponse.json({ consent: null });
-  }),
-];
-
-/**
- * `GET /capabilities` (B6 §9.1). Mock mode has a deterministic stand-in
- * reworder, so `ai` reports configured. The export/PDF/deletion flags stay
- * false: the mock does not implement those routes yet, and a capability must
- * never advertise a control that would fail (F6 wires them).
- */
-export const capabilityHandlers = [
-  http.get("/api/v1/capabilities", async () => {
-    await latency();
-    return HttpResponse.json({
-      ai: {
-        configured: true,
-        analysisEnrichment: false,
-        resumeRewording: true,
-      },
-      pdfExport: false,
-      dataExport: false,
-      accountDeletion: { dataDeletion: false, authUserDeletion: false },
-    });
   }),
 ];
 
@@ -353,6 +402,7 @@ export const workspaceHandlers = [
     return HttpResponse.json({
       persona: personaOf(storage(), currentUserId()),
       failures: failuresEnabled(),
+      failureScope: currentFailureScope(),
     });
   }),
 
@@ -377,8 +427,11 @@ export const workspaceHandlers = [
     if (!parsed.success) {
       return HttpResponse.json({ error: "Expected { enabled: boolean }." }, { status: 400 });
     }
-    setFailures(parsed.data.enabled);
-    return HttpResponse.json({ enabled: parsed.data.enabled });
+    setFailures(parsed.data.enabled, parsed.data.scope as FailureScope);
+    return HttpResponse.json({
+      enabled: parsed.data.enabled,
+      scope: parsed.data.scope,
+    });
   }),
 ];
 
@@ -386,8 +439,8 @@ export const workspaceHandlers = [
 export const handlers = [
   ...workspaceHandlers,
   ...authHandlers,
-  ...capabilityHandlers,
   ...targetHandlers,
   ...resumeHandlers,
   ...importHandlers,
+  ...privacyHandlers,
 ];

@@ -15,6 +15,13 @@ Endpoints added by B6 that are relevant here: `GET /api/v1/capabilities`,
 `GET /api/v1/resumes/{resume_id}/export.pdf`, `GET /api/v1/export` and
 `DELETE /api/v1/account` (ADR-041 to ADR-043).
 
+> Historical note (F6): B6 resolved all five gaps below. Capabilities now
+> report AI availability, delete/purge routes exist, `ResumeSummary` and
+> `ResumeVersion` carry `removedEvidenceIds`/`stale`, and the OpenAPI version
+> description documents newest-first ordering. F6 removes the temporary
+> behaviours described here; remaining B6 gaps live in
+> `docs/api/f6-privacy-contract-gaps.md`.
+
 ## 1. No AI-provider capability endpoint
 
 **Was:** `ResumeGenerateRequest.rewordWithAi` can return `503 ai_not_configured`,

@@ -313,7 +313,12 @@ test("tailored resume: generate, edit, reject ungrounded text, refresh stale and
   });
   await expect.poll(() => restoreButtons.count()).toBe(before + 1);
   await expect(page.getByText(/Restore is non-destructive/)).toBeVisible();
-  await expect(page.getByText(/Deleting a snapshot or purging/)).toBeVisible();
+  await expect(
+    page.getByTestId(`delete-resume-${resumeId}`),
+  ).toBeVisible();
+  await expect(
+    page.getByTestId(`purge-resume-${resumeId}`),
+  ).toBeVisible();
 });
 
 /* ---------------------------------------------------------------- mobile */

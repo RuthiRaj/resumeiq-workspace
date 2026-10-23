@@ -25,6 +25,9 @@ function baseClient(overrides: Partial<AuthClient> = {}): AuthClient {
     signInWithOAuth: async () => SESSION,
     requestPasswordReset: async () => ({ message: "ok" }),
     signOut: async () => {},
+    signOutEverywhere: async () => {},
+    changePassword: async () => {},
+    updateDisplayName: async () => SESSION,
     ...overrides,
   };
 }

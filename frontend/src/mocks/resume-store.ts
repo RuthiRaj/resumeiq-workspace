@@ -1,16 +1,18 @@
-import {
+﻿import {
   type AnalysisReport,
   type Claim,
   type Resume,
   type ResumeDiff,
   type ResumeEvidence,
   type ResumeGenerateRequest,
+  type ResumePurgeResult,
   type ResumeRefreshRequest,
   type ResumeRefreshResult,
   type ResumeSection,
   type ResumeSectionEdit,
   type ResumeSummary,
   type ResumeVersion,
+  type ResumeVersionPurgeResult,
   type TargetLength,
 } from "@/lib/schemas";
 import { computeAtsReport } from "@/lib/analysis/ats";
@@ -273,8 +275,16 @@ function appendVersion(
   at: string,
 ): void {
   const existing = state.versions[resume.id] ?? [];
+  const nextNumber =
+    Math.max(
+      0,
+      ...existing.map((entry) => {
+        const match = /-v(\d+)$/.exec(entry.version.id);
+        return match ? Number.parseInt(match[1], 10) : 0;
+      }),
+    ) + 1;
   const version: ResumeVersion = {
-    id: `${resume.id}-v${existing.length + 1}`,
+    id: `${resume.id}-v${nextNumber}`,
     resumeId: resume.id,
     workspaceVersion: resume.workspaceVersion,
     createdAt: at,
@@ -720,3 +730,206 @@ export function refreshResume(
 
 /** Keep an unused import out of the production graph while documenting the key. */
 export const RESUME_STANDARD_ID = standardResumeId();
+
+/* ------------------------------------------------- deletion / purge (B6) */
+
+function purgeSections(
+  sections: ResumeSection[],
+  removed: Set<string>,
+): { sections: ResumeSection[]; removedClaims: number } {
+  let removedClaims = 0;
+  const next = sections.map((section) => ({
+    ...section,
+    claims: section.claims.filter((claim) => {
+      const drop = claim.evidenceIds.some((id) => removed.has(id));
+      if (drop) removedClaims += 1;
+      return !drop;
+    }),
+  }));
+  return { sections: next, removedClaims };
+}
+
+/** Permanently delete a tailored resume and all of its versions. */
+export function deleteResume(
+  storage: KeyValueStorage,
+  userId: string,
+  resumeId: string,
+): void {
+  requireTailored(storage, userId, resumeId);
+  const state = loadResumes(storage, userId);
+  state.resumes = state.resumes.filter((entry) => entry.resume.id !== resumeId);
+  delete state.versions[resumeId];
+  saveResumes(storage, userId, state);
+}
+
+/** Permanently delete one saved version (the current resume is untouched). */
+export function deleteResumeVersion(
+  storage: KeyValueStorage,
+  userId: string,
+  resumeId: string,
+  versionId: string,
+): void {
+  requireTailored(storage, userId, resumeId);
+  const state = loadResumes(storage, userId);
+  const existing = state.versions[resumeId] ?? [];
+  if (!existing.some((entry) => entry.version.id === versionId)) {
+    throw new ResumeStoreError(
+      404,
+      "resume_version_not_found",
+      "That resume version no longer exists.",
+    );
+  }
+  state.versions[resumeId] = existing.filter(
+    (entry) => entry.version.id !== versionId,
+  );
+  saveResumes(storage, userId, state);
+}
+
+/**
+ * Rewrite removed-item claims out of the current resume and every saved
+ * version. Appends one `purged` version only when the current resume changed,
+ * mirroring the B6 route.
+ */
+export function purgeResume(
+  storage: KeyValueStorage,
+  userId: string,
+  resumeId: string,
+  now: Clock = isoClock,
+): ResumePurgeResult {
+  requireTailored(storage, userId, resumeId);
+  const ws = loadWorkspace(storage, userId);
+  const state = loadResumes(storage, userId);
+  const index = state.resumes.findIndex((entry) => entry.resume.id === resumeId);
+  if (index === -1) {
+    throw new ResumeStoreError(
+      404,
+      "resume_not_found",
+      "That resume no longer exists.",
+    );
+  }
+  const stored = state.resumes[index];
+  const removed = new Set(removedItemIds(stored.evidence, ws.items));
+  if (removed.size === 0) {
+    return {
+      resume: decorate(stored, ws.version, ws.items),
+      purgedVersions: 0,
+      removedClaims: 0,
+      removedEvidenceIds: [],
+    };
+  }
+
+  const at = now();
+  const purged = purgeSections(stored.resume.sections, removed);
+  const evidence = stored.evidence.filter((entry) => !removed.has(entry.itemId));
+  const resume: Resume = {
+    ...stored.resume,
+    sections: purged.sections,
+    updatedAt: at,
+    removedEvidenceIds: [],
+  };
+  state.resumes[index] = { resume: deepClone(resume), evidence: deepClone(evidence) };
+
+  let purgedVersions = 0;
+  state.versions[resumeId] = (state.versions[resumeId] ?? []).map((entry) => {
+    const rewritten = purgeSections(entry.version.sections, removed);
+    if (rewritten.removedClaims > 0) purgedVersions += 1;
+    return {
+      version: {
+        ...entry.version,
+        sections: rewritten.sections,
+        removedEvidenceIds: [],
+      },
+      evidence: entry.evidence.filter((item) => !removed.has(item.itemId)),
+    };
+  });
+
+  // A rewrite is a real content change, so it becomes part of the history.
+  if (purged.removedClaims > 0) {
+    appendVersion(state, resume, evidence, "purged", at);
+  }
+  saveResumes(storage, userId, state);
+
+  return {
+    resume: decorate(
+      state.resumes[index] ?? { resume, evidence },
+      ws.version,
+      ws.items,
+    ),
+    purgedVersions,
+    removedClaims: purged.removedClaims,
+    removedEvidenceIds: [...removed],
+  };
+}
+
+/** Rewrite removed-item claims out of a single saved version. */
+export function purgeResumeVersion(
+  storage: KeyValueStorage,
+  userId: string,
+  resumeId: string,
+  versionId: string,
+): ResumeVersionPurgeResult {
+  requireTailored(storage, userId, resumeId);
+  const ws = loadWorkspace(storage, userId);
+  const state = loadResumes(storage, userId);
+  const versions = state.versions[resumeId] ?? [];
+  const index = versions.findIndex((entry) => entry.version.id === versionId);
+  if (index === -1) {
+    throw new ResumeStoreError(
+      404,
+      "resume_version_not_found",
+      "That resume version no longer exists.",
+    );
+  }
+  const stored = versions[index];
+  const removed = new Set(removedItemIds(stored.evidence, ws.items));
+  if (removed.size === 0) {
+    return {
+      version: decorateVersion(stored, ws.version, ws.items),
+      removedClaims: 0,
+      removedEvidenceIds: [],
+    };
+  }
+  const purged = purgeSections(stored.version.sections, removed);
+  const next: StoredVersion = {
+    version: {
+      ...stored.version,
+      sections: purged.sections,
+      removedEvidenceIds: [],
+    },
+    evidence: stored.evidence.filter((entry) => !removed.has(entry.itemId)),
+  };
+  state.versions[resumeId] = versions.map((entry, position) =>
+    position === index ? next : entry,
+  );
+  saveResumes(storage, userId, state);
+  return {
+    version: decorateVersion(next, ws.version, ws.items),
+    removedClaims: purged.removedClaims,
+    removedEvidenceIds: [...removed],
+  };
+}
+
+/** Account deletion: remove every tailored resume and saved version. */
+export function clearResumes(storage: KeyValueStorage, userId: string): void {
+  saveResumes(storage, userId, emptyState());
+}
+
+/** Rows for `GET /export`; the wire export exposes stored rows, not summaries. */
+export function exportResumeData(storage: KeyValueStorage, userId: string) {
+  const state = loadResumes(storage, userId);
+  return {
+    resumes: state.resumes.map((entry) => entry.resume),
+    versions: Object.values(state.versions)
+      .flat()
+      .map((entry) => entry.version),
+    claims: state.resumes.flatMap((entry) =>
+      entry.resume.sections.flatMap((section) =>
+        section.claims.map((claim) => ({
+          resumeId: entry.resume.id,
+          section: section.key,
+          ...claim,
+        })),
+      ),
+    ),
+  };
+}

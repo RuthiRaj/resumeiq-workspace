@@ -2067,10 +2067,128 @@ Decision:
    the screen that owns them is F6; the UI says deletion/purge is coming in F6
    instead of offering a dead button. AI rewording is shown only when the
    recorded consent and `GET /capabilities`' `ai.resumeRewording` both pass;
-   the disabled copy names the missing gate.
+   the disabled copy names the missing gate. (F6 shipped those controls in
+   ADR-047; the historical wording above is kept as written.)
 
 Consequences: History reads its deleted-source warnings from
 `ResumeSummary.removedEvidenceIds` and `ResumeVersion.removedEvidenceIds` (B6),
 so it makes one list request plus one versions request and no per-snapshot
 detail requests. If a future screen needs counts without the id list, the
 contract can add a `removedCount` alongside the ids.
+
+## ADR-046 - 2026-10-23 - F6 reads AI availability from capabilities, fail-closed
+
+Context: F5 gated optional AI rewording with the build-time
+`NEXT_PUBLIC_AI_REWORDING_CONFIGURED` flag because B5 had no capability route.
+B6 adds `GET /capabilities`, which is the server's own answer and works in both
+mock and live mode.
+
+Decision:
+
+1. Capabilities are the only source for AI, PDF export, data export and
+   account-deletion availability. The build-time flag is removed; no screen
+   reads an environment variable to decide whether a feature exists.
+2. `useCapabilities` returns all-false switches until a successful read. A
+   loading or failed read therefore shows "unavailable" with a retry/explanation,
+   never an optimistic enabled control. The query keeps the last successful
+   value only through TanStack Query's normal cache; an explicit error keeps the
+   UI disabled.
+3. AI rewording still needs two gates: recorded `aiProcessing` consent and
+   `ai.configured && ai.resumeRewording`. The reason string names whichever gate
+   is missing, so a disabled switch is never unexplained.
+4. The mock route returns the same shape as B6 (`ai`, `pdfExport`, `dataExport`,
+   `accountDeletion`) so F6 tests exercise the live branch's decisions.
+
+Consequences: live mode now shows the real server state without a rebuild, and
+a capabilities outage degrades safely to deterministic-only behaviour. The
+provider name is still not part of the payload; see
+`docs/api/f6-privacy-contract-gaps.md` gap 1.
+
+## ADR-047 - 2026-10-23 - F6 destructive actions are typed, scoped and honest
+
+Context: History and the privacy centre now expose permanent actions added by
+B6. A confirmation that only says "Are you sure?" does not tell the user what
+will disappear, and an account deletion that silently omits the auth identity
+would be false.
+
+Decision:
+
+1. Every destructive control opens a dialog that names the exact scope. Resume
+   delete removes the resume, every version and every cited claim, and says the
+   workspace and target are untouched. Version delete removes only that
+   snapshot. Purge rewrites citations to deleted workspace items and never
+   deletes the resume.
+2. Account deletion requires the exact lowercase phrase `delete my account`.
+   The server compares case-insensitively after trimming; the UI is stricter so
+   an autocapitalised paste cannot arm the button. A typo sends nothing.
+3. The deletion result is rendered from the response, not a client assumption.
+   While `authUserDeleted` is false the UI states that the sign-in email remains
+   and the operator must remove it. `deletedCounts` is summarised in a stable
+   order.
+4. Mock deletion clears the same stores the backend's function clears and keeps
+   the mock auth identity, so `authUserDeleted: false` is exercised in mock
+   mode too. A reload shows an empty workspace, not reseeded fixtures.
+5. History warnings use `removedEvidenceIds` on the list response. There is no
+   per-resume detail fetch; version rows use their own `removedEvidenceIds` and
+   `stale` fields.
+
+Consequences: destructive UI is slower by one confirmation but never optimistic
+and never claims more than the response. The typed phrase is deliberately
+stricter than the API; both accept only the same sentence.
+
+## ADR-048 - 2026-10-23 - F6 downloads only after the PDF check passes
+
+Context: B6 streams a PDF and reports a text-extraction check in `X-Export-*`
+headers. A 502 with `export_verification_failed` still carries those headers so
+the client can explain the refusal.
+
+Decision:
+
+1. The PDF button reads the headers before creating a download. `passed`
+   downloads and shows the section/claim counts; `failed` or `unknown` does not
+   download, keeps the resume editable and explains the check. A 200 whose
+   header says `failed` is treated as a refusal defensively.
+2. On a 502, `ApiError.responseHeaders` preserves the headers, so the UI shows
+   the failed check rather than a generic network error. The message states that
+   no file was downloaded and the resume is unchanged.
+3. The mock PDF route builds real, minimal ASCII PDF bytes with exact xref
+   offsets and verifies its own text stream. A scoped dev failure returns the
+   same 502 plus failed headers as the backend, so mock and live take the same
+   UI branch.
+4. Capabilities gate the control. If `pdfExport` is false or the capabilities
+   read failed, the button is disabled with the reason; the browser's Print /
+   Save as PDF remains described as the fallback.
+
+Consequences: no path hands the user a PDF the server refused, and the
+extraction result is visible feedback rather than a silent success toast. The
+header names are not yet in OpenAPI's schema; see
+`docs/api/f6-privacy-contract-gaps.md` gap 2.
+
+## ADR-049 - 2026-10-23 - F6 settings uses real auth actions and no fake switches
+
+Context: `/settings` must cover profile, display preferences and security
+without dead controls. Display defaults already live in the resume-preferences
+store, while password, display name and global sign-out need an auth seam.
+
+Decision:
+
+1. `AuthClient` gains `updateDisplayName`, `changePassword` and
+   `signOutEverywhere`. The mock implements them through `/auth/profile`,
+   `/auth/password` and `/auth/signout`; Supabase uses `updateUser`,
+   re-verifies the current password with `signInWithPassword` before changing
+   it, and signs out with `scope: "global"`.
+2. Password change is offered only for password accounts. OAuth accounts see
+   which provider manages the password instead of a form that cannot work.
+   A wrong current password changes nothing and is reported as such.
+3. Display preferences reuse `useResumePreferences` (the same localStorage keys
+   `/resume` reads). Reset writes the defaults back and toasts the result.
+4. Reduced motion is shown as OS-controlled with a disabled checkbox. Adding a
+   second in-app switch would either lie or fight `prefers-reduced-motion`, so
+   no dead override is rendered.
+5. The AI feature list is descriptive and capability-driven: what each feature
+   does, when it is available, and a link to the privacy centre for consent.
+   Nothing promises a provider or an output the server has not reported.
+
+Consequences: every settings control has an observable effect, and a provider
+account never sees a password form it cannot use. Live password change requires
+a recent Supabase session because the current password is re-verified first.

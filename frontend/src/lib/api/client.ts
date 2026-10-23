@@ -3,6 +3,7 @@ import { apiBaseUrl, isLiveMode } from "@/lib/config/mode";
 import {
   AnalysisReportSchema,
   AnalysisRunResponseSchema,
+  AccountDeletionResultSchema,
   CapabilitiesSchema,
   ImportConfirmResponseSchema,
   ImportReviewItemSchema,
@@ -10,16 +11,21 @@ import {
   ImportSummarySchema,
   JobTargetSchema,
   ResumeDiffSchema,
+  ResumePurgeResultSchema,
   ResumeRefreshResultSchema,
   ResumeSchema,
   ResumeSummarySchema,
+  ResumeVersionPurgeResultSchema,
   ResumeVersionSchema,
+  UserDataExportSchema,
   WorkspaceChangeLogEntrySchema,
   WorkspaceItemSchema,
   WorkspaceSchema,
   reviewItemToWorkspaceInputs,
+  type AccountDeletionResult,
   type AnalysisReport,
   type AnalysisRunResponse,
+  type Capabilities,
   type ImportItemStatus,
   type ImportItemValues,
   type ImportReviewItem,
@@ -29,9 +35,12 @@ import {
   type JobTarget,
   type Resume,
   type ResumeGenerateRequest,
+  type ResumePurgeResult,
   type ResumeRefreshRequest,
   type ResumeSectionEdit,
+  type ResumeVersionPurgeResult,
   type TargetCreateValues,
+  type UserDataExport,
   type Workspace,
   type WorkspaceChangeLogEntry,
   type WorkspaceItem,
@@ -63,6 +72,8 @@ export class ApiError extends Error {
     public readonly code?: string,
     /** `Retry-After` in milliseconds, when the server sent one. */
     public readonly retryAfterMs?: number,
+    /** Response headers, kept for binary routes such as the PDF export check. */
+    public readonly responseHeaders?: Headers,
   ) {
     super(message);
     this.name = "ApiError";
@@ -99,6 +110,14 @@ const CODE_FALLBACKS: Record<string, string> = {
   resume_version_not_found: "That resume version no longer exists.",
   ai_not_configured:
     "AI rewording is unavailable until a provider is configured on the server.",
+  export_verification_failed:
+    "The PDF failed the text-extraction check, so it was not delivered. Your resume is unchanged; try again.",
+  data_export_unavailable:
+    "Data export is unavailable right now. Nothing was changed; try again.",
+  account_deletion_unavailable:
+    "Account deletion is unavailable right now. Nothing was deleted; try again.",
+  account_confirmation_required:
+    "Type “delete my account” exactly to confirm. Nothing was deleted.",
   import_not_found: "That import session no longer exists.",
   import_item_not_found: "That review item no longer exists.",
   unreadable_document:
@@ -142,6 +161,7 @@ export function errorFromBody(
   status: number,
   path: string,
   retryAfterMs?: number,
+  responseHeaders?: Headers,
 ): ApiError {
   let message = "";
   let code: string | undefined;
@@ -162,6 +182,7 @@ export function errorFromBody(
     path,
     code,
     retryAfterMs,
+    responseHeaders,
   );
 }
 
@@ -221,6 +242,7 @@ async function request<T>(
       res.status,
       path,
       parseRetryAfter(res.headers.get("Retry-After")),
+      res.headers,
     );
   }
   if (res.status === 204) return undefined as T;
@@ -253,6 +275,48 @@ async function request<T>(
 
 /** Shared by the dev-only client in `./dev`; not part of the public API surface. */
 export { request as apiRequest };
+
+/**
+ * Binary GET (PDF export). The error path keeps the response headers because
+ * a refused export (502) still reports its extraction check in `X-Export-*`.
+ */
+async function requestBinary(
+  path: string,
+  init?: RequestInit,
+): Promise<{ blob: Blob; headers: Headers }> {
+  const live = isLiveMode();
+  const base = live ? `${apiBaseUrl()}${MOCK_BASE}` : MOCK_BASE;
+  const headers = new Headers(init?.headers);
+  if (live) {
+    const token = await accessToken();
+    if (token) headers.set("Authorization", `Bearer ${token}`);
+  }
+
+  let res: Response;
+  try {
+    res = await fetch(`${base}${path}`, { ...init, headers });
+  } catch {
+    throw new ApiError(
+      "We couldn't reach the server. Check your connection and try again.",
+      0,
+      path,
+      "network",
+    );
+  }
+
+  if (!res.ok) {
+    if (res.status === 401) unauthorizedHandler?.();
+    const errorBody = await res.json().catch(() => null);
+    throw errorFromBody(
+      errorBody,
+      res.status,
+      path,
+      parseRetryAfter(res.headers.get("Retry-After")),
+      res.headers,
+    );
+  }
+  return { blob: await res.blob(), headers: res.headers };
+}
 
 function unavailable(path: string): never {
   throw new ApiError(
@@ -429,23 +493,51 @@ export const api = {
       ResumeRefreshResultSchema,
     ),
 
-  // --- Capabilities (B6 contract §9.1) ---
+  // --- Resume deletion + purge (B6 contract §9) ---
+  /** Permanently delete a tailored resume and every saved version. */
+  deleteResume: (resumeId: string) =>
+    request<void>(`/resumes/${encodeURIComponent(resumeId)}`, {
+      method: "DELETE",
+    }),
+  /** Permanently delete one saved version. */
+  deleteResumeVersion: (resumeId: string, versionId: string) =>
+    request<void>(
+      `/resumes/${encodeURIComponent(resumeId)}/versions/${encodeURIComponent(versionId)}`,
+      { method: "DELETE" },
+    ),
+  /** Rewrite away claims that cite deleted workspace items (never deletes). */
+  purgeResume: (resumeId: string) =>
+    request(
+      `/resumes/${encodeURIComponent(resumeId)}/purge`,
+      { method: "POST" },
+      ResumePurgeResultSchema,
+    ),
+  purgeResumeVersion: (resumeId: string, versionId: string) =>
+    request(
+      `/resumes/${encodeURIComponent(resumeId)}/versions/${encodeURIComponent(versionId)}/purge`,
+      { method: "POST" },
+      ResumeVersionPurgeResultSchema,
+    ),
+
   /**
-   * Feature switches only. Used to decide whether the optional AI reworder can
-   * be offered; a failed read is handled by the caller as "unavailable".
+   * Streamed PDF export (B6 §9.2). The caller reads the `X-Export-*` headers
+   * to show the extraction-check result before offering the download.
    */
+  exportResumePdf: (resumeId: string) =>
+    requestBinary(`/resumes/${encodeURIComponent(resumeId)}/export.pdf`),
+
+  // --- Capabilities + privacy (B6 contract §9) ---
   getCapabilities: () =>
     request("/capabilities", undefined, CapabilitiesSchema),
-
-  // --- Privacy placeholders (F6 replaces these with /export and /account) ---
-  exportData: async (): Promise<unknown> => {
-    if (isLiveMode()) unavailable("/privacy/export");
-    return request<unknown>("/privacy/export");
-  },
-  deleteAccount: async (): Promise<void> => {
-    if (isLiveMode()) unavailable("/privacy/account");
-    return request<void>("/privacy/account", { method: "DELETE" });
-  },
+  exportData: () =>
+    request("/export", undefined, UserDataExportSchema),
+  /** `confirmation` must be the exact phrase; a typo deletes nothing. */
+  deleteAccount: (confirmation: string) =>
+    request(
+      "/account",
+      { method: "DELETE", body: JSON.stringify({ confirmation }) },
+      AccountDeletionResultSchema,
+    ),
 
   // --- AI-processing consent (PRD EX-3) ---
   /**
@@ -484,13 +576,18 @@ export const api = {
 };
 
 export type {
+  AccountDeletionResult,
   AnalysisReport,
   AnalysisRunResponse,
+  Capabilities,
   ImportReviewItem,
   ImportSession,
   ImportSummary,
   JobTarget,
   Resume,
+  ResumePurgeResult,
+  ResumeVersionPurgeResult,
+  UserDataExport,
   Workspace,
   WorkspaceChangeLogEntry,
   WorkspaceItem,

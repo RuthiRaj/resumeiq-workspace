@@ -17,6 +17,7 @@ import { ResumeCanvas } from "./resume-canvas";
 import { ResumeDiffDrawer } from "./resume-diff-drawer";
 import { EvidenceSheet } from "./evidence-sheet";
 import { ResumeSidePanel } from "./resume-side-panel";
+import { PdfExportButton } from "./pdf-export-button";
 import { useResume, useResumeList } from "./use-resume";
 
 function StudioSkeleton() {
@@ -195,6 +196,7 @@ export function ResumeStudio({ targetId }: { targetId: string }) {
                 Review changes
               </Button>
             ) : null}
+            <PdfExportButton resumeId={data.id} />
             <Link
               href="/history"
               className="inline-flex h-8 items-center gap-1.5 rounded-sm border border-white/[0.12] px-3 text-xs font-medium text-text hover:bg-white/[0.06] focus-visible:outline-accent-cyan"

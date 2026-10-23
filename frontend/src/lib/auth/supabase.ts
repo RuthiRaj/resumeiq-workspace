@@ -104,7 +104,7 @@ async function withAuthTimeout<T>(work: Promise<T>): Promise<T> {
   }
 }
 
-function mapSupabaseError(error: unknown, action: "signin" | "signup" | "reset"): AuthError {
+function mapSupabaseError(error: unknown, action: "signin" | "signup" | "reset" | "update"): AuthError {
   const candidate = error as { message?: unknown; status?: unknown; code?: unknown };
   const rawMessage =
     typeof candidate?.message === "string" ? candidate.message : "";
@@ -141,6 +141,12 @@ function mapSupabaseError(error: unknown, action: "signin" | "signup" | "reset")
   if (action === "reset") {
     return new AuthError(
       "We couldn't send the reset email. Try again in a moment.",
+      status === 422 ? "validation" : "unknown",
+    );
+  }
+  if (action === "update") {
+    return new AuthError(
+      "We couldn't update your account. Check the fields and try again.",
       status === 422 ? "validation" : "unknown",
     );
   }
@@ -256,6 +262,67 @@ export function createSupabaseAuthClient(): AuthClient {
       } catch {
         // Signing out locally must still succeed when the network is down.
       }
+    },
+
+    async signOutEverywhere() {
+      const supabase = await getClient();
+      const { error } = await withAuthTimeout(
+        supabase.auth.signOut({ scope: "global" }),
+      );
+      if (error) throw mapSupabaseError(error, "signin");
+    },
+
+    /**
+     * Supabase expects a recent authentication for a password change, so the
+     * current password is re-verified first. A wrong password is reported with
+     * the same message as a failed sign-in and changes nothing.
+     */
+    async changePassword(currentPassword: string, newPassword: string) {
+      const supabase = await getClient();
+      const session = await currentSession();
+      const email = session?.user?.email;
+      if (!session || !email) {
+        throw new AuthError("Sign in again to change your password.", "invalid_credentials");
+      }
+      if (providerOf(session.user) !== "password") {
+        throw new AuthError(
+          "This account signs in with a provider, so it has no password to change.",
+          "validation",
+        );
+      }
+      const verified = await withAuthTimeout(
+        supabase.auth.signInWithPassword({ email, password: currentPassword }),
+      );
+      if (verified.error) {
+        const message = verified.error.message?.toLowerCase() ?? "";
+        if (message.includes("invalid login credentials")) {
+          throw new AuthError(
+            "Current password is incorrect. Nothing was changed.",
+            "invalid_credentials",
+          );
+        }
+        throw mapSupabaseError(verified.error, "signin");
+      }
+      const { error } = await withAuthTimeout(
+        supabase.auth.updateUser({ password: newPassword }),
+      );
+      if (error) throw mapSupabaseError(error, "update");
+    },
+
+    async updateDisplayName(name: string) {
+      const trimmed = name.trim();
+      if (!trimmed) throw new AuthError("Enter your name.", "validation");
+      const supabase = await getClient();
+      const { error } = await withAuthTimeout(
+        supabase.auth.updateUser({ data: { name: trimmed } }),
+      );
+      if (error) throw mapSupabaseError(error, "update");
+      const session = await currentSession();
+      const mapped = session ? sessionFromSupabase(session) : null;
+      if (!mapped) {
+        throw new AuthError("Your session expired. Sign in again.", "invalid_credentials");
+      }
+      return mapped;
     },
 
     async subscribe(listener) {

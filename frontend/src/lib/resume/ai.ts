@@ -1,4 +1,5 @@
 import type { Consent } from "@/lib/privacy/consent";
+import type { AiCapabilities } from "@/lib/schemas";
 
 /**
  * AI rewording availability (PRD §6.9 EX-3, B5 §6.7).
@@ -6,12 +7,12 @@ import type { Consent } from "@/lib/privacy/consent";
  * Generation is deterministic and never needs AI. Rewording is optional and
  * only enabled when both gates pass:
  *  1. the user has recorded AI-processing consent;
- *  2. the server reports `ai.resumeRewording` through `GET /capabilities`.
+ *  2. `GET /capabilities` says the server has AI and `resumeRewording` on.
  *
- * The capability read replaced the old build-time
- * `NEXT_PUBLIC_AI_REWORDING_CONFIGURED` flag once B6 merged the endpoint. A
- * missing or failed read is treated as "not configured", never as "yes".
- * See docs/DECISIONS.md ADR-044 and docs/api/f5-resume-contract-gaps.md.
+ * Capabilities are the source of truth (`NEXT_PUBLIC_AI_REWORDING_CONFIGURED`
+ * is gone). While the call is loading, or if it fails, `capabilities` is null
+ * and the safe answer is "AI unavailable" — never an optimistic guess.
+ * See docs/DECISIONS.md ADR-046.
  */
 
 export interface AiRewordAvailability {
@@ -23,16 +24,37 @@ export interface AiRewordAvailability {
 
 export function aiRewordAvailability(
   consent: Consent | null | undefined,
-  providerConfigured: boolean,
+  capabilities: AiCapabilities | null | undefined,
 ): AiRewordAvailability {
   const consentGranted = Boolean(consent?.aiProcessing);
-  if (!providerConfigured) {
+  const providerConfigured = Boolean(
+    capabilities?.configured && capabilities.resumeRewording,
+  );
+  if (!capabilities) {
     return {
       enabled: false,
       consentGranted,
-      providerConfigured,
+      providerConfigured: false,
       reason:
-        "AI rewording is off because this server has no AI provider configured. Your resume is generated deterministically without it.",
+        "AI availability couldn't be confirmed, so AI rewording is off. Your resume is generated deterministically without it.",
+    };
+  }
+  if (!capabilities.configured) {
+    return {
+      enabled: false,
+      consentGranted,
+      providerConfigured: false,
+      reason:
+        "AI rewording is off because no AI provider is configured on the server. Your resume is generated deterministically without it.",
+    };
+  }
+  if (!capabilities.resumeRewording) {
+    return {
+      enabled: false,
+      consentGranted,
+      providerConfigured: false,
+      reason:
+        "This server supports AI analysis but not AI rewording. Your resume is generated deterministically without it.",
     };
   }
   if (!consentGranted) {

@@ -3,9 +3,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useConsent } from "@/lib/privacy/use-consent";
+import { useCapabilities } from "@/lib/privacy/use-capabilities";
 import { aiRewordAvailability } from "@/lib/resume";
 import type {
-  Capabilities,
   Resume,
   ResumeDiff,
   ResumeGenerateRequest,
@@ -64,41 +64,6 @@ export function useResumeDiff(
     queryFn: () => api.getResumeDiff(resumeId as string),
     enabled: Boolean(resumeId) && enabled,
   });
-}
-
-/**
- * Deliberately all-false: a failed capabilities read must never look like a
- * working feature, and `data` stays `null` so callers can tell "off" from
- * "could not check".
- */
-const CAPABILITIES_UNAVAILABLE: Capabilities = {
-  ai: { configured: false, analysisEnrichment: false, resumeRewording: false },
-  pdfExport: false,
-  dataExport: false,
-  accountDeletion: { dataDeletion: false, authUserDeletion: false },
-};
-
-export const capabilitiesKeys = {
-  all: ["capabilities"] as const,
-};
-
-/** `GET /capabilities` (B6 §9.1): the only source of truth for AI gating. */
-export function useCapabilities() {
-  const query = useQuery({
-    queryKey: capabilitiesKeys.all,
-    queryFn: () => api.getCapabilities(),
-    staleTime: 60_000,
-    retry: 1,
-  });
-  return {
-    ...(query.data ?? CAPABILITIES_UNAVAILABLE),
-    data: query.data ?? null,
-    isLoading: query.isLoading,
-    isError: query.isError,
-    error: query.error,
-    refetch: query.refetch,
-    query,
-  };
 }
 
 function useInvalidateResume(resumeId?: string) {
@@ -198,19 +163,67 @@ export function useResumeForTarget(targetId: string) {
   return { ...list, resume: matches[0] ?? null, matches };
 }
 
-/** Both availability gates for the optional AI reworder. */
+/** Both availability gates for the optional AI reworder (capabilities, B6). */
 export function useAiRewordAvailability() {
   const consent = useConsent();
   const capabilities = useCapabilities();
   return {
-    ...aiRewordAvailability(
-      consent.data?.consent,
-      capabilities.ai.resumeRewording,
-    ),
+    ...aiRewordAvailability(consent.data?.consent, capabilities.ai),
     loading: consent.isLoading || capabilities.isLoading,
-    query: consent,
     capabilities,
+    query: consent,
   };
+}
+
+/* -------------------------------------------------- B6 delete + purge hooks */
+
+export function useDeleteResume() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (resumeId: string) => api.deleteResume(resumeId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: resumeKeys.all });
+    },
+  });
+}
+
+export function useDeleteResumeVersion(resumeId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (versionId: string) =>
+      api.deleteResumeVersion(resumeId, versionId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: resumeKeys.versions(resumeId),
+      });
+      void queryClient.invalidateQueries({ queryKey: resumeKeys.list() });
+    },
+  });
+}
+
+export function usePurgeResume(resumeId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.purgeResume(resumeId),
+    onSuccess: (result) => {
+      queryClient.setQueryData(resumeKeys.detail(resumeId), result.resume);
+      void queryClient.invalidateQueries({ queryKey: resumeKeys.all });
+    },
+  });
+}
+
+export function usePurgeResumeVersion(resumeId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (versionId: string) =>
+      api.purgeResumeVersion(resumeId, versionId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: resumeKeys.versions(resumeId),
+      });
+      void queryClient.invalidateQueries({ queryKey: resumeKeys.list() });
+    },
+  });
 }
 
 export type ResumeDiffData = ResumeDiff;

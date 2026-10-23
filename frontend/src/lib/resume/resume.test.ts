@@ -108,7 +108,11 @@ describe("buildResumeDiff", () => {
 
 describe("aiRewordAvailability", () => {
   it("stays disabled and explains the missing consent gate", () => {
-    const availability = aiRewordAvailability(null, true);
+    const availability = aiRewordAvailability(null, {
+      configured: true,
+      analysisEnrichment: true,
+      resumeRewording: true,
+    });
 
     expect(availability.enabled).toBe(false);
     expect(availability.consentGranted).toBe(false);
@@ -124,7 +128,7 @@ describe("aiRewordAvailability", () => {
         recordedAt: "2026-10-21T09:00:00.000Z",
         version: 1,
       },
-      true,
+      { configured: true, analysisEnrichment: true, resumeRewording: true },
     );
 
     expect(availability.enabled).toBe(true);
@@ -139,12 +143,16 @@ describe("aiRewordAvailability", () => {
         recordedAt: "2026-10-21T09:00:00.000Z",
         version: 1,
       },
-      false,
+      {
+        configured: false,
+        analysisEnrichment: false,
+        resumeRewording: false,
+      },
     );
 
     expect(availability.enabled).toBe(false);
     expect(availability.providerConfigured).toBe(false);
-    expect(availability.reason).toContain("no AI provider configured");
+    expect(availability.reason).toContain("no AI provider is configured");
   });
 });
 

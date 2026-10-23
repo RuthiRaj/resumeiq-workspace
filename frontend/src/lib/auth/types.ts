@@ -55,6 +55,12 @@ export interface AuthClient {
   signInWithOAuth(provider: "google" | "github"): Promise<Session>;
   requestPasswordReset(email: string): Promise<{ message: string }>;
   signOut(): Promise<void>;
+  /** Ends every active session (Supabase global scope; mock clears its one). */
+  signOutEverywhere(): Promise<void>;
+  /** Re-verifies the current password (live) before setting a new one. */
+  changePassword(currentPassword: string, newPassword: string): Promise<void>;
+  /** Updates the display name; returns the refreshed session. */
+  updateDisplayName(name: string): Promise<Session>;
   /**
    * Live transport only: pushes auth-state changes (sign-out, refresh) so the
    * provider can react without polling. Returns an unsubscribe function.
