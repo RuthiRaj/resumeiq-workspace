@@ -172,6 +172,7 @@ export function useAiRewordAvailability() {
     loading: consent.isLoading || capabilities.isLoading,
     capabilities,
     query: consent,
+    capabilities,
   };
 }
 

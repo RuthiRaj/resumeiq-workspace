@@ -77,6 +77,14 @@ describe("mock tailored-resume store", () => {
     expect(listResumes(storage, USER)[0]?.kind).toBe("standard");
     expect(listVersions(storage, USER, resume.id)).toHaveLength(1);
     expect(listVersions(storage, USER, resume.id)[0]?.reason).toBe("generated");
+    expect(listVersions(storage, USER, resume.id)[0]?.stale).toBe(false);
+    expect(listVersions(storage, USER, resume.id)[0]?.removedEvidenceIds).toEqual(
+      [],
+    );
+    expect(
+      listResumes(storage, USER).find((row) => row.id === resume.id)
+        ?.removedEvidenceIds,
+    ).toEqual([]);
     expect(getResume(storage, USER, resume.id).id).toBe(resume.id);
   });
 
@@ -170,6 +178,15 @@ describe("mock tailored-resume store", () => {
     expect(diff.stale).toBe(true);
     expect(diff.removed.map((entry) => entry.itemId)).toContain(citedId);
     expect(diff.changedSections).toContain("experience");
+
+    // B6: the list row and every saved version carry the warning, so /history
+    // never has to fetch a full snapshot per resume.
+    const summary = listResumes(storage, USER).find((row) => row.id === resume.id);
+    expect(summary?.removedEvidenceIds).toContain(citedId);
+    expect(summary?.stale).toBe(true);
+    const versionRows = listVersions(storage, USER, resume.id);
+    expect(versionRows.every((version) => version.stale)).toBe(true);
+    expect(versionRows[0]?.removedEvidenceIds).toContain(citedId);
 
     const refreshed = refreshResume(
       storage,

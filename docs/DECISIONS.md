@@ -2007,7 +2007,7 @@ contains the resume routes. F5 must not modify backend code.
 
 Decision:
 
-1. The frontend contract is `docs/api/contract-proposals.md` section 6 and the
+1. The frontend contract is `docs/api/contract-proposals.md` §6 and the
    exported `docs/api/openapi.json` on `master`.
    `frontend/src/lib/schemas/resume.ts` mirrors that shape and the mock handlers
    use the same paths: `POST /targets/{id}/resume`, `GET /resumes`,
@@ -2021,17 +2021,20 @@ Decision:
 3. Tailored resumes are snapshots. The studio never silently rewrites one:
    section edits, restores and refreshes always replace server state with a new
    version, and the diff drawer makes the choice explicit.
-4. The numbers `044`/`045` follow the highest ADR on `master` (`043`) after the
-   B6 merge. The original F5 branch text used `041`/`042` and was renumbered
-   here because those numbers belong to B6.
+4. F5 originally recorded this ADR as `041` and its sibling as `042`, before the
+   B6 entries landed on `master` under the same numbers. After merging
+   `origin/master` (which carries `041`-`043`) they were renumbered to `044` and
+   `045`, so ADR numbers stay unique and increasing; code, tests and docs were
+   updated to the new numbers.
 5. Contract gaps found while implementing F5 are listed in
-   `docs/api/f5-resume-contract-gaps.md`; they are reported in the F5 pull
-   request instead of being guessed around in production code.
+   `docs/api/f5-resume-contract-gaps.md`. The B5/B6 merge closed every one of
+   them, and the document now records where the frontend consumes the real
+   contract instead of its temporary workaround.
 
 Consequences: mock mode remains the deterministic acceptance path, and live mode
-can use the merged routes once the backend deployment includes migration 0007.
-The opt-in live resume spec is now runnable with `RUN_LIVE_E2E=1`; the contract
-gaps document tracks only gaps that still exist on `master`.
+can use the merged routes once the backend deployment includes migrations 0007
+and 0008. The opt-in live resume spec is now runnable with `RUN_LIVE_E2E=1`; the
+contract gaps document is a closed record, not a list of open issues.
 
 ## ADR-045 - 2026-10-21 - F5 mock grounding, refresh and history semantics
 
@@ -2060,16 +2063,18 @@ Decision:
    appends a new `restored` version. History shows the standard resume and saved
    tailored snapshots separately, warns when a snapshot still cites missing
    items, and never claims deleted information was recovered.
-5. There is no purge/delete control. B5 has no delete endpoint and versions are
-   insert-only; the UI explains that purge is coming instead of offering a dead
-   button. AI rewording is shown only when both the consent lookup and the
-   provider gate pass; the disabled copy names the missing gate.
+5. Delete/purge controls are not rendered here. B6 merged the endpoints, but
+   the screen that owns them is F6; the UI says deletion/purge is coming in F6
+   instead of offering a dead button. AI rewording is shown only when the
+   recorded consent and `GET /capabilities`' `ai.resumeRewording` both pass;
+   the disabled copy names the missing gate. (F6 shipped those controls in
+   ADR-047; the historical wording above is kept as written.)
 
-Consequences: History performs one detail request per saved tailored resume to
-compute the removed-information warning, because `ResumeSummary` intentionally
-omits `sections` and `removedEvidenceIds`. If that list grows, B5 should add a
-cheap `removedCount` to the summary rather than making the client fetch every
-snapshot.
+Consequences: History reads its deleted-source warnings from
+`ResumeSummary.removedEvidenceIds` and `ResumeVersion.removedEvidenceIds` (B6),
+so it makes one list request plus one versions request and no per-snapshot
+detail requests. If a future screen needs counts without the id list, the
+contract can add a `removedCount` alongside the ids.
 
 ## ADR-046 - 2026-10-23 - F6 reads AI availability from capabilities, fail-closed
 

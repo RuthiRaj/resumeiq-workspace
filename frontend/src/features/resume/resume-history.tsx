@@ -582,6 +582,26 @@ export function ResumeHistoryPage() {
                               {version.editedSections.length} hand-edited
                               {version.aiUsed ? " · AI rewording" : ""}
                             </p>
+                            {version.stale || version.removedEvidenceIds.length > 0 ? (
+                              <p
+                                className="mt-1 flex items-start gap-1 text-[11px] text-evidence-missing"
+                                data-testid={`version-warning-${version.id}`}
+                              >
+                                <AlertTriangle
+                                  className="mt-0.5 size-3 shrink-0"
+                                  aria-hidden="true"
+                                />
+                                {version.stale ? "Older workspace version" : null}
+                                {version.stale && version.removedEvidenceIds.length > 0
+                                  ? " · "
+                                  : null}
+                                {version.removedEvidenceIds.length > 0
+                                  ? `${version.removedEvidenceIds.length} cited item${
+                                      version.removedEvidenceIds.length === 1 ? "" : "s"
+                                    } removed`
+                                  : null}
+                              </p>
+                            ) : null}
                           </div>
                           <Button
                             variant="secondary"

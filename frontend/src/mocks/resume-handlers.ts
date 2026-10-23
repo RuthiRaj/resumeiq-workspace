@@ -25,7 +25,7 @@ import {
 import { buildMockResumePdf } from "@/lib/export/mock-pdf";
 
 /**
- * Tailored-resume mock endpoints (B5 contract Â§6). They intentionally enforce
+ * Tailored-resume mock endpoints (B5 contract §6). They intentionally enforce
  * the same gates as the FastAPI branch: current analysis, recorded AI consent,
  * active evidence ids, grounding-checked edits and per-section refresh.
  */

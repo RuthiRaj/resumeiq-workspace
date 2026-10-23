@@ -134,6 +134,22 @@ describe("aiRewordAvailability", () => {
     expect(availability.enabled).toBe(true);
     expect(availability.reason).toContain("Only bullet lines are sent");
   });
+
+  it("fails closed when the capability read says no provider", () => {
+    const availability = aiRewordAvailability(
+      {
+        aiProcessing: true,
+        provider: "test-provider",
+        recordedAt: "2026-10-21T09:00:00.000Z",
+        version: 1,
+      },
+      false,
+    );
+
+    expect(availability.enabled).toBe(false);
+    expect(availability.providerConfigured).toBe(false);
+    expect(availability.reason).toContain("no AI provider configured");
+  });
 });
 
 describe("mergeRefresh", () => {
