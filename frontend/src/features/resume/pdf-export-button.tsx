@@ -46,10 +46,13 @@ export function PdfExportButton({
       const result = await api.exportResumePdf(resumeId);
       const parsed = parseExportCheck(result.headers);
       setCheck(parsed);
-      if (parsed.textCheck === "failed") {
-        // Defensive: a 200 with a failed check must never reach the user.
+      if (parsed.textCheck !== "passed") {
+        // Defensive: a 200 whose check is failed, or missing entirely, must
+        // never be handed to the user as if the server verified it.
         setError(
-          "The PDF failed its text check and was not downloaded. Your resume is unchanged; try again.",
+          parsed.textCheck === "failed"
+            ? "The PDF failed its text check and was not downloaded. Your resume is unchanged; try again."
+            : "The server did not report its PDF text-extraction check, so the file was not downloaded. Your resume is unchanged; try again.",
         );
         return;
       }
