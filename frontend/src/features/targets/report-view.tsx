@@ -16,6 +16,7 @@ import {
   SkillsPanel,
 } from "./report-panels";
 import type { AnalysisReport, JobTarget, WorkspaceItem } from "@/lib/schemas";
+import { GenerateResumeCard } from "@/features/resume/generate-resume-card";
 
 /**
  * The full AI report (PRD §6.4–6.7): score, requirements, gaps, skills, content
@@ -77,6 +78,8 @@ export function ReportView({
           </div>
         </div>
       </header>
+
+      <GenerateResumeCard target={target} stale={stale} />
 
       {stale ? (
         <Panel

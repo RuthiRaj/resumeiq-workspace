@@ -332,10 +332,22 @@ export function deriveStandardResume(ws: StoredWorkspace): Resume {
           .filter((part) => part && part.trim())
           .join(" · ");
         return [
-          { text: header, evidenceIds: [item.id], confirmed },
+          {
+            text: header,
+            evidenceIds: [item.id],
+            confirmed,
+            aiRewritten: false,
+            removed: false,
+          },
           ...item.bullets
             .filter((bullet) => bullet.trim())
-            .map((bullet) => ({ text: bullet, evidenceIds: [item.id], confirmed })),
+            .map((bullet) => ({
+              text: bullet,
+              evidenceIds: [item.id],
+              confirmed,
+              aiRewritten: false,
+              removed: false,
+            })),
         ];
       }),
     });
@@ -343,10 +355,16 @@ export function deriveStandardResume(ws: StoredWorkspace): Resume {
   return {
     id: "resume-standard",
     kind: "standard",
+    targetId: null,
+    title: "Standard resume",
     workspaceVersion: ws.version,
     stale: false,
     sections,
     createdAt: GENESIS_TIME,
     updatedAt: ws.updatedAt,
+    aiUsed: false,
+    ats: null,
+    editedSections: [],
+    removedEvidenceIds: [],
   };
 }

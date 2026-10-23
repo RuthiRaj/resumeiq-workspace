@@ -55,12 +55,51 @@ body {
 
 /* Clean print/PDF output: no app chrome, no grain, structured sections (PRD §7.7). */
 @media print {
+  @page {
+    size: A4;
+    margin: 14mm;
+  }
   .grain-overlay,
+  .no-print,
   [data-app-chrome] {
     display: none !important;
   }
+  html,
   body {
     background: #fff !important;
     color: #000 !important;
+  }
+  /* The shell normally owns viewport height and scroll; print must let the
+     document flow naturally so a long resume can span pages. */
+  [data-app-shell],
+  [data-app-scroll] {
+    display: block !important;
+    height: auto !important;
+    min-height: 0 !important;
+    position: static !important;
+    overflow: visible !important;
+  }
+  [data-app-shell] > div,
+  [data-app-scroll] > main {
+    display: block !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+  main {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: none !important;
+  }
+  .resume-paper {
+    box-shadow: none !important;
+    border: 0 !important;
+    max-width: none !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  .resume-paper section,
+  .resume-paper header {
+    break-inside: avoid;
   }
 }
