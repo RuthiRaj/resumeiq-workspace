@@ -60,8 +60,12 @@ export function PdfExportButton({
         description: describeExportCheck(parsed),
       });
     } catch (cause) {
+      // Only a refused export (502) carries the X-Export-* check headers. A
+      // generic API error must not render "the PDF was downloaded" copy.
       const failedCheck =
-        cause instanceof ApiError && cause.responseHeaders
+        cause instanceof ApiError &&
+        cause.status === 502 &&
+        cause.responseHeaders?.get("X-Export-Text-Check")
           ? parseExportCheck(cause.responseHeaders)
           : null;
       if (failedCheck) setCheck(failedCheck);
