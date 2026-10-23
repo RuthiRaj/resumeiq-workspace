@@ -199,11 +199,43 @@ async function measureLayout(page: Page): Promise<LayoutFinding> {
       }`;
     };
 
+    // An element below the fold of the app's own scroll region still has a
+    // full getBoundingClientRect(), so a naive check sees it "under" the
+    // mobile navigation row even though the scroll container clips it. Clip
+    // every rect to its overflow ancestors and the viewport first; only what
+    // can actually be painted is compared.
+    const visibleRect = (el: HTMLElement) => {
+      const rect = el.getBoundingClientRect();
+      let left = rect.left;
+      let top = rect.top;
+      let right = rect.right;
+      let bottom = rect.bottom;
+      let node = el.parentElement;
+      while (node && node !== document.body) {
+        const style = window.getComputedStyle(node);
+        if (/(auto|scroll|hidden|clip)/.test(`${style.overflowX}${style.overflowY}`)) {
+          const clip = node.getBoundingClientRect();
+          left = Math.max(left, clip.left);
+          top = Math.max(top, clip.top);
+          right = Math.min(right, clip.right);
+          bottom = Math.min(bottom, clip.bottom);
+        }
+        node = node.parentElement;
+      }
+      left = Math.max(left, 0);
+      top = Math.max(top, 0);
+      right = Math.min(right, window.innerWidth);
+      bottom = Math.min(bottom, window.innerHeight);
+      if (right <= left || bottom <= top) return null;
+      return { left, top, right, bottom, width: right - left, height: bottom - top };
+    };
+
     const visible = Array.from(document.querySelectorAll<HTMLElement>(selector)).filter((el) => {
       if (el.closest("nextjs-portal")) return false;
-      const rect = el.getBoundingClientRect();
+      const rect = visibleRect(el);
       const style = window.getComputedStyle(el);
       return (
+        rect !== null &&
         rect.width > 1 &&
         rect.height > 1 &&
         style.visibility !== "hidden" &&
@@ -226,15 +258,9 @@ async function measureLayout(page: Page): Promise<LayoutFinding> {
         const a = visible[i]!;
         const b = visible[j]!;
         if (a.contains(b) || b.contains(a)) continue;
-        const ra = a.getBoundingClientRect();
-        const rb = b.getBoundingClientRect();
-        if (
-          ra.bottom < 0 ||
-          rb.bottom < 0 ||
-          ra.top > window.innerHeight ||
-          rb.top > window.innerHeight
-        )
-          continue;
+        const ra = visibleRect(a);
+        const rb = visibleRect(b);
+        if (!ra || !rb) continue;
         const width = Math.min(ra.right, rb.right) - Math.max(ra.left, rb.left);
         const height = Math.min(ra.bottom, rb.bottom) - Math.max(ra.top, rb.top);
         if (width <= 4 || height <= 4) continue;
@@ -516,7 +542,12 @@ test.describe("live stack audit", () => {
       await signIn(page);
 
       const targetUrl = await readTargetUrl();
-      const routes = targetUrl ? [...ROUTES, targetUrl] : ROUTES;
+      // F5 adds /targets/[id]/resume; it only exists once the actions test has
+      // created a target with a report.
+      const studioUrl = targetUrl ? `${targetUrl}/resume` : null;
+      const routes = targetUrl
+        ? [...ROUTES, targetUrl, ...(studioUrl ? [studioUrl] : [])]
+        : ROUTES;
       if (!targetUrl) {
         console.log(
           "[live-audit] no target detail URL from the actions test; skipping /targets/[id]",
