@@ -28,6 +28,7 @@ from app.core.security import (
     RequestSizeLimitMiddleware,
     SecurityHeadersMiddleware,
 )
+from app.export.errors import ExportVerificationError
 from app.extraction.errors import (
     DocumentRejectedError,
     ExtractionError,
@@ -36,11 +37,14 @@ from app.extraction.errors import (
     UnsupportedFileTypeError,
 )
 from app.repositories.errors import (
+    AccountConfirmationError,
+    AccountDeletionUnavailableError,
     AnalysisAlreadyRunningError,
     AnalysisRequiredError,
     AnalysisRunNotFoundError,
     AnalysisStaleError,
     DataApiNotConfiguredError,
+    DataExportUnavailableError,
     ImportReviewItemNotFoundError,
     ImportSessionNotFoundError,
     InvalidReorderError,
@@ -172,6 +176,45 @@ async def _handle_resume_claim_ungrounded(_request: Request, _exc: Exception) ->
         422,
         "resume_claim_ungrounded",
         "A statement is not supported by the evidence it cites.",
+    )
+
+
+async def _handle_account_confirmation_required(_request: Request, _exc: Exception) -> JSONResponse:
+    return _error_response(
+        400,
+        "account_confirmation_required",
+        'Type "delete my account" to confirm. Nothing was deleted.',
+    )
+
+
+async def _handle_data_export_unavailable(_request: Request, _exc: Exception) -> JSONResponse:
+    return _error_response(
+        503,
+        "data_export_unavailable",
+        "Your data export could not be read right now. Try again.",
+    )
+
+
+async def _handle_account_deletion_unavailable(_request: Request, _exc: Exception) -> JSONResponse:
+    return _error_response(
+        503,
+        "account_deletion_unavailable",
+        "Account data deletion is unavailable right now. Nothing was deleted.",
+    )
+
+
+async def _handle_export_verification_failed(_request: Request, exc: Exception) -> JSONResponse:
+    check = getattr(exc, "check", None)
+    headers = check.headers() if check is not None else {}
+    return JSONResponse(
+        status_code=502,
+        content={
+            "detail": {
+                "code": "export_verification_failed",
+                "message": "The generated PDF failed its text check and was not served.",
+            }
+        },
+        headers=headers,
     )
 
 
@@ -308,6 +351,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.add_exception_handler(ResumeReadOnlyError, _handle_resume_read_only)
     app.add_exception_handler(ResumeEvidenceNotFoundError, _handle_resume_evidence_not_found)
     app.add_exception_handler(ResumeClaimUngroundedError, _handle_resume_claim_ungrounded)
+
+    # B6 export/privacy: honest 503s, a 400 for a bad confirmation and a 502
+    # (with count-only headers) for a PDF that failed its own extraction check.
+    app.add_exception_handler(AccountConfirmationError, _handle_account_confirmation_required)
+    app.add_exception_handler(DataExportUnavailableError, _handle_data_export_unavailable)
+    app.add_exception_handler(AccountDeletionUnavailableError, _handle_account_deletion_unavailable)
+    app.add_exception_handler(ExportVerificationError, _handle_export_verification_failed)
 
     # AI gateway errors (B3): typed, stable codes, no prompt/response content.
     app.add_exception_handler(AINotConfiguredError, _handle_ai_not_configured)

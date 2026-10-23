@@ -1,17 +1,19 @@
-# Contract proposals — imports, targets, analysis, report and resumes (F4/B5)
+# Contract proposals — imports, targets, analysis, report, resumes and privacy (F4/B5/B6)
 
 Status: **§2 (imports) implemented** by the backend (B2), **§3–§5 (targets,
-analysis, report) implemented** by B4 and **§6 (resumes) implemented** by B5;
-all are exported into `docs/api/openapi.json`. The dev-only routes in §7 exist
-only in the frontend mock API (MSW). The frontend Zod schemas + MSW handlers get
-reconciled against that export before the mock layer is removed at B7 (see
-ADR-013, ADR-021, ADR-028, ADR-039).
+analysis, report) implemented** by B4, **§6 (resumes) implemented** by B5 and
+**§9 (export, capabilities, deletion) implemented** by B6; all are exported into
+`docs/api/openapi.json`. The dev-only routes in §7 exist only in the frontend
+mock API (MSW). The frontend Zod schemas + MSW handlers get reconciled against
+that export before the mock layer is removed at B7 (see ADR-013, ADR-021,
+ADR-028, ADR-039, ADR-041).
 
 This document is the contract the F4 frontend already speaks. It complements
 `docs/api/openapi.json`, which contains the B0/B1 routes (`/health`,
 `/api/v1/me`, `/api/v1/workspace*`, `/api/v1/resume/standard`), the B2 import
-routes (`/api/v1/imports*`), the B4 target/analysis routes and the B5 resume
-routes.
+routes (`/api/v1/imports*`), the B4 target/analysis routes, the B5 resume
+routes and the B6 privacy/export routes (`/api/v1/capabilities`,
+`/api/v1/export`, `/api/v1/account`, resume delete/purge/PDF export).
 
 Source of truth on the frontend:
 
@@ -515,12 +517,27 @@ two use the same `Resume` shape; only tailored resumes accept mutations.
 | `POST` | `/resumes/{resume_id}/stale` | — | `200 Resume` | `404 resume_not_found`, `409 resume_not_tailored` |
 | `GET` | `/resumes/{resume_id}/diff` | — | `200 ResumeDiff` | `404 resume_not_found` |
 | `POST` | `/resumes/{resume_id}/refresh` | `ResumeRefreshRequest` | `200 ResumeRefreshResult` | `403 ai_consent_required`, `404 resume_not_found \| target_not_found`, `409 resume_not_tailored \| analysis_required`, `422 resume_section_invalid`, `503 ai_not_configured` |
+| `DELETE` | `/resumes/{resume_id}` | — | `204` | `404 resume_not_found`, `409 resume_not_tailored` |
+| `DELETE` | `/resumes/{resume_id}/versions/{version_id}` | — | `204` | `404 resume_not_found \| resume_version_not_found`, `409 resume_not_tailored` |
+| `POST` | `/resumes/{resume_id}/purge` | — | `200 ResumePurgeResult` | `404 resume_not_found`, `409 resume_not_tailored` |
+| `POST` | `/resumes/{resume_id}/versions/{version_id}/purge` | — | `200 ResumeVersionPurgeResult` | `404 resume_not_found \| resume_version_not_found`, `409 resume_not_tailored` |
+| `GET` | `/resumes/{resume_id}/export.pdf` | — | `200 application/pdf` | `404 resume_not_found`, `502 export_verification_failed` |
 
 The standard resume's id is the stable `resume-standard` (the B1
 `GET /resume/standard` route remains available for the same derived resume).
 `GET /resumes` returns it
 first, followed by tailored resumes newest-first. `GET /resumes/resume-standard`
 is always current and `stale: false`; its `/versions` list is empty.
+
+**Version ordering is part of the contract:** `GET /resumes/{resume_id}/versions`
+returns snapshots **newest first** (`createdAt` descending; the deletion/purge
+routes preserve that order). The first row is therefore always the most recent
+snapshot. The standard resume has no versions (`[]`).
+
+B6 adds user-initiated deletion and purge on top of B5's append-only rules:
+normal generation/edit/restore/refresh still append, never rewrite, history;
+only the explicit `DELETE` and `purge` routes below remove or rewrite saved
+information, and they are documented in §6.5 and ADR-041.
 
 ### 6.2 `Resume`
 
@@ -566,10 +583,12 @@ is always current and `stale: false`; its `/versions` list is empty.
   from the selected items and the report's requirements. It is never a
   guarantee and always carries the methodology disclaimer.
 
-`ResumeSummary` is the same object without `sections`, `ats` or
-`removedEvidenceIds` (it keeps `id`, `kind`, `targetId`, `title`,
-`workspaceVersion`, `stale`, `aiUsed`, `editedSections`, `createdAt`,
-`updatedAt`).
+`ResumeSummary` is the same object without `sections` or `ats` (it keeps `id`,
+`kind`, `targetId`, `title`, `workspaceVersion`, `stale`, `aiUsed`,
+`editedSections`, `removedEvidenceIds`, `createdAt`, `updatedAt`). B6 added
+`removedEvidenceIds` to the list row so the history screen can show "contains
+removed information" and offer purge without fetching every full resume
+(ADR-041).
 
 ### 6.3 Generation (deterministic first)
 
@@ -623,13 +642,53 @@ with `reason: "edited"` is appended.
 ### 6.5 Versions and restore
 
 `ResumeVersion` = `{ id, resumeId, workspaceVersion, createdAt, reason, title,
-aiUsed, sections, ats, editedSections }`; `reason` is `generated`, `edited`,
-`restored` or `refreshed`. Versions are insert-only: nothing is updated or
-deleted. `POST …/versions/{version_id}/restore` copies that snapshot into the
-current resume (same resume id, new `updatedAt`) and appends a new version with
+aiUsed, sections, ats, editedSections, stale, removedEvidenceIds }`; `reason`
+is `generated`, `edited`, `restored`, `refreshed` or `purged`. Versions are
+returned newest-first. `stale` and `removedEvidenceIds` are computed on read
+against the current workspace (they are not stored): a version is stale when
+its `workspaceVersion` is older than the current workspace version, and
+`removedEvidenceIds` lists cited items that no longer exist. Reading a version
+therefore has the same warning information as reading the current resume.
+
+`POST …/versions/{version_id}/restore` copies that snapshot into the current
+resume (same resume id, new `updatedAt`) and appends a new version with
 `reason: "restored"`. History therefore grows by one; the restored version's
 `workspaceVersion` is preserved, so a restore from before a workspace change is
 reported as stale.
+
+**Deletion and purge (B6).** Normal mutations never delete history. The
+following are explicit user actions:
+
+* `DELETE /resumes/{resume_id}` permanently deletes a tailored resume, its
+  claims and its saved versions (the standard resume is rejected with
+  `409 resume_not_tailored`). Returns `204`.
+* `DELETE /resumes/{resume_id}/versions/{version_id}` permanently deletes one
+  saved version and leaves the current resume unchanged. Returns `204`.
+* `POST /resumes/{resume_id}/purge` is the "remove removed information"
+  operation (PRD §6.8 RG-6). It rewrites the current resume **and every saved
+  version** so no claim that cites a workspace item deleted after the snapshot
+  survives. Sections left with no claims are dropped, cited evidence for the
+  removed items is dropped, `editedSections` only keeps surviving sections, and
+  a new version with `reason: "purged"` is appended when the current resume
+  changed. The response is:
+
+  ```json
+  {
+    "resume": Resume,
+    "purgedVersions": 2,
+    "removedClaims": 5,
+    "removedEvidenceIds": ["item-uuid"]
+  }
+  ```
+
+* `POST /resumes/{resume_id}/versions/{version_id}/purge` rewrites exactly one
+  snapshot. The response is
+  `{ "version": ResumeVersion, "removedClaims": 2, "removedEvidenceIds": ["item-uuid"] }`.
+
+Purge never invents, rewrites or reorders surviving statements: it only removes
+claims whose evidence no longer exists. A purge with nothing to remove is a
+no-op (`200`, zero counts) and does not append a version. Purge is idempotent:
+the second call reports zero removed claims.
 
 ### 6.6 Stale, diff and refresh
 
@@ -742,3 +801,159 @@ Sample target ids are stable: `sample-target-strong`, `sample-target-partial`,
 8. **Resume ATS reuse** — B5 reuses the report's `AtsReport` shape on the resume
    because it is the same deterministic check over the selected items. If F6
    needs resume-specific layout checks, add fields rather than a second type.
+
+---
+
+## 9. Export, capabilities and account privacy (B6)
+
+B6 implements PRD §6.9 (EX-1..EX-3) and the privacy half of RG-6. Everything is
+authenticated and scoped by the caller's JWT: no endpoint accepts a user id.
+
+### 9.1 Endpoints
+
+| Method | Path | Request | Success | Errors |
+|---|---|---|---|---|
+| `GET` | `/capabilities` | — | `200 Capabilities` | — |
+| `GET` | `/resumes/{resume_id}/export.pdf` | — | `200 application/pdf` (streamed) | `404 resume_not_found`, `502 export_verification_failed` |
+| `GET` | `/export` | — | `200 UserDataExport` | `503 data_export_unavailable` |
+| `DELETE` | `/account` | `AccountDeleteRequest` | `200 AccountDeletionResult` | `400 account_confirmation_required`, `503 account_deletion_unavailable` |
+
+`GET /capabilities` answers "can this server do X" without disclosing a provider:
+no provider name, model id, base URL, key or key length appears in the body.
+
+```json
+{
+  "ai": {
+    "configured": true,
+    "analysisEnrichment": true,
+    "resumeRewording": true
+  },
+  "pdfExport": true,
+  "dataExport": true,
+  "accountDeletion": {
+    "dataDeletion": true,
+    "authUserDeletion": false
+  }
+}
+```
+
+* `ai.configured` is true when at least one AI provider key is present. The two
+  feature flags say which AI-backed features may be offered; they never imply a
+  provider is healthy, and a missing key turns them off before any call.
+* `pdfExport`, `dataExport` and `accountDeletion.dataDeletion` describe this
+  API surface and are false when the deployed server has no data access
+  configured.
+* `authUserDeletion` is false in B6 on purpose: deleting the Supabase auth
+  identity needs a privilege this process deliberately does not hold (ADR-043).
+  Clients must not offer a "complete account deletion" claim while it is false.
+
+### 9.2 PDF export (EX-1)
+
+`GET /resumes/{resume_id}/export.pdf` accepts the standard resume id
+(`resume-standard`) or a tailored resume. The PDF is generated server-side and
+**streamed; it is never stored**. It is single column, A4, has selectable text,
+uses conventional uppercase-safe section headings (`Contact`, `Experience`,
+`Projects`, `Education`, `Skills`, …), and carries no watermark and no invented
+content. Every visible statement is one of the resume's `sections[].claims`;
+the export renders no summary, score, ATS panel or branding text.
+
+After rendering, the server extracts the text back from the generated bytes
+and checks that every rendered section heading and every claim is present
+(whitespace-normalized). The result is reported in response headers:
+
+| Header | Meaning |
+|---|---|
+| `X-Export-Text-Check` | `passed` or `failed` |
+| `X-Export-Sections-Checked` | rendered sections checked |
+| `X-Export-Sections-Missing` | heading checks that failed |
+| `X-Export-Claims-Checked` | visible claims checked |
+| `X-Export-Claims-Missing` | claim checks that failed |
+| `Content-Disposition` | `attachment; filename="<slug>.pdf"` |
+
+A failed extraction check is **not** served as a good export: the route returns
+`502 export_verification_failed` and the headers, so a client cannot silently
+hand the user a PDF whose text layer is missing. Headers never contain claim
+text (only counts), so no personal data leaks into logs or proxies.
+
+### 9.3 Full data export (EX-2)
+
+`GET /export` returns every public row owned by the caller. The response is JSON
+with `Content-Disposition: attachment` and `Cache-Control: no-store`:
+
+```json
+{
+  "format": "resumeiq.data-export.v1",
+  "exportedAt": "2026-10-21T10:00:00.000Z",
+  "userId": "uuid",
+  "email": "user@example.com | null",
+  "workspace": [],
+  "workspaceVersions": [],
+  "evidenceLinks": [],
+  "changeLog": [],
+  "targets": [],
+  "jdRequirements": [],
+  "reports": [],
+  "analysisRuns": [],
+  "resumes": [],
+  "resumeVersions": [],
+  "resumeClaims": [],
+  "consentRecords": [],
+  "imports": [],
+  "importReviewItems": [],
+  "profile": null,
+  "skills": [],
+  "skillRelations": [],
+  "auditEvents": []
+}
+```
+
+Rows are the stored JSON, so soft-deleted workspace items, month-precision
+dates and provenance columns survive the export. `userId`/`email` come from the
+verified access token, never from another table. The export contains **no
+`auth.users` row, password, access token, refresh token, API key or service
+key**, and no row belonging to another user: the query filters `user_id` and
+Postgres RLS enforces the same rule. `format` is versioned so a consumer can
+detect a future shape change.
+
+### 9.4 Account deletion (EX-2)
+
+```json
+// DELETE /account
+{ "confirmation": "delete my account" }
+```
+
+The confirmation phrase is compared case-insensitively after trimming; anything
+else is `400 account_confirmation_required` and deletes nothing. A correct
+request removes every public row the caller owns in dependency order (claims
+and versions before resumes; import items before sessions; requirements and
+reports before targets; evidence before workspace items; relations before
+skills; then versions, change log, consent records, audit events, the profile
+and the workspace), using one narrowly scoped `SECURITY DEFINER` function that
+resolves `auth.uid()` and takes no user id. It then returns:
+
+```json
+{
+  "dataDeleted": true,
+  "authUserDeleted": false,
+  "remainingStep": "auth_user",
+  "deletedAt": "2026-10-21T10:00:00.000Z",
+  "deletedCounts": { "workspace_items": 12, "resumes": 2, "…": 0 },
+  "message": "Your ResumeIQ data was deleted. The sign-in identity still exists and must be removed by the service operator."
+}
+```
+
+The response is deliberately honest: `authUserDeleted` is false and
+`remainingStep` names the outstanding auth-identity deletion. This process does
+not hold a service-role key and does not add one (ADR-043). Account deletion is
+idempotent for data: a second call deletes zero rows and returns the same
+remaining step.
+
+### 9.5 Privacy notes
+
+* PDFs are generated in memory per request and never persisted.
+* The export and deletion routes never log row contents, tokens or the
+  confirmation phrase.
+* Failures return the standard `{"detail":{"code","message"}}` envelope and do
+  not echo stored data.
+* `DELETE /account` only removes data for the token's `sub`; a forged body,
+  query parameter or header cannot select another user (no user id is accepted).

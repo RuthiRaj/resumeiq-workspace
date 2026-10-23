@@ -1882,7 +1882,124 @@ still yields a workspace-ordered fallback resume. AI output cannot introduce a
 metric/title/date/technology because the same validator that protects B3 runs
 per claim, and `aiUsed` is evidence of visible output, not of an attempted call.
 
-## ADR-041 - 2026-10-21 - F5 consumes the merged B5 resume contract
+## ADR-041 - 2026-10-21 - B6 capabilities, resume summaries, deletion and purge
+
+Context: the F5 resume studio needs to know which optional features exist, needs
+to see "contains removed information" without fetching every full resume, and
+needs explicit delete/purge actions for a historical snapshot that cites a
+workspace item the user has since deleted (PRD §6.8 RG-6, PRD §6.9).
+
+Decision:
+
+1. `GET /capabilities` reports booleans only: AI configured (and the two AI-backed
+   features), PDF export, data export and account data deletion. No provider
+   name, model id, base URL, key or key length is returned. The AI flags mean
+   "at least one key is configured", never "the provider is healthy".
+2. `ResumeSummary` and `ResumeVersion` expose `removedEvidenceIds`; versions also
+   expose `stale`. Both are computed on read against the current workspace (they
+   are not stored), so the list and the history screen can warn and offer purge
+   without a second request. `GET /resumes/{id}/versions` is contractually
+   newest-first (`createdAt` descending).
+3. Normal mutations stay append-only. `DELETE /resumes/{id}` removes a tailored
+   resume (claims/versions cascade in Postgres). `DELETE …/versions/{id}` removes
+   one saved version and leaves the current resume untouched. The standard
+   resume is rejected with `409 resume_not_tailored`.
+4. `POST …/purge` and `POST …/versions/{id}/purge` remove only claims whose cited
+   item no longer exists. Surviving statements are copied verbatim (no rewrite or
+   reorder), empty sections and newly unused evidence are dropped,
+   `editedSections` keeps survivors, and a `purged` version is appended only when
+   the current resume changed. The operation is idempotent and a no-op reports
+   zero counts.
+5. `resume_versions` keeps its insert-only default; migration 0008 adds one
+   owner-scoped DELETE policy for the explicit version delete and a narrow
+   `SECURITY DEFINER` `api_resume_version_purge` that changes only `snapshot`
+   after checking `auth.uid()` and the resume id. Broad UPDATE on a history table
+   is deliberately not granted.
+
+Consequences: the UI can offer accurate, scoped deletion/purge actions, and a
+deleted workspace item can never be silently republished by a restore or an
+export. The purge response says exactly how many claims and versions changed.
+
+## ADR-042 - 2026-10-21 - B6 PDF export: licence, layout and round-trip check
+
+Context: PRD §6.9 EX-1 requires a server-generated, ATS-safe, text-selectable PDF
+with no fabricated content, no storage and no AGPL dependency.
+
+Decision:
+
+1. Rendering uses `reportlab` (BSD-3-Clause); verification uses `pypdf`
+   (BSD-3-Clause) to extract the text back. The bundled `DejaVuSans.ttf` font is
+   Bitstream Vera / public-domain DejaVu, with its licence file next to it. No
+   AGPL component is used, and the PDF is never written to disk or object storage.
+2. The layout is deliberately minimal: A4, single column, plain paragraphs,
+   conventional section headings (`Contact`, `Experience`, `Projects`,
+   `Education`, `Skills`, …), black text, no tables, images, columns, watermark
+   or branding. The only body content is `resume.sections[].claims` text.
+3. Claims flagged `removed` (their workspace item was deleted) are omitted: the
+   export must not republish deleted information. This is the same rule as purge,
+   applied at render time.
+4. After rendering, the bytes are read back with `pypdf`; every rendered heading
+   and claim must be found in the extracted, whitespace-normalised text. The
+   counts are returned in `X-Export-*` headers. A failed check returns
+   `502 export_verification_failed` and never serves the PDF. Headers carry counts
+   only, never claim text.
+5. The standard resume (`resume-standard`) and tailored resumes both export
+   through the same route; the derived standard is never persisted by this path.
+
+Consequences: an export either round-trips its own text layer or fails loudly.
+Adding a decorative element means extending the verification, which keeps the
+ATS guarantee honest rather than aspirational.
+
+## ADR-043 - 2026-10-21 - B6 data export and account deletion: no service-role key
+
+Context: PRD §6.9 EX-2 requires a complete data export and account deletion.
+Supabase's self-service API has no "delete my auth user" call for a normal access
+token. Adding a service-role key to the backend only to finish that step would
+put an RLS-bypassing credential in every request process.
+
+Decision:
+
+1. `GET /export` returns `resumeiq.data-export.v1`: one `select=*` query per
+   public table that can hold the caller's data, plus the profile row. Keys are
+   explicit; adding a user-owned table requires adding it to `EXPORT_TABLES` and
+   to contract §9. `userId`/`email` come from the verified token, not from
+   `auth.users`. No auth row, token, key or other user's row is included.
+2. `DELETE /account` requires the trimmed, case-insensitive phrase
+   `delete my account`; anything else is `400 account_confirmation_required` and
+   deletes nothing. It calls migration 0008's
+   `api_account_delete_data()`: SECURITY DEFINER, no arguments, resolves
+   `auth.uid()`, deletes public rows in dependency order (claims → versions →
+   resumes; import items → sessions; requirements/reports/jobs → targets;
+   evidence → workspace; relations → skills; then versions, change log, consent,
+   audit, profile) and returns per-table counts.
+
+   Privileges required, and why: the function must be created by the migration
+   role (the schema owner, normally `postgres`/`supabase_admin`) because it is
+   `SECURITY DEFINER` and must delete from `resume_versions`, `change_log`,
+   `analysis_reports` and `audit_events`, which intentionally have no DELETE
+   policy. It needs only DELETE/SELECT on the `public` tables it names -- no
+   role membership, no `auth` schema write and no service-role key. EXECUTE is
+   revoked from `PUBLIC`/`anon` and granted only to `authenticated`, so the
+   definer rights are reachable only through a verified user token, and the
+   no-argument signature means the caller cannot choose whose rows are removed.
+   Deleting the `auth.users` identity additionally needs the Supabase Admin API
+   with a `service_role` key; that key is held by an operator outside this
+   service and never enters the repository, the backend process or the frontend.
+3. The function cannot touch `auth.users` and takes no user id, so it cannot
+   select another account. It exists because four history tables intentionally
+   have no DELETE policy; the function is the only path that can remove them.
+4. `authUserDeleted` is `false` and `remainingStep: "auth_user"` on every B6
+   response. Completing the auth-identity deletion is a documented operator step
+   using a privileged admin API outside this service. The process holds no
+   service-role key and the frontend receives none.
+5. Neither route logs row contents, the confirmation phrase or a token. Failures
+   use the standard error envelope.
+
+Consequences: the API never claims a complete account deletion it did not
+perform. Data deletion is real, idempotent and isolated, while the remaining
+identity step is explicit in the response and in the operator documentation.
+
+## ADR-044 - 2026-10-21 - F5 consumes the merged B5 resume contract
 
 Context: F5 needs tailored resumes, history, diff and refresh. B5 is now merged
 into `master` (PR #27, merge commit `a4dbe2f`), so `docs/api/openapi.json`
@@ -1904,18 +2021,22 @@ Decision:
 3. Tailored resumes are snapshots. The studio never silently rewrites one:
    section edits, restores and refreshes always replace server state with a new
    version, and the diff drawer makes the choice explicit.
-4. ADR numbers `041`/`042` were chosen while B5's `039`/`040` were still
-   unmerged; they now follow the highest ADR on `master` and need no renumbering.
+4. F5 originally recorded this ADR as `041` and its sibling as `042`, before the
+   B6 entries landed on `master` under the same numbers. After merging
+   `origin/master` (which carries `041`-`043`) they were renumbered to `044` and
+   `045`, so ADR numbers stay unique and increasing; code, tests and docs were
+   updated to the new numbers.
 5. Contract gaps found while implementing F5 are listed in
-   `docs/api/f5-resume-contract-gaps.md`; they are reported in the F5 pull
-   request instead of being guessed around in production code.
+   `docs/api/f5-resume-contract-gaps.md`. The B5/B6 merge closed every one of
+   them, and the document now records where the frontend consumes the real
+   contract instead of its temporary workaround.
 
 Consequences: mock mode remains the deterministic acceptance path, and live mode
-can use the merged routes once the backend deployment includes migration 0007.
-The opt-in live resume spec is now runnable with `RUN_LIVE_E2E=1`; the contract
-gaps document tracks only gaps that still exist on `master`.
+can use the merged routes once the backend deployment includes migrations 0007
+and 0008. The opt-in live resume spec is now runnable with `RUN_LIVE_E2E=1`; the
+contract gaps document is a closed record, not a list of open issues.
 
-## ADR-042 - 2026-10-21 - F5 mock grounding, refresh and history semantics
+## ADR-045 - 2026-10-21 - F5 mock grounding, refresh and history semantics
 
 Context: F5 must be demonstrable without a backend while still failing closed
 on invented claims. The mock cannot be more permissive than B5 or the UI would
@@ -1942,13 +2063,14 @@ Decision:
    appends a new `restored` version. History shows the standard resume and saved
    tailored snapshots separately, warns when a snapshot still cites missing
    items, and never claims deleted information was recovered.
-5. There is no purge/delete control. B5 has no delete endpoint and versions are
-   insert-only; the UI explains that purge is coming instead of offering a dead
-   button. AI rewording is shown only when both the consent lookup and the
-   provider gate pass; the disabled copy names the missing gate.
+5. Delete/purge controls are not rendered here. B6 merged the endpoints, but
+   the screen that owns them is F6; the UI says deletion/purge is coming in F6
+   instead of offering a dead button. AI rewording is shown only when the
+   recorded consent and `GET /capabilities`' `ai.resumeRewording` both pass;
+   the disabled copy names the missing gate.
 
-Consequences: History performs one detail request per saved tailored resume to
-compute the removed-information warning, because `ResumeSummary` intentionally
-omits `sections` and `removedEvidenceIds`. If that list grows, B5 should add a
-cheap `removedCount` to the summary rather than making the client fetch every
-snapshot.
+Consequences: History reads its deleted-source warnings from
+`ResumeSummary.removedEvidenceIds` and `ResumeVersion.removedEvidenceIds` (B6),
+so it makes one list request plus one versions request and no per-snapshot
+detail requests. If a future screen needs counts without the id list, the
+contract can add a `removedCount` alongside the ids.
