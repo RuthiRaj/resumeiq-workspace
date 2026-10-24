@@ -34,6 +34,7 @@ export function PdfExportButton({
   const capabilities = useCapabilities();
   const [working, setWorking] = useState(false);
   const [check, setCheck] = useState<ExportCheck | null>(null);
+  const [delivered, setDelivered] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const unavailable = !capabilities.isLoading && !capabilities.pdfExport;
@@ -42,6 +43,7 @@ export function PdfExportButton({
     setWorking(true);
     setError(null);
     setCheck(null);
+    setDelivered(false);
     try {
       const result = await api.exportResumePdf(resumeId);
       const parsed = parseExportCheck(result.headers);
@@ -57,6 +59,7 @@ export function PdfExportButton({
         return;
       }
       downloadBlob(result.blob, parsed.filename);
+      setDelivered(true);
       toast({
         tone: "success",
         title: "PDF downloaded",
@@ -136,7 +139,7 @@ export function PdfExportButton({
           data-testid="pdf-export-check"
         >
           <FileWarning className="mt-0.5 size-3 shrink-0" aria-hidden="true" />
-          {describeExportCheck(check)}
+          {describeExportCheck(check, delivered)}
         </p>
       ) : null}
 
