@@ -49,6 +49,7 @@ def settings() -> Settings:
         supabase_jwt_issuer=TEST_ISSUER,
         max_request_bytes=1_048_576,
         rate_limit_per_minute=1000,  # effectively off unless a test lowers it
+        authenticated_rate_limit_per_minute=1000,
     )
 
 

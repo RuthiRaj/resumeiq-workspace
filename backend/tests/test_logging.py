@@ -62,7 +62,7 @@ def test_no_info_record_carries_a_supabase_user_filter(isolated_logging: None) -
     try:
         logging.getLogger("httpx").info(
             "HTTP Request: GET https://project.supabase.co/rest/v1/resumes"
-            f"?select=*&{USER_FILTER} \"HTTP/1.1 200 OK\""
+            f'?select=*&{USER_FILTER} "HTTP/1.1 200 OK"'
         )
         logging.getLogger("httpcore").info(
             f"HTTP Request: GET https://project.supabase.co/rest/v1/resumes?{USER_FILTER}"

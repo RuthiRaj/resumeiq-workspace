@@ -133,27 +133,46 @@ class RequestSizeLimitMiddleware:
 
 
 class InMemoryRateLimiter(BaseHTTPMiddleware):
-    """Fixed-window per-IP rate limiter (single-process placeholder)."""
+    """Single-process rate limiter.
 
-    def __init__(self, app: ASGIApp, per_minute: int) -> None:
+    Anonymous traffic is keyed by client IP with ``per_minute``. A request with
+    a *verified* Supabase bearer token is keyed by the user id instead, with the
+    higher ``authenticated_per_minute`` budget, so one signed-in user cannot
+    exhaust the allowance of everyone sharing their IP. An invalid or expired
+    token falls back to the IP bucket; the route still rejects it with 401.
+    """
+
+    def __init__(
+        self,
+        app: ASGIApp,
+        per_minute: int,
+        authenticated_per_minute: int = 240,
+    ) -> None:
         super().__init__(app)
         self.per_minute = per_minute
+        self.authenticated_per_minute = authenticated_per_minute
         self._hits: dict[str, deque[float]] = {}
 
     async def dispatch(
         self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
     ) -> Response:
-        if self.per_minute <= 0:
+        user_id = _verified_user_id(request)
+        if user_id is not None:
+            key = f"user:{user_id}"
+            limit = self.authenticated_per_minute
+        else:
+            key = f"ip:{request.client.host if request.client else 'unknown'}"
+            limit = self.per_minute
+        if limit <= 0:
             return await call_next(request)
         now = time.monotonic()
         window_start = now - 60.0
-        key = request.client.host if request.client else "unknown"
         hits = self._hits.get(key)
         if hits is None:
             hits = self._hits[key] = deque()
         while hits and hits[0] <= window_start:
             hits.popleft()
-        if len(hits) >= self.per_minute:
+        if len(hits) >= limit:
             retry_after = max(1, int(hits[0] + 60.0 - now))
             return JSONResponse(
                 {"detail": {"code": "rate_limited", "message": "Too many requests."}},
@@ -164,3 +183,26 @@ class InMemoryRateLimiter(BaseHTTPMiddleware):
         if len(self._hits) > 10_000:  # bound memory: drop the oldest client bucket
             self._hits.pop(next(iter(self._hits)))
         return await call_next(request)
+
+
+def _verified_user_id(request: Request) -> str | None:
+    """The verified `sub`, or None for anonymous/invalid tokens.
+
+    Verification is the same function the routes use, so a forged or expired
+    token can never earn a higher budget. Nothing here is logged: the token and
+    its claims must not reach a log line.
+    """
+    settings = getattr(request.app.state, "settings", None)
+    if settings is None or not settings.auth_configured:
+        return None
+    authorization = request.headers.get("authorization", "")
+    scheme, _, token = authorization.partition(" ")
+    if scheme.lower() != "bearer" or not token.strip():
+        return None
+    # Local import keeps the middleware module free of the repository stack.
+    from app.api.deps import verify_supabase_jwt
+
+    try:
+        return verify_supabase_jwt(token.strip(), settings).sub
+    except Exception:
+        return None

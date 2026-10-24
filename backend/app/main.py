@@ -370,7 +370,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.add_exception_handler(AIProviderError, _handle_ai_unavailable)
 
     # Added last = outermost. Request path: CORS -> headers -> logging -> size -> rate -> router.
-    app.add_middleware(InMemoryRateLimiter, per_minute=settings.rate_limit_per_minute)
+    app.add_middleware(
+        InMemoryRateLimiter,
+        per_minute=settings.rate_limit_per_minute,
+        authenticated_per_minute=settings.authenticated_rate_limit_per_minute,
+    )
     app.add_middleware(
         RequestSizeLimitMiddleware,
         max_bytes=settings.max_request_bytes,
