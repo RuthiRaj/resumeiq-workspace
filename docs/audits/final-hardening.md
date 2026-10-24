@@ -6,10 +6,12 @@
   operation against a live backend, the full route set in a live browser at
   360 px and 1280 px, security/privacy review, secret scan, dependency audit,
   and the full quality gates.
-- **Mode:** audit only. No application code was changed. The only additions are
-  opt-in audit instruments (`backend/scripts/smoke_live.py` extension,
-  `backend/scripts/security_probe.py`, `scripts/scan_secrets.py`,
-  `frontend/tests/e2e-live/stack-health.spec.ts` extension) and this report.
+- **Mode:** audit only for the original pass. No application code was changed
+  by the audit. The only additions are opt-in audit instruments
+  (`backend/scripts/smoke_live.py` extension, `backend/scripts/security_probe.py`,
+  `scripts/scan_secrets.py`, `frontend/tests/e2e-live/stack-health.spec.ts`
+  extension) and this report. **Follow-up:** the seven findings below were then
+  fixed on `fix/final-hardening-1`; see “Fix log” for commits and gates.
 - **Environment:** frontend in live mode on `http://localhost:3000`, backend on
   `http://127.0.0.1:8000`, dedicated backend on `http://127.0.0.1:8010` for
   the security/rate-limit and privacy log-capture runs. The real Supabase
@@ -19,13 +21,63 @@
 
 ## Verdict
 
-**Conditional pass.** One major live defect blocks the F6 PDF export in the
-browser: the backend CORS policy does not expose the `X-Export-*` response
-headers, so the browser cannot read the server's extraction check and the UI
-refuses every live export. The server generates and verifies the PDF correctly
-(`X-Export-Text-Check: passed`). The fix is small and local (add
-`expose_headers` to `CORSMiddleware`). No authentication, cross-user, RLS,
-secret or privacy blocker was found.
+**Conditional pass at audit time; the major defect is fixed on the follow-up
+branch.** At audit time one live defect blocked the F6 PDF export in the
+browser: the backend CORS policy did not expose the `X-Export-*` response
+headers, so the browser could not read the server's extraction check and the UI
+refused every live export. The server generated and verified the PDF correctly
+(`X-Export-Text-Check: passed`). The fix (add `expose_headers` to
+`CORSMiddleware`) landed in `289c34d` with a cross-origin regression test; the
+only remaining confirmation is the live browser re-run. No authentication,
+cross-user, RLS, secret or privacy blocker was found.
+
+## Fix log — branch `fix/final-hardening-1`
+
+All seven follow-ups were addressed in seven commits (plus one typing follow-up
+to the dependency upgrade). Every behaviour change has a regression test that
+was written first and observed failing on the pre-fix code, then passing at the
+branch tip. The live browser re-run requires the live stack and user A
+credentials; it was **not** executed in this fix pass, so the extended
+`privacy.spec.ts` assertion is committed but its live result is still to be
+confirmed by the operator.
+
+| # | Item | Status | Commit |
+| --- | --- | --- | --- |
+| 1 | CORS exposes `X-Export-*` + `Content-Disposition` | **Fixed** — `expose_headers` on the existing origin allowlist; cross-origin PDF test; live spec now requires the passed check | `289c34d` |
+| 2 | Misleading “PDF was downloaded” refused copy | **Fixed** — `describeExportCheck(check, delivered)`; refused path says not downloaded; unit test | `fb8e367` |
+| 3 | `httpx`/`httpcore` INFO URLs with user filters | **Fixed** — both loggers at WARNING; capture test proves no INFO `user_id=eq.` line | `4665ffc` |
+| 4 | Rate limiting per verified user | **Fixed** — per-IP for anonymous, per-`sub` for authenticated at 240/min (configurable), 429 + `Retry-After`; isolation tests | `38f7db8` |
+| 5 | Server banner + public docs | **Fixed** — `--no-server-header` in Docker/README; `/docs`, `/redoc`, `/openapi.json` 404 outside development; tests | `a6369bf` |
+| 6 | Dependency advisories | **Fixed** — starlette 1.9.0, fastapi 0.162.0, certifi 2026.10.23, pypdf 6.21.2, pytest 9.1.1; `pip-audit` clean; floor test | `6444f2d` (`95ccf9e` typing follow-up) |
+| 7 | Version-purge RPC own-data risk | **Explained, accepted** — no safe migration-only fix; no `0009` written or applied | `9bda11d` |
+
+### Quality gates for this branch
+
+| Gate | Command | Result |
+| --- | --- | --- |
+| Backend lint | `uv run ruff check .` | pass |
+| Backend format | `uv run ruff format --check .` | pass, 135 files |
+| Backend types | `uv run mypy app` | pass, 85 files |
+| Test types | `uv run mypy tests` | pass, 44 files (follow-up `95ccf9e`) |
+| Backend tests | `uv run pytest` | **393 passed, 0 failed, 0 skipped** |
+| Frontend lint | `npm run lint` | pass |
+| Frontend types | `npm run typecheck` | pass |
+| Frontend unit | `npm run test` | **40 files / 254 tests passed** |
+| Mock e2e | `NEXT_PUBLIC_API_MODE=mock npx playwright test` | **63 passed, 1 failed, 0 skipped**; see “E2E note” |
+| Frontend build | `NEXT_PUBLIC_API_MODE=mock npm run build` | pass (Next.js 16.4.2) |
+| Dependency audit | `uvx pip-audit --path .venv/Lib/site-packages` | no known vulnerabilities (local package skipped: not on PyPI) |
+
+**E2E note:** the developer’s git-ignored `frontend/.env.local` selects live
+mode (not read for values), so the mock suite must be run with
+`NEXT_PUBLIC_API_MODE=mock` exported. A fresh dev server with two workers gave
+**63 passed, 1 failed, 0 skipped**. The one failure was a timing-only axe
+`document-title` finding on `/signup` at 360 px during the route sweep; the same
+sweep passed in an earlier full run, and no signup/metadata file changed in this
+branch. An earlier six-worker run gave 62 passed / 2 failed, both transient
+`net::ERR_FAILED`/compile timeouts whose specs passed on targeted rerun. No
+product assertion introduced by this branch fails.
+
+## Original audit results (pre-fix)
 
 | Area | Result |
 | --- | --- |
@@ -33,12 +85,12 @@ secret or privacy blocker was found.
 | Live endpoint walk | **Pass** — 78-call account-deletion run and 88-call privacy run, both exit 0 |
 | Cross-user isolation | **Pass** — B cannot list, read, delete or export A's resume |
 | Browser route sweep | **Pass** — 28 routes × 2 widths, 5/5 tests, all counters zero |
-| Live PDF export in the browser | **Fail** — CORS hides `X-Export-*`; UI refuses the download |
+| Live PDF export in the browser | **Fail** — CORS hides `X-Export-*`; UI refuses the download (fixed `289c34d`; live re-run pending) |
 | Security headers / size limits / rate limiting | **Pass with minor hardening** |
 | RLS on public tables | **Pass** — 18/18 enabled |
 | Privacy of logs, PDF and uploads | **Pass with one minor logging finding** |
 | Secret scan (tree + history) | **Pass** — no high-confidence secret patterns |
-| Dependency audit | **At risk** — 15 advisory entries / 8 unique IDs in 3 Python packages; 0 npm production vulnerabilities |
+| Dependency audit | **At risk** — 15 advisory entries / 8 unique IDs in 3 Python packages; 0 npm production vulnerabilities (cleared `6444f2d`) |
 | Quality gates | **Pass** — ruff, mypy, pytest, lint, 253 frontend tests, production build |
 
 ## 1. Endpoint coverage
@@ -50,7 +102,8 @@ authentication**. The probe enumerated the running server's own
 - `GET /health` is public and returns 200.
 - `/docs`, `/redoc` and `/openapi.json` are also public and return 200. This is
   useful locally and a minor production-hardening item (disable or protect
-  them in production).
+  them in production). **Fixed in `a6369bf`:** these paths are mounted only when
+  `ENVIRONMENT=development`; every other value returns 404.
 - Every one of the **38 protected operations** returned **401
   `missing_credentials`** without an `Authorization` header. No operation
   leaked data or a different status before the auth dependency ran.
@@ -172,6 +225,13 @@ Add a regression test that sends `Origin: http://localhost:3000` to the PDF
 route and asserts `Access-Control-Expose-Headers` contains the five
 `X-Export-*` names. Re-run `privacy.spec.ts` after the fix; it should pass.
 
+**Fixed in `289c34d`.** `CORSMiddleware` now lists `Content-Disposition`, the
+five `X-Export-*` headers and `X-Request-ID` in `expose_headers`, sharing the
+existing `CORS_ORIGINS` allowlist. `test_pdf_export.py` asserts the header on a
+real cross-origin PDF response, and `privacy.spec.ts` now requires the visible
+“Text extraction passed … claims verified” result (live re-run pending; see the
+fix log).
+
 ### 3.2 Minor — PDF UI copy contradicts the refused state
 
 `describeExportCheck()` returns “The PDF was downloaded, but the server did not
@@ -180,6 +240,11 @@ the UI has **not** downloaded anything and the alert says so, so the copy
 contradicts the action. Proposed fix (XS): use a “the PDF was not downloaded”
 variant for the refused path, or pass a `delivered` flag to
 `describeExportCheck()`.
+
+**Fixed in `fb8e367`.** `describeExportCheck(check, delivered)` now renders
+“the PDF was not downloaded” whenever delivery did not happen; the button tracks
+delivery explicitly. `pdf-export.test.ts` fails if the refused copy claims a
+download.
 
 ### 3.3 Minor — `httpx` INFO logs full Supabase REST URLs
 
@@ -195,6 +260,10 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("httpcore").setLevel(logging.WARNING)
 ```
 
+**Fixed in `4665ffc`.** Both loggers are set to `WARNING` in `setup_logging()`.
+`test_logging.py` emits an INFO Supabase URL with `user_id=eq.<uuid>` and
+asserts it never reaches a captured record, while warnings still pass.
+
 ### 3.4 Minor — rate limit is tight for a full flow
 
 The limiter is **60 requests/minute per IP** and works as designed: it returns
@@ -205,6 +274,16 @@ resume → export flow can reach it, especially with autosave and polling.
 Proposed fix (S): raise the default to ~120/minute or add per-route budgets;
 the shared-store replacement is already tracked by ADR-009. This is tuning,
 not a correctness defect.
+
+**Fixed in `38f7db8`.** Anonymous requests keep the per-IP budget
+(`RATE_LIMIT_PER_MINUTE`, default 60). Requests carrying a **verified** bearer
+token are keyed by the Supabase user id with
+`AUTHENTICATED_RATE_LIMIT_PER_MINUTE` (default 240, `0` disables that budget),
+so a user behind a shared IP cannot consume anyone else's allowance. Invalid
+tokens fall back to the IP bucket and are still rejected with 401 by the route.
+429 still carries `Retry-After`. `test_rate_limit.py` covers isolation, the
+anonymous path and the configurable higher default; the single-process caveat
+(ADR-009) is unchanged.
 
 ### 3.5 Minor — response/server hardening
 
@@ -219,6 +298,12 @@ not a correctness defect.
   `Permissions-Policy`, `Content-Security-Policy`; `X-Request-ID` is present.
 - CORS rejects a foreign origin (no `Access-Control-Allow-Origin`; preflight
   400) and does not allow credentials.
+
+**Fixed in `a6369bf`.** The Docker `CMD` and every documented start command
+include `--no-server-header`, so `Server: uvicorn` is no longer emitted. `/docs`,
+`/redoc` and `/openapi.json` are mounted only when `ENVIRONMENT` is exactly
+`development`; every other value returns 404 (`test_api_surface.py`, including a
+Dockerfile assertion). HSTS remains a TLS-terminator deployment setting.
 
 ### 3.6 Request-size limits
 
@@ -355,8 +440,8 @@ printed.
 
 - **Frontend production dependencies:** `npm audit --omit=dev` → **0
   vulnerabilities** (info 0, low 0, moderate 0, high 0, critical 0).
-- **Backend:** `pip-audit` reports **15 advisory entries / 8 unique IDs** in
-  3 packages:
+- **Backend at audit time:** `pip-audit` reported **15 advisory entries / 8
+  unique IDs** in 3 packages:
   - `certifi 2026.7.22` — PYSEC-2026-4320; fix `2026.10.19`.
   - `pytest 8.4.2` — PYSEC-2026-1845; fix `9.0.3` (development only).
   - `starlette 0.48.0` — six unique IDs (PYSEC-2026-1942, -161, -2281, -2280,
@@ -364,8 +449,21 @@ printed.
 - Starlette is pinned through FastAPI; moving to the fully fixed release
   requires a FastAPI compatibility pass, not a blind bump. Certifi is a patch
   upgrade. Pytest is not shipped in production.
+- A fresh audit during the fix pass also found three new **pypdf 6.21.1**
+  advisories (CVE-2026-115572, -115585, -115580; fix `6.21.2`).
 - No advisory was exploited during this audit; this is dependency risk to
   schedule, not an observed vulnerability.
+
+**Fixed in `6444f2d`.** Upgraded after the FastAPI compatibility pass and the
+full suite: `starlette 1.9.0` (clears all six), `fastapi 0.162.0` (declares
+starlette 1.x compatibility), `certifi 2026.10.23`, `pypdf 6.21.2` (clears the
+three newer CVEs), and `pytest 9.1.1` (clears the dev-only advisory). The
+OpenAPI export was regenerated for the newer FastAPI schema wording; only the
+binary upload format wording and the validation-error fields changed. A floor
+test (`test_dependencies.py`) guards against downgrades. Re-running
+`pip-audit` reports **no known vulnerabilities**; the only skip is the local
+`resumeiq-backend` package itself, which is not on PyPI. Nothing remains open
+from the advisory set.
 
 ## 7. Quality gates
 
@@ -385,15 +483,15 @@ The only gate failure during the audit was the new probe's return type
 
 ### Real defects (fix before calling F6 complete)
 
-| # | Severity | Defect | Fix size |
-| --- | --- | --- | --- |
-| 1 | **Major** | CORS does not expose `X-Export-*` / `Content-Disposition`; live PDF export is refused by the UI | XS |
-| 2 | Minor | “The PDF was downloaded…” copy in the refused state | XS |
-| 3 | Minor | `httpx` INFO logs full Supabase REST URLs with user-ID filters | XS |
-| 4 | Minor | 60/min rate limit is tight for a full flow; smoke retried | S |
-| 5 | Minor | `Server: uvicorn` header; public `/docs`, `/redoc`, `/openapi.json`; no HSTS (deployment) | XS |
-| 6 | Minor (accepted risk) | `api_resume_version_purge` can rewrite the caller's own snapshot via direct RPC | S |
-| 7 | Dependency risk | Certifi, pytest (dev) and starlette advisories | M |
+| # | Severity | Defect | Fix size | Status |
+| --- | --- | --- | --- | --- |
+| 1 | **Major** | CORS does not expose `X-Export-*` / `Content-Disposition`; live PDF export is refused by the UI | XS | **Fixed** `289c34d` |
+| 2 | Minor | “The PDF was downloaded…” copy in the refused state | XS | **Fixed** `fb8e367` |
+| 3 | Minor | `httpx` INFO logs full Supabase REST URLs with user-ID filters | XS | **Fixed** `4665ffc` |
+| 4 | Minor | 60/min rate limit is tight for a full flow; smoke retried | S | **Fixed** `38f7db8` |
+| 5 | Minor | `Server: uvicorn` header; public `/docs`, `/redoc`, `/openapi.json`; no HSTS (deployment) | XS | **Fixed** `a6369bf` (HSTS still deployment) |
+| 6 | Minor (accepted risk) | `api_resume_version_purge` can rewrite the caller's own snapshot via direct RPC | S | **Accepted / documented** `9bda11d` |
+| 7 | Dependency risk | Certifi, pytest (dev) and starlette advisories | M | **Fixed** `6444f2d`; none remain |
 
 ### Not built yet / known limitations
 
@@ -463,8 +561,10 @@ npx playwright test -c playwright.live.config.ts stack-health.spec.ts
 - `auth-flows.spec.ts` was not run in the final sweep to avoid creating more
   throwaway Supabase users. Sign-in/sign-out and the live session are covered
   by the unit tests and the existing live suite.
-- The browser PDF-export test cannot pass until the CORS fix lands; it was
-  intentionally left failing rather than weakening the fail-closed UI.
+- The browser PDF-export test could not pass until the CORS fix lands; it was
+  intentionally left failing rather than weakening the fail-closed UI. The fix
+  (`289c34d`) and a stronger assertion are committed; the live re-run remains
+  for the operator.
 - Security/privacy probes ran on a dedicated 8010 backend so the rate-limit
   probe did not block the 8000 browser session; the rate-limit counts are
   therefore per-process and include the probe's own earlier calls.
@@ -475,22 +575,36 @@ npx playwright test -c playwright.live.config.ts stack-health.spec.ts
 
 ## 11. Proposed next actions
 
-1. **Fix CORS** (`expose_headers`) and add the PDF header regression test.
-2. Re-run `privacy.spec.ts` and the full live suite; expect 9/9.
-3. Fix the PDF “unknown” copy and silence `httpx`/`httpcore` INFO logs.
-4. Tune the rate limit or add per-route budgets; keep the shared-store plan.
+Items 1–7 were addressed on `fix/final-hardening-1` (see the fix log); items
+8–9 remain operator/product work.
+
+1. **Fix CORS** (`expose_headers`) and add the PDF header regression test. —
+   done `289c34d`.
+2. Re-run `privacy.spec.ts` and the full live suite; expect 9/9. — **still
+   required**; the assertion is extended but the live stack was not run here.
+3. Fix the PDF “unknown” copy and silence `httpx`/`httpcore` INFO logs. — done
+   `fb8e367`, `4665ffc`.
+4. Tune the rate limit or add per-route budgets; keep the shared-store plan. —
+   done `38f7db8`.
 5. Harden the deployment: `--no-server-header`, disable/protect docs, HSTS at
-   the proxy, production CORS origins, leaked-password protection.
+   the proxy, production CORS origins, leaked-password protection. — code done
+   `a6369bf`; HSTS, production origins and leaked-password protection remain
+   operator settings.
 6. Schedule certifi/pytest/starlette upgrades; test the FastAPI/Starlette
-   compatibility jump before bumping.
+   compatibility jump before bumping. — done `6444f2d`; `pip-audit` clean.
 7. Decide on the version-purge RPC: service-role call with revoked
-   `authenticated` execute, or document the accepted own-data risk.
+   `authenticated` execute, or document the accepted own-data risk. — accepted
+   and documented `9bda11d`.
 8. Build auth-user deletion (service role) and flip `deleteAuth` only when it
    works end to end.
 9. Operator cleanup: remove the 15 `@example.com` Supabase auth users.
 
 **Bottom line:** the merged stack is internally consistent, authenticated,
-RLS-protected, secret-clean and privacy-conscious. It is **not ready to call
-F6 complete in live mode** until the CORS expose-headers fix lands; after that
-one small fix, the live PDF path and the remaining hardening items are
-straightforward.
+RLS-protected, secret-clean and privacy-conscious. The audit blockers are fixed
+on `fix/final-hardening-1`: CORS exposes the PDF check headers, the refused copy
+is honest, third-party HTTP URLs no longer reach INFO logs, signed-in callers are
+rate-limited per verified user, the banner and docs are hardened, and the Python
+advisories are cleared (`pip-audit` clean). The remaining work is operational:
+re-run the live browser suite with user A, set HSTS/production origins, enable
+leaked-password protection, build auth-user deletion, and remove the audit test
+users.
