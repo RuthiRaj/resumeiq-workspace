@@ -54,6 +54,11 @@ def setup_logging(level: str = "INFO") -> None:
     root = logging.getLogger()
     root.handlers = [handler]
     root.setLevel(getattr(logging, level.upper(), logging.INFO))
+    # `httpx` logs every outbound request at INFO. Its URL includes Supabase
+    # Data API query strings (e.g. `user_id=eq.<uuid>`), which are personal
+    # data and must not reach a log collector. Warnings and errors still pass.
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("httpcore").setLevel(logging.WARNING)
     _configured = True
 
 
