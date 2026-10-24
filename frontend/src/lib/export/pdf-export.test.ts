@@ -62,6 +62,19 @@ describe("describeExportCheck", () => {
     ).toBe("Text extraction passed: 3 sections and 12 claims verified.");
   });
 
+  it("uses singular nouns for a one-section, one-claim resume", () => {
+    expect(
+      describeExportCheck({
+        textCheck: "passed",
+        sectionsChecked: 1,
+        sectionsMissing: 0,
+        claimsChecked: 1,
+        claimsMissing: 0,
+        filename: "resume.pdf",
+      }),
+    ).toBe("Text extraction passed: 1 section and 1 claim verified.");
+  });
+
   it("explains a refusal without claiming the PDF was delivered", () => {
     const message = describeExportCheck({
       textCheck: "failed",
