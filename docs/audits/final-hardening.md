@@ -256,6 +256,24 @@ executable by `authenticated`:
   have the backend call it with the service role, or document the accepted
   risk.
 
+  **Hardening pass 2026-10-24 — risk explained, no migration added.** The
+  function predicate is `id = p_version_id AND resume_id = p_resume_id AND
+  user_id = auth.uid()`; a caller therefore can only ever rewrite a snapshot
+  they already own, and an unknown id is a silent no-op. The only integrity
+  effect is that the caller's own version history can hold JSON the backend did
+  not generate, which could later be restored or exported. That is not a
+  cross-user leak: the same person can already type arbitrary content into
+  their own workspace. There is no safe migration-only fix. Revoking `EXECUTE`
+  from `authenticated` would break the backend purge route, which deliberately
+  calls the RPC with the caller's JWT and never a service-role key (ADR-016);
+  moving it to the service role is a backend + secret-management change.
+  Replacing the RPC with one that takes removed evidence ids and rebuilds the
+  snapshot server-side would fix the write surface, but it needs coordinated
+  SQL, repository and contract changes — not a small `0009`. No `0009` is
+  written or applied; the risk is accepted and recorded here. If resume
+  snapshots ever become attested artefacts, migrate to the server-side rebuild
+  RPC and revoke direct execution.
+
 Other advisor output: leaked-password protection is disabled (operator
 setting; enable it in production) and four indexes are unused (performance
 only, not a security defect).
