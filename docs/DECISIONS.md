@@ -2224,4 +2224,29 @@ Consequences: the live PDF path can read the server check, one signed-in user
 behind a shared IP cannot exhaust another's budget, and deployment responses
 no longer advertise the framework or publish the full schema. The audit's
 version-purge own-data risk is explicitly accepted rather than fixed by a
-breaking migration (see `docs/audits/final-hardening.md` section 3.8).
+breaking migration (see `docs/audits/final-hardening.md` section 3.8). The live
+browser test that exercises this CORS exposure is recorded in ADR-051.
+
+## ADR-051 - 2026-10-24 - Live PDF export test accepts singular check copy
+
+Context: the live privacy spec asserted the literal phrase `claims verified`.
+A resume with exactly one claim correctly renders `1 claim verified`, so a
+successful export could fail the test even though the UI copy was right. The
+test also did not prove the browser used the filename from the server's
+`Content-Disposition` header rather than its own fallback.
+
+Decision:
+
+1. Match the check line with
+   `/Text extraction passed: \d+ sections? and \d+ claims? verified\./`, so
+   zero, one and many sections/claims are all accepted without weakening the
+   requirement that the check passed.
+2. Assert that `download.suggestedFilename()` matches the filename in the
+   response's `Content-Disposition` header. ADR-050 is what makes that header
+   readable by the browser.
+3. Cover the one-section, one-claim copy in `pdf-export.test.ts`.
+
+Consequences: the live suite accepts grammatically correct singular copy and
+fails if the browser falls back to a client-side filename instead of the
+server's header. The test remains fail-closed: the download only starts after
+the exported check reports `passed`.
