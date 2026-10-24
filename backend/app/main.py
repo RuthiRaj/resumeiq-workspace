@@ -297,6 +297,11 @@ async def _handle_ai_provider_auth(_request: Request, _exc: Exception) -> JSONRe
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or get_settings()
     setup_logging(settings.log_level)
+    # Interactive docs reveal the whole contract and are only useful while
+    # developing. In test/staging/production they are not mounted at all, so a
+    # scanner gets a plain 404 (the exported docs/api/openapi.json remains the
+    # contract for clients).
+    expose_docs = settings.environment.strip().lower() == "development"
 
     @contextlib.asynccontextmanager
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
@@ -310,9 +315,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app = FastAPI(
         title="ResumeIQ API",
         version=settings.app_version,
-        docs_url="/docs",
-        redoc_url="/redoc",
-        openapi_url="/openapi.json",
+        docs_url="/docs" if expose_docs else None,
+        redoc_url="/redoc" if expose_docs else None,
+        openapi_url="/openapi.json" if expose_docs else None,
         lifespan=lifespan,
     )
     app.state.settings = settings

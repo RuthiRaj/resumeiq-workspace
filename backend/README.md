@@ -34,10 +34,10 @@ cp .env.test.example .env.test    # optional: only for the integration tests
 
 ```bash
 cd backend
-uv run uvicorn app.main:app --reload --port 8000
+uv run uvicorn app.main:app --reload --port 8000 --no-server-header
 # GET http://localhost:8000/health
 # GET http://localhost:8000/api/v1/me  (Authorization: Bearer <Supabase JWT>)
-# Docs: http://localhost:8000/docs
+# Docs: http://localhost:8000/docs (only when ENVIRONMENT=development, the default)
 ```
 
 ## Run with the frontend (live mode)
@@ -47,7 +47,7 @@ Run the API on port **8000** and the Next.js app on port **3000**:
 ```bash
 # terminal 1 (backend)
 cd backend
-uv run uvicorn app.main:app --reload --port 8000
+uv run uvicorn app.main:app --reload --port 8000 --no-server-header
 
 # terminal 2 (frontend)
 cd frontend
@@ -354,6 +354,15 @@ docker run -p 8000:8000 --env-file .env -e PORT=8000 resumeiq-backend
 
 Render (free web service): build `docker build -t app .` equivalent is
 automatic — set the service root to `backend/`, Dockerfile path
-`backend/Dockerfile`, start command `uvicorn app.main:app --host 0.0.0.0 --port $PORT` (the Dockerfile CMD already does
-this), and copy every variable from `.env.example` into the service
-environment. Expect ~1 min cold starts (frontend warm-up screen covers this).
+`backend/Dockerfile`, start command
+`uvicorn app.main:app --host 0.0.0.0 --port $PORT --no-server-header` (the
+Dockerfile CMD already does this), and copy every variable from `.env.example`
+into the service environment. Expect ~1 min cold starts (frontend warm-up screen
+covers this).
+
+Deployment surface: `ENVIRONMENT` defaults to `development`, where `/docs`,
+`/redoc` and `/openapi.json` are served. Set `ENVIRONMENT=production` (or any
+other value) in the service environment and those routes are not mounted (404);
+use the committed `docs/api/openapi.json` as the contract. Keep
+`--no-server-header` in every start command so responses do not advertise
+`Server: uvicorn`.
