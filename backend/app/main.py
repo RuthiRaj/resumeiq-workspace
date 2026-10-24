@@ -386,6 +386,20 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         allow_credentials=False,
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         allow_headers=["Authorization", "Content-Type"],
+        # Browsers hide every response header a cross-origin request did not
+        # explicitly expose. The PDF button reads the extraction check before it
+        # downloads anything (fail-closed), so these must be listed or a
+        # perfectly verified export is refused by the UI. Same allowlist as
+        # `allow_origins`: this is a CORS policy, not a second origin setting.
+        expose_headers=[
+            "Content-Disposition",
+            "X-Export-Text-Check",
+            "X-Export-Sections-Checked",
+            "X-Export-Sections-Missing",
+            "X-Export-Claims-Checked",
+            "X-Export-Claims-Missing",
+            "X-Request-ID",
+        ],
         max_age=600,
     )
 

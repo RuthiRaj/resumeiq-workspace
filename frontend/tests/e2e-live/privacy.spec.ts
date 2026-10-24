@@ -83,8 +83,15 @@ test.describe("live privacy and export (B6)", () => {
     expect(path).toBeTruthy();
     const bytes = await readFile(path!);
     expect(bytes.subarray(0, 5).toString("latin1")).toBe("%PDF-");
+    // The CORS policy must expose the X-Export-* headers, otherwise the
+    // fail-closed button never starts this download. Seeing the verified
+    // counts here proves the browser could read them end to end.
     await expect(page.getByTestId("pdf-export-check")).toContainText(
-      "Text extraction",
+      "Text extraction passed",
     );
+    await expect(page.getByTestId("pdf-export-check")).toContainText(
+      "claims verified",
+    );
+    await expect(page.getByTestId("pdf-export-error")).toHaveCount(0);
   });
 });
