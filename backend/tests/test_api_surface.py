@@ -43,3 +43,20 @@ def test_docker_image_hides_the_uvicorn_server_header() -> None:
     assert "--no-server-header" in dockerfile, (
         "the production image must not advertise `Server: uvicorn`"
     )
+
+
+def test_documented_uvicorn_commands_hide_the_server_header() -> None:
+    readmes = [
+        BACKEND_DIR / "README.md",
+        BACKEND_DIR.parent / "frontend" / "README.md",
+    ]
+    commands = [
+        line.strip()
+        for readme in readmes
+        for line in readme.read_text(encoding="utf-8").splitlines()
+        if "uvicorn app.main:app" in line
+    ]
+
+    assert commands, "expected documented uvicorn start commands"
+    for command in commands:
+        assert "--no-server-header" in command, command

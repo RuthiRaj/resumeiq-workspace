@@ -47,7 +47,7 @@ confirmed by the operator.
 | 2 | Misleading “PDF was downloaded” refused copy | **Fixed** — `describeExportCheck(check, delivered)`; refused path says not downloaded; unit test | `fb8e367` |
 | 3 | `httpx`/`httpcore` INFO URLs with user filters | **Fixed** — both loggers at WARNING; capture test proves no INFO `user_id=eq.` line | `4665ffc` |
 | 4 | Rate limiting per verified user | **Fixed** — per-IP for anonymous, per-`sub` for authenticated at 240/min (configurable), 429 + `Retry-After`; isolation tests | `38f7db8` |
-| 5 | Server banner + public docs | **Fixed** — `--no-server-header` in Docker/README; `/docs`, `/redoc`, `/openapi.json` 404 outside development; tests | `a6369bf` |
+| 5 | Server banner + public docs | **Fixed** — `--no-server-header` in Docker and both READMEs (guarded by a test); `/docs`, `/redoc`, `/openapi.json` 404 outside development; tests | `a6369bf` |
 | 6 | Dependency advisories | **Fixed** — starlette 1.9.0, fastapi 0.162.0, certifi 2026.10.23, pypdf 6.21.2, pytest 9.1.1; `pip-audit` clean; floor test | `6444f2d` (`95ccf9e` typing follow-up) |
 | 7 | Version-purge RPC own-data risk | **Explained, accepted** — no safe migration-only fix; no `0009` written or applied | `9bda11d` |
 
@@ -59,7 +59,7 @@ confirmed by the operator.
 | Backend format | `uv run ruff format --check .` | pass, 135 files |
 | Backend types | `uv run mypy app` | pass, 85 files |
 | Test types | `uv run mypy tests` | pass, 44 files (follow-up `95ccf9e`) |
-| Backend tests | `uv run pytest` | **393 passed, 0 failed, 0 skipped** |
+| Backend tests | `uv run pytest` | **394 passed, 0 failed, 0 skipped** |
 | Frontend lint | `npm run lint` | pass |
 | Frontend types | `npm run typecheck` | pass |
 | Frontend unit | `npm run test` | **40 files / 254 tests passed** |
@@ -73,7 +73,10 @@ mode (not read for values), so the mock suite must be run with
 **63 passed, 1 failed, 0 skipped**. The one failure was a timing-only axe
 `document-title` finding on `/signup` at 360 px during the route sweep; the same
 sweep passed in an earlier full run, and no signup/metadata file changed in this
-branch. An earlier six-worker run gave 62 passed / 2 failed, both transient
+branch. A separate one-worker run on the same branch also gave **63 passed, 1
+failed, 0 skipped**; its failure was a 240 s dev-server fill timeout in the
+tailored-resume sign-in step, and that spec passed on targeted rerun (1/1). An
+earlier six-worker run gave 62 passed / 2 failed, both transient
 `net::ERR_FAILED`/compile timeouts whose specs passed on targeted rerun. No
 product assertion introduced by this branch fails.
 
@@ -299,11 +302,13 @@ anonymous path and the configurable higher default; the single-process caveat
 - CORS rejects a foreign origin (no `Access-Control-Allow-Origin`; preflight
   400) and does not allow credentials.
 
-**Fixed in `a6369bf`.** The Docker `CMD` and every documented start command
-include `--no-server-header`, so `Server: uvicorn` is no longer emitted. `/docs`,
-`/redoc` and `/openapi.json` are mounted only when `ENVIRONMENT` is exactly
-`development`; every other value returns 404 (`test_api_surface.py`, including a
-Dockerfile assertion). HSTS remains a TLS-terminator deployment setting.
+**Fixed in `a6369bf`.** The Docker `CMD` and both documented start commands
+(`backend/README.md` and the frontend live-mode section) include
+`--no-server-header`, so `Server: uvicorn` is no longer emitted.
+`test_api_surface.py` checks the Dockerfile and every documented
+`uvicorn app.main:app` line. `/docs`, `/redoc` and `/openapi.json` are mounted
+only when `ENVIRONMENT` is exactly `development`; every other value returns 404.
+HSTS remains a TLS-terminator deployment setting.
 
 ### 3.6 Request-size limits
 

@@ -71,7 +71,7 @@ opt-in; mock mode and all existing tests are unchanged.
    ```sh
    cd backend
    uv sync
-   uv run uvicorn app.main:app --reload --port 8000
+   uv run uvicorn app.main:app --reload --port 8000 --no-server-header
    ```
 
 2. Create `frontend/.env.local` (git-ignored) with these **names** only — never
