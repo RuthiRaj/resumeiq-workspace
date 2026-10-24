@@ -58,9 +58,14 @@ export function parseExportCheck(
 }
 
 /** Human-readable extraction result; never claims the PDF is "ATS-proof". */
-export function describeExportCheck(check: ExportCheck): string {
+export function describeExportCheck(
+  check: ExportCheck,
+  delivered = true,
+): string {
   if (check.textCheck === "unknown") {
-    return "The PDF was downloaded, but the server did not report its text-extraction check.";
+    return delivered
+      ? "The PDF was downloaded, but the server did not report its text-extraction check."
+      : "The server did not report its PDF text-extraction check, so the PDF was not downloaded.";
   }
   if (check.textCheck === "failed") {
     const missing = check.claimsMissing + check.sectionsMissing;

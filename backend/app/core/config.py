@@ -45,7 +45,11 @@ class Settings(BaseSettings):
     supabase_publishable_key: str = ""
 
     max_request_bytes: int = 1_048_576
+    #: Anonymous traffic is limited per client IP; a signed-in caller has an
+    #: identity, so the (higher) authenticated budget is keyed by the verified
+    #: user id instead. 0 disables the limiter for that class of traffic.
     rate_limit_per_minute: int = 60
+    authenticated_rate_limit_per_minute: int = 240
 
     # --- AI gateway (B3, PRD §10.3) ---------------------------------------
     # Keys are OPTIONAL: the backend must start without them, and an AI call

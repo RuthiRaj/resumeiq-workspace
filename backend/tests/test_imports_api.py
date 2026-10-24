@@ -63,10 +63,13 @@ def upload(
     data: bytes = PDF_RESUME,
     content_type: str = "application/pdf",
 ) -> Response:
-    return client.post(
-        f"{BASE}/imports",
-        files={"file": (name, data, content_type)},
-        headers=headers,
+    return cast(
+        Response,
+        client.post(
+            f"{BASE}/imports",
+            files={"file": (name, data, content_type)},
+            headers=headers,
+        ),
     )
 
 

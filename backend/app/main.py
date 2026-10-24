@@ -297,6 +297,11 @@ async def _handle_ai_provider_auth(_request: Request, _exc: Exception) -> JSONRe
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or get_settings()
     setup_logging(settings.log_level)
+    # Interactive docs reveal the whole contract and are only useful while
+    # developing. In test/staging/production they are not mounted at all, so a
+    # scanner gets a plain 404 (the exported docs/api/openapi.json remains the
+    # contract for clients).
+    expose_docs = settings.environment.strip().lower() == "development"
 
     @contextlib.asynccontextmanager
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
@@ -310,9 +315,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app = FastAPI(
         title="ResumeIQ API",
         version=settings.app_version,
-        docs_url="/docs",
-        redoc_url="/redoc",
-        openapi_url="/openapi.json",
+        docs_url="/docs" if expose_docs else None,
+        redoc_url="/redoc" if expose_docs else None,
+        openapi_url="/openapi.json" if expose_docs else None,
         lifespan=lifespan,
     )
     app.state.settings = settings
@@ -370,7 +375,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.add_exception_handler(AIProviderError, _handle_ai_unavailable)
 
     # Added last = outermost. Request path: CORS -> headers -> logging -> size -> rate -> router.
-    app.add_middleware(InMemoryRateLimiter, per_minute=settings.rate_limit_per_minute)
+    app.add_middleware(
+        InMemoryRateLimiter,
+        per_minute=settings.rate_limit_per_minute,
+        authenticated_per_minute=settings.authenticated_rate_limit_per_minute,
+    )
     app.add_middleware(
         RequestSizeLimitMiddleware,
         max_bytes=settings.max_request_bytes,
@@ -386,6 +395,20 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         allow_credentials=False,
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         allow_headers=["Authorization", "Content-Type"],
+        # Browsers hide every response header a cross-origin request did not
+        # explicitly expose. The PDF button reads the extraction check before it
+        # downloads anything (fail-closed), so these must be listed or a
+        # perfectly verified export is refused by the UI. Same allowlist as
+        # `allow_origins`: this is a CORS policy, not a second origin setting.
+        expose_headers=[
+            "Content-Disposition",
+            "X-Export-Text-Check",
+            "X-Export-Sections-Checked",
+            "X-Export-Sections-Missing",
+            "X-Export-Claims-Checked",
+            "X-Export-Claims-Missing",
+            "X-Request-ID",
+        ],
         max_age=600,
     )
 

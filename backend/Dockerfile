@@ -22,5 +22,6 @@ USER appuser
 
 EXPOSE 8000
 
-# Render sets $PORT; default to 8000 locally.
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+# Render sets $PORT; default to 8000 locally. `--no-server-header` keeps
+# `Server: uvicorn` (framework/version hint) out of every response.
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --no-server-header"]

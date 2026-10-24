@@ -197,6 +197,36 @@ def test_pdf_route_streams_a_verified_tailored_resume(
     assert "ResumeIQ" not in extracted
 
 
+def test_pdf_export_exposes_its_check_headers_to_the_allowed_origin(
+    client: TestClient, fake_repo: InMemoryWorkspaceRepository
+) -> None:
+    """A browser must be able to read the extraction check it is asked to trust.
+
+    The UI only downloads a PDF after reading `X-Export-Text-Check`; without
+    `Access-Control-Expose-Headers` the browser hides every check header and the
+    fail-closed button refuses a perfectly good export.
+    """
+    seed_workspace(fake_repo, TEST_SUBJECT, seed_items())
+    headers = {**headers_for(TEST_SUBJECT), "Origin": "http://localhost:3000"}
+
+    response = client.get(f"{BASE}/resumes/resume-standard/export.pdf", headers=headers)
+
+    assert response.status_code == 200, response.text
+    assert response.headers["access-control-allow-origin"] == "http://localhost:3000"
+    exposed = {
+        name.strip().lower()
+        for name in response.headers["access-control-expose-headers"].split(",")
+    }
+    assert {
+        "content-disposition",
+        "x-export-text-check",
+        "x-export-sections-checked",
+        "x-export-sections-missing",
+        "x-export-claims-checked",
+        "x-export-claims-missing",
+    } <= exposed
+
+
 def test_pdf_route_exports_the_derived_standard_resume(
     client: TestClient, fake_repo: InMemoryWorkspaceRepository
 ) -> None:

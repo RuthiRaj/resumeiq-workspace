@@ -88,4 +88,22 @@ describe("describeExportCheck", () => {
       }),
     ).toContain("did not report");
   });
+
+  it("never claims a refused PDF was downloaded", () => {
+    const message = describeExportCheck(
+      {
+        textCheck: "unknown",
+        sectionsChecked: 0,
+        sectionsMissing: 0,
+        claimsChecked: 0,
+        claimsMissing: 0,
+        filename: "resume.pdf",
+      },
+      false,
+    );
+
+    expect(message).not.toContain("was downloaded");
+    expect(message).toContain("was not downloaded");
+    expect(message).toContain("did not report");
+  });
 });

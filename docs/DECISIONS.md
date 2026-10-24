@@ -2192,3 +2192,36 @@ Decision:
 Consequences: every settings control has an observable effect, and a provider
 account never sees a password form it cannot use. Live password change requires
 a recent Supabase session because the current password is re-verified first.
+
+## ADR-050 - 2026-10-24 - Final hardening: CORS check headers, per-user limits, quiet HTTP logs
+
+Context: the final-hardening audit found seven follow-ups. The PDF export was
+unusable in the browser even though the server verified it, and several
+production-hardening defaults were missing.
+
+Decision:
+
+1. `CORSMiddleware` exposes `Content-Disposition`, the five `X-Export-*` checks
+   and `X-Request-ID` through `expose_headers`, sharing the existing
+   `CORS_ORIGINS` allowlist. The fail-closed PDF button is not weakened: the
+   browser must see a passed check before downloading.
+2. Anonymous requests keep the per-IP limiter. A request with a verified
+   Supabase bearer token is keyed by `sub` with a higher, configurable budget
+   (`AUTHENTICATED_RATE_LIMIT_PER_MINUTE`, default 240). Invalid tokens fall
+   back to the IP bucket and are still rejected by the route. The limiter
+   remains the single-process placeholder of ADR-009.
+3. `httpx` and `httpcore` are set to `WARNING` in `setup_logging()` so their
+   INFO request URLs cannot put Supabase query strings (`user_id=eq.`) into a
+   log collector. Warnings and errors still pass.
+4. Docs endpoints are mounted only when `ENVIRONMENT` is exactly
+   `development`; every deployed value gets a 404. Uvicorn runs with
+   `--no-server-header` in the Docker image and documented commands.
+5. Dependency floors that clear the recorded advisories are declared in
+   `pyproject.toml` (starlette, fastapi, certifi, pypdf, pytest) and guarded by
+   a test; `pip-audit` is the authoritative check.
+
+Consequences: the live PDF path can read the server check, one signed-in user
+behind a shared IP cannot exhaust another's budget, and deployment responses
+no longer advertise the framework or publish the full schema. The audit's
+version-purge own-data risk is explicitly accepted rather than fixed by a
+breaking migration (see `docs/audits/final-hardening.md` section 3.8).
