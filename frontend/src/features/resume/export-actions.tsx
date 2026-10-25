@@ -106,7 +106,7 @@ export function ExportActions({
         </div>
 
         <div
-          className="h-10 w-full overflow-y-auto text-[11px] leading-relaxed"
+          className="w-full text-[11px] leading-relaxed min-h-[2.5rem]"
           aria-live="polite"
           data-testid="export-status"
         >
