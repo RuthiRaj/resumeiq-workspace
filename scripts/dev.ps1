@@ -29,7 +29,7 @@ $ErrorActionPreference = "Stop"
 $repoRoot   = Split-Path -Parent $PSScriptRoot
 $backendDir = Join-Path $repoRoot "backend"
 $frontendDir = Join-Path $repoRoot "frontend"
-$devMjs     = Join-Path $repoRoot "scripts" "dev.mjs"
+$devMjs     = Join-Path (Join-Path $repoRoot "scripts") "dev.mjs"
 
 $backendEnvPath  = Join-Path $backendDir  ".env"
 $frontendEnvPath = Join-Path $frontendDir ".env.local"
@@ -232,12 +232,23 @@ $frontendModules = Join-Path $frontendDir "node_modules"
 if (Test-LockNewer $frontendLock $frontendModules) {
   Write-Host ""
   Write-Host "Frontend dependencies outdated (package-lock.json newer than node_modules). Running: npm ci" -ForegroundColor Cyan
-  $result = Start-Process -FilePath "npm" -ArgumentList "ci" -WorkingDirectory $frontendDir -Wait -PassThru -NoNewWindow
+  $npmCmd = if ([Environment]::OSVersion.Platform -eq 'Win32NT') { "npm.cmd" } else { "npm" }
+  $result = Start-Process -FilePath $npmCmd -ArgumentList "ci" -WorkingDirectory $frontendDir -Wait -PassThru -NoNewWindow
   if ($result.ExitCode -ne 0) {
     Write-Host "npm ci failed with exit code $($result.ExitCode)" -ForegroundColor Red
     exit $result.ExitCode
   }
   Write-Host "Frontend dependencies installed." -ForegroundColor Green
+}
+
+# Check-only mode: exit after checks and dependency sync
+if ($CheckOnly) {
+  Write-Host ""
+  Write-Host "Check-only mode: would start backend and frontend." -ForegroundColor Green
+  Write-Host "  backend:  uv run uvicorn app.main:app --host 127.0.0.1 --port 8000 --log-level info"
+  Write-Host "  frontend: npm run dev -- --hostname localhost --port 3000"
+  Write-Host "Check-only: no servers started." -ForegroundColor Green
+  exit 0
 }
 
 # --- Launch the Node.js dev launcher in two separate windows with -NoExit ---
