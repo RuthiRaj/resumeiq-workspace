@@ -107,3 +107,89 @@ def test_root_endpoint_production_mode(settings: Settings) -> None:
     # Version and environment should not be exposed in production
     assert "version" not in body
     assert "environment" not in body
+
+
+def test_csp_strict_on_api_routes_in_development(settings: Settings) -> None:
+    """API routes always get strict CSP, even in development."""
+    dev_settings = Settings(
+        environment="development",
+        supabase_url="https://test.supabase.co",
+        supabase_publishable_key="test-key",
+    )
+    client = TestClient(create_app(dev_settings))
+
+    # Health endpoint (not under /api/v1 but should still be strict)
+    response = client.get("/health")
+    assert response.headers["Content-Security-Policy"] == "default-src 'none'; frame-ancestors 'none'"
+
+    # API v1 route (any route under /api/v1/)
+    response = client.get("/api/v1/health")
+    assert response.headers["Content-Security-Policy"] == "default-src 'none'; frame-ancestors 'none'"
+
+
+def test_csp_strict_on_all_routes_in_production(settings: Settings) -> None:
+    """All routes get strict CSP in production."""
+    prod_settings = Settings(
+        environment="production",
+        supabase_url="https://test.supabase.co",
+        supabase_publishable_key="test-key",
+    )
+    client = TestClient(create_app(prod_settings))
+
+    # Health endpoint
+    response = client.get("/health")
+    assert response.headers["Content-Security-Policy"] == "default-src 'none'; frame-ancestors 'none'"
+
+    # Docs paths return 404 in production but still have strict CSP
+    response = client.get("/docs")
+    assert response.status_code == 404
+    assert response.headers["Content-Security-Policy"] == "default-src 'none'; frame-ancestors 'none'"
+
+    response = client.get("/redoc")
+    assert response.status_code == 404
+    assert response.headers["Content-Security-Policy"] == "default-src 'none'; frame-ancestors 'none'"
+
+    response = client.get("/openapi.json")
+    assert response.status_code == 404
+    assert response.headers["Content-Security-Policy"] == "default-src 'none'; frame-ancestors 'none'"
+
+
+def test_csp_relaxed_on_docs_paths_in_development(settings: Settings) -> None:
+    """Docs paths get relaxed CSP in development to allow Swagger UI assets."""
+    dev_settings = Settings(
+        environment="development",
+        supabase_url="https://test.supabase.co",
+        supabase_publishable_key="test-key",
+    )
+    client = TestClient(create_app(dev_settings))
+
+    # /docs should have relaxed CSP allowing CDN scripts/styles/images
+    response = client.get("/docs")
+    csp = response.headers["Content-Security-Policy"]
+    assert "script-src" in csp
+    assert "'unsafe-inline'" in csp
+    assert "https://cdn.jsdelivr.net" in csp
+    assert "https://fastapi.tiangolo.com" in csp
+    assert "style-src" in csp
+    assert "img-src" in csp
+    assert "frame-ancestors 'none'" in csp
+
+    # /redoc should have the same relaxed CSP
+    response = client.get("/redoc")
+    csp = response.headers["Content-Security-Policy"]
+    assert "script-src" in csp
+    assert "'unsafe-inline'" in csp
+    assert "https://cdn.jsdelivr.net" in csp
+    assert "https://fastapi.tiangolo.com" in csp
+    assert "style-src" in csp
+    assert "img-src" in csp
+
+    # /openapi.json should have the same relaxed CSP
+    response = client.get("/openapi.json")
+    csp = response.headers["Content-Security-Policy"]
+    assert "script-src" in csp
+    assert "'unsafe-inline'" in csp
+    assert "https://cdn.jsdelivr.net" in csp
+    assert "https://fastapi.tiangolo.com" in csp
+    assert "style-src" in csp
+    assert "img-src" in csp

@@ -15,6 +15,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
+from app.core.config import Settings
 from app.core.logging import get_logger, request_id_ctx
 
 logger = get_logger(__name__)
@@ -24,15 +25,48 @@ SECURITY_HEADERS = {
     "X-Frame-Options": "DENY",
     "Referrer-Policy": "no-referrer",
     "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
-    "Content-Security-Policy": "default-src 'none'; frame-ancestors 'none'",
 }
+
+# Strict CSP for production and all non-docs paths
+STRICT_CSP = "default-src 'none'; frame-ancestors 'none'"
+
+# Relaxed CSP for Swagger UI / ReDoc in development only
+# Allows scripts/styles/images from the FastAPI CDN sources plus 'unsafe-inline'
+# for the inline script that initializes Swagger UI.
+RELAXED_CSP = (
+    "default-src 'none'; "
+    "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fastapi.tiangolo.com; "
+    "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fastapi.tiangolo.com; "
+    "img-src 'self' data: https://cdn.jsdelivr.net https://fastapi.tiangolo.com; "
+    "frame-ancestors 'none'"
+)
+
+# Paths that get the relaxed CSP in development
+DOCS_PATHS = {"/docs", "/redoc", "/openapi.json"}
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         response = await call_next(request)
+
+        # Apply common security headers
         for name, value in SECURITY_HEADERS.items():
             response.headers[name] = value
+
+        # Determine CSP based on environment and path
+        settings: Settings | None = getattr(request.app.state, "settings", None)
+        is_development = (
+            settings is not None
+            and settings.environment.strip().lower() == "development"
+        )
+        path = request.url.path
+
+        if is_development and path in DOCS_PATHS:
+            csp = RELAXED_CSP
+        else:
+            csp = STRICT_CSP
+
+        response.headers["Content-Security-Policy"] = csp
         return response
 
 
