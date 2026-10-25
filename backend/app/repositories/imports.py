@@ -107,7 +107,10 @@ def values_to_workspace_create(
     if values.startDate and values.endDate and values.startDate > values.endDate:
         raise ValueError("The end date can't be before the start date.")
 
-    evidence: EvidenceState = "verified" if support is not None else "attested"
+    # Evidence is "verified" ONLY for external verification links (ImportSupportLink).
+    # User-uploaded files (ImportSupportFile) are self-reported evidence, not third-party
+    # verification, so they remain "attested" (PRD §4.2).
+    evidence: EvidenceState = "verified" if isinstance(support, ImportSupportLink) else "attested"
     links: list[str] = []
     attachments: list[Attachment] = []
     if isinstance(support, ImportSupportLink):

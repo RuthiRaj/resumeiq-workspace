@@ -410,7 +410,7 @@ def test_confirm_with_a_link_is_verified(
     assert body["item"]["links"] == ["https://example.com/cert"]
 
 
-def test_confirm_with_a_certificate_file_is_verified_and_attached(
+def test_confirm_with_a_certificate_file_is_attested_and_attached(
     import_client: TestClient, auth_headers: dict[str, str]
 ) -> None:
     session = session_of(upload(import_client, auth_headers))
@@ -421,7 +421,7 @@ def test_confirm_with_a_certificate_file_is_verified_and_attached(
         url, json={"support": {"kind": "file", "name": "cert.pdf"}}, headers=auth_headers
     )
     body = import_client.post(f"{url}/confirm", headers=auth_headers).json()
-    assert body["item"]["evidence"] == "verified"
+    assert body["item"]["evidence"] == "attested"
     assert body["item"]["attachments"][0]["name"] == "cert.pdf"
     # The file itself is not stored in B2: the attachment is an internal reference.
     assert body["item"]["attachments"][0]["url"].startswith("import://")
