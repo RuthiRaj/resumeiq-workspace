@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CircleAlert, RefreshCw, ChevronDown, ChevronUp } from "lucide-react";
+import { CircleAlert, RefreshCw, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { classifyError, type ErrorKind } from "@/lib/api/error-classifier";
@@ -15,14 +15,14 @@ export function ErrorState({
   className,
   /** HTTP method of the failed request (for auto-retry eligibility). */
   method = "GET",
-  /** Request path (for context). */
-  path = "",
   /** The raw error from the query/mutation. */
   error: rawError,
   /** Maximum auto-retry attempts for eligible errors. */
   maxAutoRetries = 3,
   /** Base delay for exponential backoff (ms). */
   baseRetryDelay = 1000,
+  /** Optional test ID for the root element. */
+  testId,
 }: {
   title?: string;
   description?: string;
@@ -30,17 +30,16 @@ export function ErrorState({
   retrying?: boolean;
   className?: string;
   method?: string;
-  path?: string;
   error?: unknown;
   maxAutoRetries?: number;
   baseRetryDelay?: number;
+  testId?: string;
 }) {
   const [autoRetryCount, setAutoRetryCount] = useState(0);
   const [autoRetrying, setAutoRetrying] = useState(false);
-  const [showDetails, setShowDetails] = useState(false);
 
   // Classify the error (pure function, safe to call during render)
-  const classified = rawError ? classifyError(rawError, method, path) : null;
+  const classified = rawError ? classifyError(rawError, method) : null;
   const isIdempotentRead = classified?.isIdempotentRead ?? isIdempotentMethod(method);
   const canAutoRetry = isIdempotentRead && shouldAutoRetry(classified?.kind);
   const hasRetriesLeft = autoRetryCount < maxAutoRetries;
@@ -71,6 +70,7 @@ export function ErrorState({
   return (
     <div
       role="alert"
+      data-testid={testId}
       className={cn(
         "glass flex flex-col items-start gap-3 rounded-md border-l-2 border-evidence-missing p-4 sm:p-6",
         className,
@@ -84,10 +84,10 @@ export function ErrorState({
 
       {/* Technical details disclosure */}
       {technicalMessage && (
-        <details className="w-full max-w-prose">
+        <details className="w-full max-w-prose" open={false}>
           <summary className="flex items-center gap-2 text-xs text-muted cursor-pointer select-none">
             <span>Details</span>
-            {showDetails ? <ChevronUp className="size-3.5" /> : <ChevronDown className="size-3.5" />}
+            <ChevronDown className="size-3.5" />
           </summary>
           <div className="mt-2 text-xs font-mono text-muted bg-elevated/50 rounded-sm p-2 whitespace-pre-wrap break-all">
             {httpStatus && <div>Status: {httpStatus}</div>}
@@ -95,7 +95,6 @@ export function ErrorState({
             {requestId && <div>Request ID: {requestId}</div>}
             {retryAfterMs && <div>Retry after: {Math.ceil(retryAfterMs / 1000)}s</div>}
             <div>Method: {method}</div>
-            <div>Path: {sanitizePath(path)}</div>
             {technicalMessage && <div>Message: {technicalMessage}</div>}
           </div>
         </details>
@@ -138,9 +137,4 @@ function isIdempotentMethod(method: string): boolean {
 
 function shouldAutoRetry(kind?: ErrorKind): boolean {
   return kind === "network" || kind === "server_error" || kind === "supabase_unavailable";
-}
-
-function sanitizePath(path: string): string {
-  // Remove query strings and sensitive path segments
-  return path.split("?")[0].replace(/\/[a-f0-9-]{36}/gi, "/:id");
 }

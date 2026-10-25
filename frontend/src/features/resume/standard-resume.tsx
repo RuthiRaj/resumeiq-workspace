@@ -67,7 +67,6 @@ export function StandardResumePage() {
         onRetry={() => void resume.refetch()}
         retrying={resume.isFetching}
         method="GET"
-        path="/api/v1/resume/standard"
         error={resume.error}
       />
     );
@@ -82,7 +81,6 @@ export function StandardResumePage() {
         onRetry={() => void resume.refetch()}
         retrying={resume.isFetching}
         method="GET"
-        path="/api/v1/resume/standard"
         error={resume.error}
       />
     );

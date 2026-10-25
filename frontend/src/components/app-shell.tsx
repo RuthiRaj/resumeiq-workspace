@@ -390,7 +390,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </IconTooltip>
               <UserMenu />
             </header>
-            <main className="min-w-0 flex-1 px-4 py-6 pb-8 sm:px-6">{children}</main>
+            <main className="min-w-0 flex-1 px-4 py-6 pb-8 sm:px-6">
+              {children}
+              <DevStatusChip />
+            </main>
           </div>
 
           {/* Mobile bottom navigation — a layout row, not an overlay. */}
@@ -476,7 +479,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </Sheet>
 
         <CommandPalette />
-        <DevStatusChip />
       </div>
     </TooltipProvider>
   );

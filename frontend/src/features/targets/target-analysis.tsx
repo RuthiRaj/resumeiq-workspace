@@ -106,7 +106,6 @@ export function TargetAnalysis({ targetId }: { targetId: string }) {
               onRetry={() => void targetQuery.refetch()}
               retrying={targetQuery.isFetching}
               method="GET"
-              path={`/api/v1/targets/${targetId}`}
               error={targetQuery.error}
             />
           )}
@@ -159,7 +158,6 @@ export function TargetAnalysis({ targetId }: { targetId: string }) {
           onRetry={() => void consentQuery.refetch()}
           retrying={consentQuery.isFetching}
           method="GET"
-          path="/api/v1/privacy/consent"
           error={consentQuery.error}
         />
       ) : !consentGranted ? (

@@ -107,7 +107,6 @@ export function ImportReviewPage() {
           onRetry={lastFile ? () => handleFile(lastFile) : undefined}
           retrying={uploading}
           method="POST"
-          path="/api/v1/imports"
           error={upload.error}
         />
       ) : sessionId ? (
@@ -127,7 +126,6 @@ export function ImportReviewPage() {
             description="The review session may have expired. Upload the document again to start a fresh review."
             onRetry={() => router.replace("/workspace/import")}
             method="GET"
-            path={sessionId ? `/api/v1/imports/${sessionId}` : "/api/v1/imports"}
             error={session.error}
           />
         ) : (

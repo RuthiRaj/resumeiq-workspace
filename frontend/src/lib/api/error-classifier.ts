@@ -48,13 +48,11 @@ const NETWORK_ERROR_CODES = new Set(["network", "timeout", "connection_refused"]
  * Classify an error into a user-facing kind with appropriate messaging.
  * @param error The caught error (ApiError, TypeError, Response, or unknown)
  * @param method HTTP method of the request (for idempotency check)
- * @param path Request path (for context)
  * @returns ClassifiedError with user message, retry info, and technical details
  */
 export function classifyError(
   error: unknown,
-  method: string = "GET",
-  path: string = ""
+  method: string = "GET"
 ): ClassifiedError {
   // Handle ApiError from our client
   if (error instanceof ApiError) {

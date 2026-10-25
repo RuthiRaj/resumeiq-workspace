@@ -134,7 +134,6 @@ export function WorkspaceDashboard() {
           onRetry={() => void workspace.refetch()}
           retrying={workspace.isFetching}
           method="GET"
-          path="/api/v1/workspace"
           error={workspace.error}
         />
       ) : (

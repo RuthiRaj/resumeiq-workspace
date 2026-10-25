@@ -159,6 +159,17 @@ test("the printed PDF is a one-page ATS document, not a text dump", async ({
     preferCSSPageSize: true,
   });
   const { text, pages } = await extractPdf(Buffer.from(pdf));
+  console.log(`Total pages: ${pages}`);
+  const document = await getDocument({
+    data: new Uint8Array(pdf),
+    useSystemFonts: true,
+  }).promise;
+  for (let index = 1; index <= document.numPages; index += 1) {
+    const page = await document.getPage(index);
+    const content = await page.getTextContent();
+    const pageText = content.items.map((item) => ("str" in item ? item.str : "")).join(" ");
+    console.log(`Page ${index}: ${pageText.substring(0, 200)}...`);
+  }
   const upper = text.toUpperCase();
 
   expect(pages).toBe(1);

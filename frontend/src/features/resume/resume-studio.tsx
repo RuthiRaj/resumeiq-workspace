@@ -83,7 +83,6 @@ export function ResumeStudio({ targetId }: { targetId: string }) {
         onRetry={() => void target.refetch()}
         retrying={target.isFetching}
         method="GET"
-        path={`/api/v1/targets/${targetId}`}
         error={target.error}
       />
     );
@@ -97,7 +96,6 @@ export function ResumeStudio({ targetId }: { targetId: string }) {
         onRetry={() => void list.refetch()}
         retrying={list.isFetching}
         method="GET"
-        path="/api/v1/resumes"
         error={list.error}
       />
     );
@@ -155,7 +153,6 @@ export function ResumeStudio({ targetId }: { targetId: string }) {
         onRetry={() => void resume.refetch()}
         retrying={resume.isFetching}
         method="GET"
-        path={resumeId ? `/api/v1/resumes/${encodeURIComponent(resumeId)}` : "/api/v1/resumes"}
         error={resume.error}
       />
     );

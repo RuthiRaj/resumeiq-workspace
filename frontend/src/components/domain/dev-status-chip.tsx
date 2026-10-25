@@ -8,6 +8,7 @@ import { apiBaseUrl, isLiveMode } from "@/lib/config/mode";
 /**
  * Development-only status chip showing API base host and health check result.
  * Hidden in production builds (dev-excluded check must pass).
+ * Renders as a regular element in the main content flow to avoid print pagination issues.
  */
 export function DevStatusChip() {
   const [health, setHealth] = useState<"checking" | "ok" | "error" | "offline">("checking");
@@ -16,7 +17,7 @@ export function DevStatusChip() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (process.env.NODE_ENV !== "development") return;
-    if (isLiveMode()) return; // In live mode, the backend URL is configured
+    if (isLiveMode()) return;
 
     let cancelled = false;
 
@@ -44,7 +45,7 @@ export function DevStatusChip() {
     }
 
     checkHealth();
-    const interval = setInterval(checkHealth, 30_000); // Check every 30s
+    const interval = setInterval(checkHealth, 30_000);
 
     return () => {
       cancelled = true;
@@ -72,8 +73,9 @@ export function DevStatusChip() {
   return (
     <div
       className={cn(
-        "fixed bottom-4 right-4 z-50 flex items-center gap-2 rounded-md bg-elevated/90 border border-white/[0.08] px-3 py-2 text-xs font-mono backdrop-blur supports-[backdrop-filter]:bg-elevated/80",
+        "flex items-center gap-2 rounded-md bg-elevated/90 border border-white/[0.08] px-3 py-2 text-xs font-mono backdrop-blur supports-[backdrop-filter]:bg-elevated/80",
         "transition-opacity duration-200",
+        "no-print",
       )}
       title={`API: ${baseUrl} | Last checked: ${lastChecked?.toLocaleTimeString() ?? "Never"}`}
     >

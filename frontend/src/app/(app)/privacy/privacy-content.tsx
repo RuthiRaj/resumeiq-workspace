@@ -145,7 +145,6 @@ function ConsentSection() {
           onRetry={() => void consent.refetch()}
           retrying={consent.isFetching}
           method="GET"
-          path="/api/v1/privacy/consent"
           error={consent.error}
         />
       ) : (
@@ -189,7 +188,6 @@ function ConsentSection() {
               onRetry={() => void record.mutate(record.variables as boolean)}
               retrying={record.isPending}
               method="POST"
-              path="/api/v1/privacy/consent"
               error={record.error}
             />
           ) : null}
@@ -252,8 +250,8 @@ function AiDisclosureSection() {
           onRetry={() => void capabilities.refetch()}
           retrying={capabilities.isFetching}
           method="GET"
-          path="/api/v1/capabilities"
           error={capabilities.error}
+          testId="capabilities-unavailable"
         />
       ) : null}
     </section>

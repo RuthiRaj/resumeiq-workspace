@@ -391,7 +391,6 @@ export function ResumeHistoryPage() {
         onRetry={() => void list.refetch()}
         retrying={list.isFetching}
         method="GET"
-        path="/api/v1/resumes"
         error={list.error}
       />
     );
