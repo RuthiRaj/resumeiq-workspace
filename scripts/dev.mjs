@@ -246,14 +246,26 @@ async function main() {
     if (shutdownInitiated) return;
     shutdownInitiated = true;
     console.log("\n[dev] Shutting down servers...");
-    if (backendProc) backendProc.kill("SIGTERM");
-    if (frontendProc) frontendProc.kill("SIGTERM");
-    // Force kill after 3 seconds
-    setTimeout(() => {
-      if (backendProc) backendProc.kill("SIGKILL");
-      if (frontendProc) frontendProc.kill("SIGKILL");
-      process.exit(exitCode || 1);
-    }, 3000);
+
+    // On Windows, use taskkill /T /F to kill the entire process tree
+    // On POSIX, use process groups with negative PID
+    const killTree = (pid) => {
+      if (process.platform === "win32") {
+        spawn("taskkill", ["/PID", String(pid), "/T", "/F"], { stdio: "ignore" });
+      } else {
+        try {
+          process.kill(-pid, "SIGKILL"); // Negative PID kills the process group
+        } catch {
+          // Process group might not exist
+        }
+      }
+    };
+
+    if (backendProc?.pid) killTree(backendProc.pid);
+    if (frontendProc?.pid) killTree(frontendProc.pid);
+
+    // Exit after a short delay to allow cleanup
+    setTimeout(() => process.exit(exitCode || 1), 1000);
   }
 
   // Handle Ctrl+C

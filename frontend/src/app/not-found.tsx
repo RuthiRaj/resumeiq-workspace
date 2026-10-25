@@ -1,13 +1,10 @@
-"use client";
-
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Home } from "lucide-react";
 
 /**
  * Not-found page (app/not-found.tsx).
  * Shown when the user visits an unknown route.
  * No stack traces, just a friendly message with links back to the workspace or home.
+ * Server component to keep it out of client bundles.
  */
 export default function NotFound() {
   return (
@@ -23,16 +20,14 @@ export default function NotFound() {
           The page you&apos;re looking for doesn&apos;t exist or has been moved.
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-          <Link href="/">
-            <Button variant="primary" size="lg">
-              <Home className="mr-2 h-4 w-4" aria-hidden="true" />
-              Go home
-            </Button>
+          <Link href="/" className="inline-flex items-center justify-center gap-2 rounded-sm font-medium transition-[filter,background-color,color] duration-200 ease-out disabled:pointer-events-none disabled:opacity-50 bg-action text-white hover:brightness-110 focus-visible:outline-accent-cyan h-12 px-6 text-base">
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+            </svg>
+            Go home
           </Link>
-          <Link href="/signin">
-            <Button variant="secondary" size="lg">
-              Sign in to workspace
-            </Button>
+          <Link href="/signin" className="inline-flex items-center justify-center gap-2 rounded-sm font-medium transition-[filter,background-color,color] duration-200 ease-out disabled:pointer-events-none disabled:opacity-50 glass text-text hover:bg-white/[0.09] h-12 px-6 text-base">
+            Sign in to workspace
           </Link>
         </div>
       </div>
