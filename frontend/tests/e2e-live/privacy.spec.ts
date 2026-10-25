@@ -64,7 +64,7 @@ test.describe("live privacy and export (B6)", () => {
     await expect(page.getByTestId("privacy-delete-account")).toBeVisible();
   });
 
-  test("PDF export streams a file and reports its extraction check", async ({
+  test("Download PDF streams the shared document as a file", async ({
     page,
   }) => {
     await signInAsUserA(page);
@@ -75,10 +75,12 @@ test.describe("live privacy and export (B6)", () => {
 
     const exportButton = page.getByTestId("pdf-export-button");
     await expect(exportButton).toBeEnabled({ timeout: 60_000 });
+    // Download PDF is rendered locally from the shared document (the Next
+    // `/resume/pdf` route), so it never depends on backend CORS headers.
     const responsePromise = page.waitForResponse(
       (response) =>
-        response.request().method() === "GET" &&
-        response.url().includes("/export.pdf") &&
+        response.request().method() === "POST" &&
+        response.url().includes("/resume/pdf") &&
         response.status() === 200,
     );
     const downloadPromise = page.waitForEvent("download");
@@ -86,20 +88,14 @@ test.describe("live privacy and export (B6)", () => {
     const response = await responsePromise;
     const download = await downloadPromise;
 
+    expect(response.headers()["content-type"]).toContain("application/pdf");
     const path = await download.path();
     expect(path).toBeTruthy();
     const bytes = await readFile(path!);
     expect(bytes.subarray(0, 5).toString("latin1")).toBe("%PDF-");
-    // The browser names the file from Content-Disposition, not from the
-    // frontend fallback. A mismatch means the exposed header did not reach it.
-    const disposition = await response.headerValue("content-disposition");
-    expect(disposition).toContain(`filename="${download.suggestedFilename()}"`);
-    // The CORS policy must expose the X-Export-* headers, otherwise the
-    // fail-closed button never starts this download. Seeing the verified
-    // counts here proves the browser could read them end to end. Accept the
-    // singular copy for a resume with exactly one section/claim.
-    await expect(page.getByTestId("pdf-export-check")).toContainText(
-      /Text extraction passed: \d+ sections? and \d+ claims? verified\./,
+
+    await expect(page.getByTestId("pdf-export-status")).toContainText(
+      "PDF downloaded",
     );
     await expect(page.getByTestId("pdf-export-error")).toHaveCount(0);
   });

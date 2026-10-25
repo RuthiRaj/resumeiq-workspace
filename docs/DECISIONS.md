@@ -2250,3 +2250,34 @@ Consequences: the live suite accepts grammatically correct singular copy and
 fails if the browser falls back to a client-side filename instead of the
 server's header. The test remains fail-closed: the download only starts after
 the exported check reports `passed`.
+
+## ADR-052 - 2026-10-25 - One print document on `/resume`, merged section controls
+
+Context: `/resume` rendered the visible preview plus a body-portal copy for
+printing. When the portal's screen-hiding CSS was stale, users saw a second
+unstyled resume below the page, and print included both the app shell and two
+copies of the sheet. The Section order panel was also built from raw workspace
+keys, so `achievement` and `extracurricular` both appeared as "Achievements and
+awards", while `training` and `course` were separate from Certifications.
+
+Decision:
+
+1. `/resume` prints its visible `ResumeDocument`; `ExportActions` does not mount
+   the print portal on that route. `ResumePaper` adds a `resume-print-mode`
+   body class, and print CSS hides app chrome, collapses the shell and keeps
+   the single sheet.
+2. Studio and History have no document preview, so they keep the body-portal
+   path. The portal is hidden inline on screen and shown only by print CSS.
+3. Section order is built from unique document-control ids, not raw workspace
+   keys. `certificate`, `training` and `course` share the Certifications id;
+   `achievement` and `extracurricular` share the Achievements and awards id.
+4. Print uses `@page { size: A4; margin: 0 }` with 14mm/16mm padding on the
+   sheet. The ATS layout is one Arial/Calibri column, black on white, uppercase
+   section headings, right-aligned dates, real `<li>` bullets and compact skill
+   lines. Templates only vary metrics.
+
+Consequences: `/resume` has exactly one `.resume-document`, print contains only
+that sheet, and the section controls cannot list the same heading twice. The
+browser's own "Headers and footers" option remains a browser setting; zero page
+margin leaves it no reserved margin to print into. Studio/History still rely on
+the portal isolation rules.

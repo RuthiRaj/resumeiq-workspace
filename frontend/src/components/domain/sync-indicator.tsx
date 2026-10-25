@@ -5,10 +5,13 @@ import { cn } from "@/lib/utils";
 export function SyncIndicator({
   syncedAt,
   syncing = false,
+  error = false,
   className,
 }: {
   syncedAt?: string;
   syncing?: boolean;
+  /** Set true when the last read request failed. */
+  error?: boolean;
   className?: string;
 }) {
   return (
@@ -16,14 +19,29 @@ export function SyncIndicator({
       <span className="relative flex size-2" aria-hidden="true">
         <span
           className={cn(
-            "absolute inline-flex h-full w-full rounded-full bg-evidence-verified opacity-60",
-            syncing ? "animate-ping" : "animate-none",
+            "absolute inline-flex h-full w-full rounded-full opacity-60",
+            syncing
+              ? "animate-ping bg-evidence-verified"
+              : error
+                ? "bg-evidence-missing"
+                : "bg-evidence-verified animate-none",
           )}
         />
-        <span className="relative inline-flex size-2 rounded-full bg-evidence-verified" />
+        <span
+          className={cn(
+            "relative inline-flex size-2 rounded-full",
+            syncing
+              ? "bg-evidence-verified"
+              : error
+                ? "bg-evidence-missing"
+                : "bg-evidence-verified",
+          )}
+        />
       </span>
       {syncing ? (
         "Syncing…"
+      ) : error ? (
+        "Not synced"
       ) : (
         <>
           Synced

@@ -317,6 +317,29 @@ export function setPersona(
  * Claims are marked `confirmed` only when the source item is verified or
  * user-attested; related/missing items surface as needing confirmation.
  */
+function looksLikeContact(value: string): boolean {
+  return /@|https?:\/\/|\+?\d[\d\s().-]{6,}/i.test(value);
+}
+
+function standardHeader(item: WorkspaceItem): string {
+  if (item.section === "personal") {
+    const contact = [
+      item.organization && looksLikeContact(item.organization)
+        ? item.organization
+        : null,
+      item.location,
+      ...item.links,
+    ].filter((part): part is string => Boolean(part && part.trim()));
+    return contact.length > 0
+      ? `${item.title} · ${contact.join(" | ")}`
+      : item.title;
+  }
+  const dates = [item.startDate, item.endDate].filter(Boolean).join(" – ");
+  return [item.title, item.organization, dates]
+    .filter((part) => part && part.trim())
+    .join(" · ");
+}
+
 export function deriveStandardResume(ws: StoredWorkspace): Resume {
   const active = activeItems(ws);
   const sections: ResumeSection[] = [];
@@ -327,10 +350,7 @@ export function deriveStandardResume(ws: StoredWorkspace): Resume {
       key,
       claims: items.flatMap((item) => {
         const confirmed = item.evidence === "verified" || item.evidence === "attested";
-        const dates = [item.startDate, item.endDate].filter(Boolean).join(" – ");
-        const header = [item.title, item.organization, dates]
-          .filter((part) => part && part.trim())
-          .join(" · ");
+        const header = standardHeader(item);
         return [
           {
             text: header,

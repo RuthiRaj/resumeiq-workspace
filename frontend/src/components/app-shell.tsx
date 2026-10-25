@@ -44,6 +44,7 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { IconTooltip, TooltipProvider } from "@/components/ui/tooltip";
+import { DevStatusChip } from "@/components/domain/dev-status-chip";
 
 const NAV = [
   { href: "/workspace", label: "Workspace", icon: Home },
@@ -389,7 +390,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </IconTooltip>
               <UserMenu />
             </header>
-            <main className="min-w-0 flex-1 px-4 py-6 pb-8 sm:px-6">{children}</main>
+            <main className="min-w-0 flex-1 px-4 py-6 pb-8 sm:px-6">
+              {children}
+              <DevStatusChip />
+            </main>
           </div>
 
           {/* Mobile bottom navigation — a layout row, not an overlay. */}

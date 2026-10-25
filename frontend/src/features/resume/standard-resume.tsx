@@ -6,7 +6,6 @@ import {
   ArrowDown,
   ArrowUp,
   FileText,
-  Printer,
   RefreshCw,
   Sparkles,
 } from "lucide-react";
@@ -19,12 +18,9 @@ import { SyncIndicator } from "@/components/domain/sync-indicator";
 import { TEMPLATE_OPTIONS, TARGET_LENGTHS } from "@/lib/schemas";
 import { cn } from "@/lib/utils";
 import { useStandardResume, useSyncStatus } from "@/features/workspace/use-workspace";
-import {
-  moveSectionKey,
-  orderedSectionKeys,
-  sectionLabel,
-} from "./resume-preferences";
-import { PdfExportButton } from "./pdf-export-button";
+import { moveSectionKey } from "./resume-preferences";
+import { documentControlSections } from "./resume-document-model";
+import { ExportActions } from "./export-actions";
 import { ResumePaper } from "./resume-paper";
 import { useResumePreferences } from "./use-resume-preferences";
 
@@ -38,9 +34,16 @@ export function StandardResumePage() {
     reset: resetPreferences,
   } = useResumePreferences();
 
-  const keys = useMemo(
-    () => (resume.data ? orderedSectionKeys(resume.data, preferences.order) : []),
-    [preferences.order, resume.data],
+  const controls = useMemo(
+    () =>
+      resume.data
+        ? documentControlSections(
+            resume.data,
+            preferences.order,
+            preferences.hidden,
+          )
+        : [],
+    [preferences.hidden, preferences.order, resume.data],
   );
 
   if (resume.isLoading) {
@@ -63,6 +66,8 @@ export function StandardResumePage() {
         description="It is derived from your workspace, so nothing was deleted. Retry to rebuild the preview."
         onRetry={() => void resume.refetch()}
         retrying={resume.isFetching}
+        method="GET"
+        error={resume.error}
       />
     );
   }
@@ -75,6 +80,8 @@ export function StandardResumePage() {
         description="Retry to rebuild it from your workspace."
         onRetry={() => void resume.refetch()}
         retrying={resume.isFetching}
+        method="GET"
+        error={resume.error}
       />
     );
   }
@@ -82,8 +89,8 @@ export function StandardResumePage() {
   const empty = data.sections.every((section) => section.claims.length === 0);
 
   return (
-    <div className="flex flex-col gap-5">
-      <header className="flex flex-col gap-3">
+    <div className="flex flex-col gap-5 print:block">
+      <header className="no-print flex flex-col gap-3">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex flex-col gap-1">
             <p className="text-xs uppercase tracking-[0.18em] text-muted">
@@ -97,18 +104,17 @@ export function StandardResumePage() {
               choices here are local; the wording lives in your workspace.
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <SyncIndicator syncing={sync.syncing} syncedAt={sync.syncedAt} />
-            <PdfExportButton resumeId={data.id} />
-            <Button
-              variant="secondary"
-              size="sm"
-              className="no-print"
-              onClick={() => window.print()}
-            >
-              <Printer className="size-4" aria-hidden="true" />
-              Print / Save as PDF
-            </Button>
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:min-w-[17rem] sm:items-end">
+            <SyncIndicator syncing={sync.syncing} syncedAt={sync.syncedAt} error={sync.error} />
+            <ExportActions
+              resume={data}
+              template={preferences.template}
+              length={preferences.length}
+              order={preferences.order}
+              hidden={preferences.hidden}
+              className="sm:items-end"
+              printPortal={false}
+            />
           </div>
         </div>
       </header>
@@ -159,7 +165,7 @@ export function StandardResumePage() {
           </div>
         </EmptyState>
       ) : (
-        <div className="grid gap-5 xl:grid-cols-[20rem_minmax(0,1fr)]">
+        <div className="grid gap-5 print:block xl:grid-cols-[20rem_minmax(0,1fr)]">
           <aside
             className="no-print flex flex-col gap-4"
             aria-label="Resume presentation controls"
@@ -222,40 +228,50 @@ export function StandardResumePage() {
                 section does not delete its workspace items.
               </p>
               <ul className="mt-3 flex flex-col gap-2">
-                {keys.map((key, index) => {
-                  const visible = !preferences.hidden.includes(key);
+                {controls.map((control, index) => {
+                  const visible = !control.hidden;
+                  const order = controls.map((item) => item.id);
                   return (
                     <li
-                      key={key}
+                      key={control.id}
                       className="flex items-center gap-2 rounded-sm border border-white/[0.06] px-2 py-1.5"
                     >
                       <Checkbox
-                        id={`resume-visible-${key}`}
+                        id={`resume-visible-${control.id}`}
                         checked={visible}
-                        onCheckedChange={(checked) =>
+                        onCheckedChange={(checked) => {
+                          const without = preferences.hidden.filter(
+                            (value) =>
+                              value !== control.id &&
+                              !control.sourceKeys.includes(value),
+                          );
                           update({
                             hidden: checked
-                              ? preferences.hidden.filter((value) => value !== key)
-                              : [...preferences.hidden, key],
-                          })
-                        }
+                              ? without
+                              : [...without, control.id],
+                          });
+                        }}
                       />
                       <Label
-                        htmlFor={`resume-visible-${key}`}
+                        htmlFor={`resume-visible-${control.id}`}
                         className="min-w-0 flex-1 truncate text-xs font-normal"
                       >
-                        {sectionLabel(key)}
+                        {control.label}
                       </Label>
                       <div className="flex shrink-0 gap-0.5">
                         <Button
                           variant="ghost"
                           size="sm"
                           className="size-7 px-0"
-                          aria-label={`Move ${sectionLabel(key)} up`}
+                          aria-label={`Move ${control.label} up`}
                           disabled={index === 0}
                           onClick={() =>
                             update({
-                              order: moveSectionKey(preferences.order, key, -1),
+                              order: moveSectionKey(
+                                order,
+                                control.id,
+                                -1,
+                              ),
                             })
                           }
                         >
@@ -265,11 +281,15 @@ export function StandardResumePage() {
                           variant="ghost"
                           size="sm"
                           className="size-7 px-0"
-                          aria-label={`Move ${sectionLabel(key)} down`}
-                          disabled={index === keys.length - 1}
+                          aria-label={`Move ${control.label} down`}
+                          disabled={index === controls.length - 1}
                           onClick={() =>
                             update({
-                              order: moveSectionKey(preferences.order, key, 1),
+                              order: moveSectionKey(
+                                order,
+                                control.id,
+                                1,
+                              ),
                             })
                           }
                         >
@@ -284,8 +304,9 @@ export function StandardResumePage() {
 
             <p className="flex items-start gap-2 px-1 text-xs leading-relaxed text-muted">
               <Sparkles className="mt-0.5 size-3.5 shrink-0 text-accent-violet" aria-hidden="true" />
-              PDF export uses the browser print dialog and this page&apos;s print
-              stylesheet. App chrome is hidden automatically.
+              Download PDF prints this same one-page A4 document with
+              selectable text. Your browser&apos;s dialog opens so you can save
+              it as a PDF named after you; app chrome is hidden automatically.
             </p>
             <Button
               variant="ghost"
@@ -305,7 +326,7 @@ export function StandardResumePage() {
             </Button>
           </aside>
 
-          <div className="min-w-0">
+          <div className="min-w-0 print:block">
             <ResumePaper
               resume={data}
               template={preferences.template}

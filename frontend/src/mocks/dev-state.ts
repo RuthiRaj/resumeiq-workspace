@@ -9,17 +9,16 @@
  * lifetime: inject failures now, to observe an error state, and be clean after
  * a reload.
  *
- * F6 adds a scope so an E2E can isolate one failing surface without blanking
- * the whole app:
+ * A scope lets an E2E isolate one failing surface without blanking the whole
+ * app:
  *  - `all`          every mock endpoint (the original behaviour);
- *  - `capabilities` only `GET /capabilities` fails;
- *  - `export`       PDF export returns the 502 verification failure.
+ *  - `capabilities` only `GET /capabilities` fails.
  *
  * It only ever gates the MSW mock API (`failIfEnabled()` in `./context`), and
  * the `/api/v1/dev/failures` route that sets it 404s outside `next dev`
  * (ADR-024), so production can neither enable nor be affected by it.
  */
-export type FailureScope = "all" | "capabilities" | "export";
+export type FailureScope = "all" | "capabilities";
 
 let failuresEnabledFlag = false;
 let failureScope: FailureScope = "all";

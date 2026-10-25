@@ -22,7 +22,6 @@ import {
   refreshResume,
   restoreResumeVersion,
 } from "./resume-store";
-import { buildMockResumePdf } from "@/lib/export/mock-pdf";
 
 /**
  * Tailored-resume mock endpoints (B5 contract §6). They intentionally enforce
@@ -298,55 +297,4 @@ export const resumeHandlers = [
     },
   ),
 
-  /* ------------------------------------------------ B6 PDF export */
-
-  http.get("/api/v1/resumes/:resumeId/export.pdf", async ({ params }) => {
-    await latency(500);
-    const scopeFailure = failIfEnabled("export");
-    try {
-      const resume = getResume(
-        storage(),
-        currentUserId(),
-        String(params.resumeId),
-      );
-      const pdf = buildMockResumePdf(resume);
-      const checkHeaders = {
-        "X-Export-Text-Check": "passed",
-        "X-Export-Sections-Checked": String(pdf.sectionsChecked),
-        "X-Export-Sections-Missing": "0",
-        "X-Export-Claims-Checked": String(pdf.claimsChecked),
-        "X-Export-Claims-Missing": "0",
-        "Cache-Control": "no-store",
-      };
-      const headers = {
-        ...checkHeaders,
-        "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="${pdf.filename}"`,
-      };
-      // Dev-only failure simulation. A scoped `export` failure reproduces the
-      // backend's refused-export contract: 502 plus the failed check headers.
-      if (scopeFailure) {
-        return HttpResponse.json(
-          {
-            detail: {
-              code: "export_verification_failed",
-              message:
-                "The generated PDF failed its text check and was not served.",
-            },
-          },
-          {
-            status: 502,
-            headers: {
-              ...checkHeaders,
-              "X-Export-Text-Check": "failed",
-              "X-Export-Claims-Missing": "1",
-            },
-          },
-        );
-      }
-      return new HttpResponse(pdf.bytes, { status: 200, headers });
-    } catch (error) {
-      return fromError(error);
-    }
-  }),
 ];

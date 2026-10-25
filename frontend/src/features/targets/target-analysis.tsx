@@ -105,6 +105,8 @@ export function TargetAnalysis({ targetId }: { targetId: string }) {
               description={targetQuery.error.message}
               onRetry={() => void targetQuery.refetch()}
               retrying={targetQuery.isFetching}
+              method="GET"
+              error={targetQuery.error}
             />
           )}
         </div>
@@ -151,10 +153,12 @@ export function TargetAnalysis({ targetId }: { targetId: string }) {
         </div>
       ) : consentQuery.isError ? (
         <ErrorState
-          title="We couldn’t check your AI-processing consent"
+          title="We couldn't check your AI-processing consent"
           description="Nothing has been analysed. Check your connection and try again."
           onRetry={() => void consentQuery.refetch()}
           retrying={consentQuery.isFetching}
+          method="GET"
+          error={consentQuery.error}
         />
       ) : !consentGranted ? (
         <div className="flex flex-col gap-4">

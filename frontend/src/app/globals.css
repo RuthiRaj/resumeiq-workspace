@@ -53,22 +53,125 @@ body {
   background: transparent;
 }
 
+/* ------------------------------------------------------------------ resume */
+/* White A4 sheet shared by the screen preview, print and the server PDF. The
+   page margins live inside the sheet so @page can stay at 0 and Chrome's own
+   date/URL/page-number header and footer have no margin to print into. */
+.resume-document {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 210mm;
+  min-height: 0;
+  margin: 0 auto;
+  padding: 14mm 16mm;
+  border: 0;
+  border-radius: 0;
+  background: #fff;
+  color: #000;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+}
+
+.resume-document-entry,
+.resume-document-section {
+  break-inside: avoid;
+}
+
+.resume-document h1,
+.resume-document h2 {
+  break-after: avoid;
+}
+
+/* The print portal is only used on pages that do not already show a document
+   preview. It is mounted as a direct body child and stays invisible on screen. */
+.resume-print-root {
+  display: none;
+}
+
+@media screen and (max-width: 860px) {
+  .resume-document {
+    padding: 24px 20px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.28);
+  }
+}
+
 /* Clean print/PDF output: no app chrome, no grain, structured sections (PRD §7.7). */
 @media print {
   @page {
     size: A4;
-    margin: 14mm;
+    margin: 0;
   }
+
+  html,
+  body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  /* Portal path (Studio/History): the portal is the only visible body child. */
+  body.has-resume-print-root > *:not(.resume-print-root) {
+    display: none !important;
+  }
+
+  body.has-resume-print-root .resume-print-root {
+    display: block !important;
+  }
+
+  /* Preview path (`/resume`): the visible preview is also the print sheet.
+     Hide the app chrome and collapse the shell so nothing is clipped or
+     repeated, then let the single document own the A4 page. */
+  body.resume-print-mode [data-app-chrome],
+  body.resume-print-mode .no-print,
+  body.resume-print-mode .grain-overlay,
   .grain-overlay,
   .no-print,
   [data-app-chrome] {
     display: none !important;
   }
-  html,
-  body {
+
+  body.resume-print-mode [data-app-shell],
+  body.resume-print-mode [data-app-shell] > div,
+  body.resume-print-mode [data-app-scroll],
+  body.resume-print-mode [data-app-scroll] > main {
+    display: block !important;
+    height: auto !important;
+    min-height: 0 !important;
+    position: static !important;
+    overflow: visible !important;
+  }
+
+  body.resume-print-mode main,
+  body.has-resume-print-root main {
+    display: block !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    max-width: none !important;
+  }
+
+  body.resume-print-mode .resume-paper-frame {
+    width: auto !important;
+    max-width: none !important;
+    margin: 0 !important;
+  }
+
+  body.resume-print-mode .resume-document,
+  body.has-resume-print-root .resume-document {
+    width: 210mm !important;
+    min-height: 297mm !important;
+    margin: 0 !important;
+    padding: 14mm 16mm !important;
+    box-shadow: none !important;
+    border: 0 !important;
+    border-radius: 0 !important;
     background: #fff !important;
     color: #000 !important;
   }
+
+  body:not(.resume-print-mode):not(.has-resume-print-root) main {
+    padding: 14mm !important;
+  }
+
   /* The shell normally owns viewport height and scroll; print must let the
      document flow naturally so a long resume can span pages. */
   [data-app-shell],
@@ -86,20 +189,7 @@ body {
     overflow: visible !important;
   }
   main {
-    padding: 0 !important;
     margin: 0 !important;
     max-width: none !important;
-  }
-  .resume-paper {
-    box-shadow: none !important;
-    border: 0 !important;
-    max-width: none !important;
-    width: 100% !important;
-    margin: 0 !important;
-    padding: 0 !important;
-  }
-  .resume-paper section,
-  .resume-paper header {
-    break-inside: avoid;
   }
 }

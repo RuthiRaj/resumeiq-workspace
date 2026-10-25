@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from "react";
 import {
-  AlertTriangle,
   Bot,
   CheckCircle2,
   Download,
@@ -27,6 +26,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/features/ui/toast-store";
 import { api, apiErrorMessage } from "@/lib/api";
 import { dataExportFilename, downloadJson } from "@/lib/export/download";
+import { ErrorState } from "@/components/domain/error-state";
 import {
   ACCOUNT_DELETION_PHRASE,
   ACCOUNT_DELETION_REMAINING,
@@ -139,21 +139,14 @@ function ConsentSection() {
           <Skeleton className="h-4 w-2/3" />
         </div>
       ) : consent.isError ? (
-        <div role="alert">
-          <p className="text-sm text-evidence-missing">
-            Your consent record could not be loaded. AI features stay off until it
-            can be checked.
-          </p>
-          <Button
-            variant="secondary"
-            size="sm"
-            className="mt-2"
-            onClick={() => void consent.refetch()}
-            disabled={consent.isFetching}
-          >
-            Try again
-          </Button>
-        </div>
+        <ErrorState
+          title="Your consent record could not be loaded"
+          description="AI features stay off until it can be checked."
+          onRetry={() => void consent.refetch()}
+          retrying={consent.isFetching}
+          method="GET"
+          error={consent.error}
+        />
       ) : (
         <div className="flex flex-col gap-3">
           <p className="font-mono text-xs text-muted" role="status">
@@ -189,9 +182,14 @@ function ConsentSection() {
             </Button>
           </div>
           {record.isError ? (
-            <p role="alert" className="text-xs text-evidence-missing">
-              {apiErrorMessage(record.error, "Your consent choice was not saved.")}
-            </p>
+            <ErrorState
+              title="Your consent choice was not saved"
+              description={apiErrorMessage(record.error, "Please try again.")}
+              onRetry={() => void record.mutate(record.variables as boolean)}
+              retrying={record.isPending}
+              method="POST"
+              error={record.error}
+            />
           ) : null}
         </div>
       )}
@@ -246,22 +244,15 @@ function AiDisclosureSection() {
         </ul>
       )}
       {capabilities.isError ? (
-        <p
-          className="mt-3 flex items-start gap-1.5 rounded-sm border-l-2 border-evidence-related bg-evidence-related/10 p-2.5 text-xs leading-relaxed text-text"
-          role="alert"
-          data-testid="capabilities-unavailable"
-        >
-          <AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-evidence-related" aria-hidden="true" />
-          Capabilities could not be checked, so every optional feature is treated
-          as unavailable.{" "}
-          <button
-            type="button"
-            className="underline underline-offset-4 hover:text-text"
-            onClick={() => void capabilities.refetch()}
-          >
-            Retry
-          </button>
-        </p>
+        <ErrorState
+          title="Capabilities could not be checked"
+          description="Every optional feature is treated as unavailable. Retry to check again."
+          onRetry={() => void capabilities.refetch()}
+          retrying={capabilities.isFetching}
+          method="GET"
+          error={capabilities.error}
+          testId="capabilities-unavailable"
+        />
       ) : null}
     </section>
   );

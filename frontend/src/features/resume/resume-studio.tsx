@@ -17,7 +17,7 @@ import { ResumeCanvas } from "./resume-canvas";
 import { ResumeDiffDrawer } from "./resume-diff-drawer";
 import { EvidenceSheet } from "./evidence-sheet";
 import { ResumeSidePanel } from "./resume-side-panel";
-import { PdfExportButton } from "./pdf-export-button";
+import { ExportActions } from "./export-actions";
 import { useResume, useResumeList } from "./use-resume";
 
 function StudioSkeleton() {
@@ -82,6 +82,8 @@ export function ResumeStudio({ targetId }: { targetId: string }) {
         description="The resume belongs to a target. Retry, or go back to all targets."
         onRetry={() => void target.refetch()}
         retrying={target.isFetching}
+        method="GET"
+        error={target.error}
       />
     );
   }
@@ -93,6 +95,8 @@ export function ResumeStudio({ targetId }: { targetId: string }) {
         description="Nothing was deleted. Retry to list the saved snapshots for this target."
         onRetry={() => void list.refetch()}
         retrying={list.isFetching}
+        method="GET"
+        error={list.error}
       />
     );
   }
@@ -148,6 +152,8 @@ export function ResumeStudio({ targetId }: { targetId: string }) {
         description="The snapshot may have been removed. Retry, or generate a new version from the report."
         onRetry={() => void resume.refetch()}
         retrying={resume.isFetching}
+        method="GET"
+        error={resume.error}
       />
     );
   }
@@ -196,7 +202,7 @@ export function ResumeStudio({ targetId }: { targetId: string }) {
                 Review changes
               </Button>
             ) : null}
-            <PdfExportButton resumeId={data.id} />
+            <ExportActions resume={data} className="w-auto" />
             <Link
               href="/history"
               className="inline-flex h-8 items-center gap-1.5 rounded-sm border border-white/[0.12] px-3 text-xs font-medium text-text hover:bg-white/[0.06] focus-visible:outline-accent-cyan"

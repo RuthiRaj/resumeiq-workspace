@@ -124,7 +124,7 @@ describe("consent lookup", () => {
 
     expect(screen.queryByTestId("consent-gate")).not.toBeInTheDocument();
     expect(
-      screen.getByText("We couldn’t check your AI-processing consent"),
+      screen.getByText(/We couldn't check your AI-processing consent/i),
     ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /try again/i }));
     expect(consent.refetch).toHaveBeenCalledTimes(1);
