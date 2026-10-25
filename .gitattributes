@@ -39,3 +39,7 @@
 *.sqlite -text
 *.sqlite3 -text
 *.db -text
+
+# Exclude launcher scripts from GitHub language statistics (PowerShell)
+# This only affects the GitHub language bar — the files remain in the repo.
+scripts/*.ps1 linguist-vendored
