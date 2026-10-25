@@ -46,9 +46,24 @@ _LINKEDIN_RE = re.compile(r"(?:https?://)?(?:www\.)?linkedin\.com/in/[A-Za-z0-9_
 
 # BI/Analytics tools to extract as keywords
 _BI_TOOLS = (
-    "excel", "tableau", "power bi", "powerbi", "looker", "metabase", "superset",
-    "qlik", "microstrategy", "cognos", "sisense", "mode", "periscope", "chartio",
-    "redash", "google data studio", "data studio", "datastudio",
+    "excel",
+    "tableau",
+    "power bi",
+    "powerbi",
+    "looker",
+    "metabase",
+    "superset",
+    "qlik",
+    "microstrategy",
+    "cognos",
+    "sisense",
+    "mode",
+    "periscope",
+    "chartio",
+    "redash",
+    "google data studio",
+    "data studio",
+    "datastudio",
 )
 
 
@@ -414,8 +429,10 @@ def compute_ats_report(
             has_email = _EMAIL_RE.search(all_text) is not None
             has_linkedin = _LINKEDIN_RE.search(all_text) is not None
             has_github = _GITHUB_RE.search(all_text) is not None
-            has_summary = any(len(b) > 50 for b in p.bullets) or (p.organization and len(p.organization) > 50)
-            
+            has_summary = any(len(b) > 50 for b in p.bullets) or (
+                p.organization and len(p.organization) > 50
+            )
+
             if not has_phone:
                 contact_issues.append("phone")
             if not has_email:
@@ -426,13 +443,16 @@ def compute_ats_report(
                 contact_issues.append("GitHub")
             if not has_summary:
                 contact_issues.append("summary")
-        
+
         if contact_issues:
             issue = AtsIssue(
                 id="ats-contact",
                 severity="low",
                 message=f"Personal details missing: {', '.join(contact_issues)}.",
-                fix="Add phone, email, LinkedIn, GitHub, and a professional summary to your personal details.",
+                fix=(
+                    "Add phone, email, LinkedIn, GitHub, and a professional summary "
+                    "to your personal details."
+                ),
                 check="Contact details",
             )
             issues.append(issue)

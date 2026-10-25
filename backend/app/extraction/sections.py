@@ -43,12 +43,8 @@ _LOCATION_RE: Final[re.Pattern[str]] = re.compile(
     r"\b([A-Z][A-Za-z.'\-]+(?:\s+[A-Z][A-Za-z.'\-]+){0,2},\s*(?:[A-Z]{2}|[A-Z][A-Za-z.'\-]+))\b"
 )
 # Contact patterns for personal section
-_PHONE_RE: Final[re.Pattern[str]] = re.compile(
-    r"(\+?\d[\d\s().-]{6,}\d)"
-)
-_EMAIL_RE: Final[re.Pattern[str]] = re.compile(
-    r"([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})"
-)
+_PHONE_RE: Final[re.Pattern[str]] = re.compile(r"(\+?\d[\d\s().-]{6,}\d)")
+_EMAIL_RE: Final[re.Pattern[str]] = re.compile(r"([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})")
 _GITHUB_RE: Final[re.Pattern[str]] = re.compile(
     r"(?:https?://)?(?:www\.)?github\.com/[A-Za-z0-9_-]+",
     re.IGNORECASE,
@@ -272,7 +268,9 @@ def _date_follows_within(block: list[str], index: int, window: int = 2) -> bool:
     )
 
 
-def _split_entries(block: list[str], section: WorkspaceSection | None = None) -> list[tuple[int, list[str]]]:
+def _split_entries(
+    block: list[str], section: WorkspaceSection | None = None
+) -> list[tuple[int, list[str]]]:
     """Split one block into entries, with each entry's offset in the block.
 
     PDF text extraction drops blank lines, so consecutive entries arrive glued
@@ -305,9 +303,14 @@ def _split_entries(block: list[str], section: WorkspaceSection | None = None) ->
         # non-bullet line is a context/link line (GitHub, URL, etc.)
         if section == "project" and previous_was_bullet and not is_bullet and not has_date:
             line_lower = line.lower()
-            if ("github" in line_lower or "http" in line_lower or "www." in line_lower or
-                line_lower.startswith("git@") or line_lower.startswith("link:") or
-                line_lower.startswith("url:")):
+            if (
+                "github" in line_lower
+                or "http" in line_lower
+                or "www." in line_lower
+                or line_lower.startswith("git@")
+                or line_lower.startswith("link:")
+                or line_lower.startswith("url:")
+            ):
                 starts_new = False
         if current and not is_bullet and starts_new:
             segments.append((start, current))
@@ -345,10 +348,40 @@ def _plain_candidates(block_start: int, block: list[str]) -> list[tuple[int, str
 
 
 _DEGREE_KEYWORDS: Final[tuple[str, ...]] = (
-    "b.tech", "btech", "b.e.", "be", "b.sc", "bsc", "b.a.", "ba", "b.com", "bcom",
-    "m.tech", "mtech", "m.e.", "me", "m.sc", "msc", "m.a.", "ma", "m.com", "mcom",
-    "bachelor", "master", "diploma", "phd", "ph.d", "doctorate", "associate",
-    "lateral", "entry", "honours", "honors", "major", "minor", "specialization",
+    "b.tech",
+    "btech",
+    "b.e.",
+    "be",
+    "b.sc",
+    "bsc",
+    "b.a.",
+    "ba",
+    "b.com",
+    "bcom",
+    "m.tech",
+    "mtech",
+    "m.e.",
+    "me",
+    "m.sc",
+    "msc",
+    "m.a.",
+    "ma",
+    "m.com",
+    "mcom",
+    "bachelor",
+    "master",
+    "diploma",
+    "phd",
+    "ph.d",
+    "doctorate",
+    "associate",
+    "lateral",
+    "entry",
+    "honours",
+    "honors",
+    "major",
+    "minor",
+    "specialization",
 )
 
 
@@ -374,8 +407,10 @@ def _entry(
         return None
 
     # Special handling for education: handle both patterns
-    # Pattern A: Institution first, then degree (e.g., "Example Institute..." then "B.Tech...")
-    # Pattern B: Degree first, then institution (e.g., "BSc Computer Science" then "Example University")
+    # Pattern A: Institution first, then degree
+    # (e.g., "Example Institute..." then "B.Tech...")
+    # Pattern B: Degree first, then institution
+    # (e.g., "BSc Computer Science" then "Example University")
     title_index, title_raw = plain[0]
     title = _strip_dates(title_raw)
     org_index = None
@@ -386,19 +421,19 @@ def _entry(
         second_candidate = plain[1][1]
         first_has_dates = bool(find_date_tokens(first_candidate))
         second_has_dates = bool(find_date_tokens(second_candidate))
-        
+
         first_is_institution = _ORG_HINT_RE.search(first_candidate) is not None
         first_is_degree = _looks_like_degree(first_candidate)
         second_is_institution = _ORG_HINT_RE.search(second_candidate) is not None
         second_is_degree = _looks_like_degree(second_candidate)
-        
+
         # Pattern A: First is institution, second is degree (no dates in second)
-        if (first_is_institution and second_is_degree and not second_has_dates):
+        if first_is_institution and second_is_degree and not second_has_dates:
             title_index, title_raw = plain[1]
             title = _strip_dates(title_raw)
             org_index, org_raw = plain[0]
         # Pattern B: First is degree, second is institution (no dates in first)
-        elif (first_is_degree and second_is_institution and not first_has_dates):
+        elif first_is_degree and second_is_institution and not first_has_dates:
             # Keep first as title (degree), use second as organization (institution)
             org_index, org_raw = plain[1]
     if not title:
@@ -584,66 +619,70 @@ def _personal_item(block: list[tuple[int, str]]) -> ExtractionItem | None:
     if not _looks_like_name(name):
         return None
     fields = [_field("title", "Name", name, 0.6, first_index)]
-    
+
     # Collect all text for headline/summary/contact extraction
     all_text = " ".join(raw for _, raw in block[1:])
-    
+
     # Location
     for index, raw in block[1:]:
         match = _LOCATION_RE.search(raw)
         if match:
             fields.append(_field("location", "Location", match.group(1), 0.5, index))
             break
-    
+
     # Headline - the line after name that looks like a title/role
     if len(block) > 1:
         second_line = block[1][1].strip()
         # Headline is a line without @, phone, or URL, and not a location
-        if (second_line and 
-            "@" not in second_line and 
-            not _PHONE_RE.search(second_line) and
-            not _EMAIL_RE.search(second_line) and
-            not _GITHUB_RE.search(second_line) and
-            not _LINKEDIN_RE.search(second_line) and
-            not _LOCATION_RE.search(second_line) and
-            len(second_line) < 120):
+        if (
+            second_line
+            and "@" not in second_line
+            and not _PHONE_RE.search(second_line)
+            and not _EMAIL_RE.search(second_line)
+            and not _GITHUB_RE.search(second_line)
+            and not _LINKEDIN_RE.search(second_line)
+            and not _LOCATION_RE.search(second_line)
+            and len(second_line) < 120
+        ):
             fields.append(_field("organization", "Headline", second_line, 0.6, block[1][0]))
-    
+
     # Phone
     phone_match = _PHONE_RE.search(all_text)
     if phone_match:
         fields.append(_field("organization", "Phone", phone_match.group(1), 0.7, first_index))
-    
+
     # Email
     email_match = _EMAIL_RE.search(all_text)
     if email_match:
         fields.append(_field("organization", "Email", email_match.group(1), 0.9, first_index))
-    
+
     # GitHub
     github_match = _GITHUB_RE.search(all_text)
     if github_match:
         fields.append(_field("organization", "GitHub", github_match.group(0), 0.9, first_index))
-    
+
     # LinkedIn
     linkedin_match = _LINKEDIN_RE.search(all_text)
     if linkedin_match:
         fields.append(_field("organization", "LinkedIn", linkedin_match.group(0), 0.9, first_index))
-    
+
     # Summary - longest paragraph-like text that's not a contact
     summary_candidate = ""
-    for index, raw in block[1:]:
+    for _index, raw in block[1:]:
         text = raw.strip()
-        if (len(text) > 50 and 
-            "@" not in text and 
-            not _PHONE_RE.search(text) and
-            not _GITHUB_RE.search(text) and
-            not _LINKEDIN_RE.search(text) and
-            not _LOCATION_RE.search(text) and
-            len(text) > len(summary_candidate)):
+        if (
+            len(text) > 50
+            and "@" not in text
+            and not _PHONE_RE.search(text)
+            and not _GITHUB_RE.search(text)
+            and not _LINKEDIN_RE.search(text)
+            and not _LOCATION_RE.search(text)
+            and len(text) > len(summary_candidate)
+        ):
             summary_candidate = text
     if summary_candidate:
         fields.append(_field("organization", "Summary", summary_candidate, 0.5, first_index))
-    
+
     return ExtractionItem(
         id="ext-personal-1",
         section="personal",

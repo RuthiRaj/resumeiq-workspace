@@ -5,6 +5,8 @@ from fastapi.testclient import TestClient
 from app.core.config import Settings
 from app.main import create_app
 
+STRICT_CSP = "default-src 'none'; frame-ancestors 'none'"
+
 
 def test_health_ok(client: TestClient) -> None:
     response = client.get("/health")
@@ -120,11 +122,11 @@ def test_csp_strict_on_api_routes_in_development(settings: Settings) -> None:
 
     # Health endpoint (not under /api/v1 but should still be strict)
     response = client.get("/health")
-    assert response.headers["Content-Security-Policy"] == "default-src 'none'; frame-ancestors 'none'"
+    assert response.headers["Content-Security-Policy"] == STRICT_CSP
 
     # API v1 route (any route under /api/v1/)
     response = client.get("/api/v1/health")
-    assert response.headers["Content-Security-Policy"] == "default-src 'none'; frame-ancestors 'none'"
+    assert response.headers["Content-Security-Policy"] == STRICT_CSP
 
 
 def test_csp_strict_on_all_routes_in_production(settings: Settings) -> None:
@@ -138,20 +140,20 @@ def test_csp_strict_on_all_routes_in_production(settings: Settings) -> None:
 
     # Health endpoint
     response = client.get("/health")
-    assert response.headers["Content-Security-Policy"] == "default-src 'none'; frame-ancestors 'none'"
+    assert response.headers["Content-Security-Policy"] == STRICT_CSP
 
     # Docs paths return 404 in production but still have strict CSP
     response = client.get("/docs")
     assert response.status_code == 404
-    assert response.headers["Content-Security-Policy"] == "default-src 'none'; frame-ancestors 'none'"
+    assert response.headers["Content-Security-Policy"] == STRICT_CSP
 
     response = client.get("/redoc")
     assert response.status_code == 404
-    assert response.headers["Content-Security-Policy"] == "default-src 'none'; frame-ancestors 'none'"
+    assert response.headers["Content-Security-Policy"] == STRICT_CSP
 
     response = client.get("/openapi.json")
     assert response.status_code == 404
-    assert response.headers["Content-Security-Policy"] == "default-src 'none'; frame-ancestors 'none'"
+    assert response.headers["Content-Security-Policy"] == STRICT_CSP
 
 
 def test_csp_relaxed_on_docs_paths_in_development(settings: Settings) -> None:

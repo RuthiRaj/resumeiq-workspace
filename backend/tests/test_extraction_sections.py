@@ -228,62 +228,77 @@ def test_personal_item_needs_a_name_like_first_line() -> None:
 # Test with the user's resume format (fake personal data, real structure)
 # ---------------------------------------------------------------------------
 
-SPYNE_RESUME = """\
-Jane Doe
-Software Development Engineer Intern Candidate
-Hyderabad, Telangana
-+91 98765 43210
-jane.doe@example.com
-https://github.com/janedoe
-https://linkedin.com/in/janedoe
-
-Computer Science (AI & ML) undergraduate with hands-on full-stack project experience building and shipping React/TypeScript applications with Firebase-backed data layers and REST API integrations. Comfortable working across frontend and backend, debugging issues end-to-end, and picking up new tools quickly.
-
-EDUCATION
-B.Tech in Computer Science Engineering (Data Science), Direct Entry
-Example Institute of Technology, Example City, Example State
-2024 - 2028
-
-Diploma in Computer Engineering
-Sample College of Engineering, Sample City, Sample State
-2021 - 2024
-Grade: 8.50
-
-PROJECTS
-TaskFlow
-Technologies: React, TypeScript, JavaScript, Firebase, Firestore
-Built a full-stack web application in React and TypeScript to help users manage tasks and collaborate with team members.
-Designed and implemented user profiles, project-based task organization, real-time updates, and authentication using Firebase/Firestore as the backend data layer.
-Developed reusable, component-based frontend architecture and integrated it with backend services via REST-style data calls.
-Debugged and iterated on user interaction workflows, continuing to extend and improve the application post-launch.
-
-CodeLens AI
-Technologies: Python, FastAPI, REST API, RAG, FAISS
-Built a backend application with FastAPI, exposing REST API endpoints to let users upload code repositories and query them for AI-generated insights.
-Implemented a code-processing pipeline (extraction, chunking, retrieval) and integrated it with LLM APIs to ground responses in source content.
-Added file/function-level citation tracking to improve traceability of API responses, and tested the service locally end-to-end.
-
-ApeX - Freelance Web Development Project
-Technologies: Web Development
-Co-developed a web application with a friend as an early freelance initiative, building and iterating on features collaboratively.
-Worked on turning application ideas into functional web experiences through iterative development and feedback.
-
-SKILLS
-Languages: JavaScript, TypeScript, Python
-Frontend: React.js, HTML, CSS
-Backend / Databases: REST API Integration, Firebase, Firestore, Supabase, FastAPI
-AI / GenAI: RAG, LLM Applications, Groq API, OpenAI, Gemini, Claude, LLaMA
-Tools: Git, GitHub
-
-CERTIFICATIONS
-Cloud AI Fundamentals
-Google Cloud
-June 2024
-
-Python Essentials 1
-Cisco Networking Academy
-July 2026
-"""
+SPYNE_RESUME = (
+    "Jane Doe\n"
+    "Software Development Engineer Intern Candidate\n"
+    "Hyderabad, Telangana\n"
+    "+91 98765 43210\n"
+    "jane.doe@example.com\n"
+    "https://github.com/janedoe\n"
+    "https://linkedin.com/in/janedoe\n"
+    "\n"
+    "Computer Science (AI & ML) undergraduate with hands-on full-stack project "
+    "experience building and shipping React/TypeScript applications with "
+    "Firebase-backed data layers and REST API integrations. Comfortable working "
+    "across frontend and backend, debugging issues end-to-end, and picking up "
+    "new tools quickly.\n"
+    "\n"
+    "EDUCATION\n"
+    "B.Tech in Computer Science Engineering (Data Science), Direct Entry\n"
+    "Example Institute of Technology, Example City, Example State\n"
+    "2024 - 2028\n"
+    "\n"
+    "Diploma in Computer Engineering\n"
+    "Sample College of Engineering, Sample City, Sample State\n"
+    "2021 - 2024\n"
+    "Grade: 8.50\n"
+    "\n"
+    "PROJECTS\n"
+    "TaskFlow\n"
+    "Technologies: React, TypeScript, JavaScript, Firebase, Firestore\n"
+    "Built a full-stack web application in React and TypeScript to help users "
+    "manage tasks and collaborate with team members.\n"
+    "Designed and implemented user profiles, project-based task organization, "
+    "real-time updates, and authentication using Firebase/Firestore as the "
+    "backend data layer.\n"
+    "Developed reusable, component-based frontend architecture and integrated it "
+    "with backend services via REST-style data calls.\n"
+    "Debugged and iterated on user interaction workflows, continuing to "
+    "extend and improve the application post-launch.\n"
+    "\n"
+    "CodeLens AI\n"
+    "Technologies: Python, FastAPI, REST API, RAG, FAISS\n"
+    "Built a backend application with FastAPI, exposing REST API endpoints to "
+    "let users upload code repositories and query them for AI-generated "
+    "insights.\n"
+    "Implemented a code-processing pipeline (extraction, chunking, retrieval) "
+    "and integrated it with LLM APIs to ground responses in source content.\n"
+    "Added file/function-level citation tracking to improve traceability of API "
+    "responses, and tested the service locally end-to-end.\n"
+    "\n"
+    "ApeX - Freelance Web Development Project\n"
+    "Technologies: Web Development\n"
+    "Co-developed a web application with a friend as an early freelance "
+    "initiative, building and iterating on features collaboratively.\n"
+    "Worked on turning application ideas into functional web experiences "
+    "through iterative development and feedback.\n"
+    "\n"
+    "SKILLS\n"
+    "Languages: JavaScript, TypeScript, Python\n"
+    "Frontend: React.js, HTML, CSS\n"
+    "Backend / Databases: REST API Integration, Firebase, Firestore, Supabase, FastAPI\n"
+    "AI / GenAI: RAG, LLM Applications, Groq API, OpenAI, Gemini, Claude, LLaMA\n"
+    "Tools: Git, GitHub\n"
+    "\n"
+    "CERTIFICATIONS\n"
+    "Cloud AI Fundamentals\n"
+    "Google Cloud\n"
+    "June 2024\n"
+    "\n"
+    "Python Essentials 1\n"
+    "Cisco Networking Academy\n"
+    "July 2026\n"
+)
 
 
 def test_spyne_resume_format_extracts_all_sections() -> None:
@@ -298,19 +313,21 @@ def test_spyne_resume_format_extracts_all_sections() -> None:
         "certificate",
     }
     assert expected_sections <= sections
-    # Experience, internship, achievement, extracurricular, course, publication, training should be empty
+    # Experience, internship, achievement, extracurricular, course,
+    # publication, training should be empty
     assert "experience" not in sections
     assert "internship" not in sections
 
 
 def test_spyne_personal_extracts_name_location_headline_contacts_summary() -> None:
-    """Personal section extracts name, location, headline, phone, email, GitHub, LinkedIn, summary."""
+    """Personal section extracts name, location, headline, phone, email, "
+    "GitHub, LinkedIn, summary."""
     personal = of(parse(SPYNE_RESUME), "personal")
     assert len(personal) == 1
     p = personal[0]
     assert value(p, "title") == "Jane Doe"
     assert value(p, "location") == "Hyderabad, Telangana"
-    
+
     # Headline stored in organization with label "Headline"
     org_fields = [f for f in p.fields if f.key == "organization"]
     org_labels = {f.label: f.value for f in org_fields}
@@ -324,14 +341,19 @@ def test_spyne_personal_extracts_name_location_headline_contacts_summary() -> No
 
 
 def test_spyne_education_maps_degree_to_title_institution_to_organization() -> None:
-    """Education: degree/diploma -> title (Qualification); college name -> organization (Institution)."""
+    """Education: degree/diploma -> title (Qualification); college name "
+    "-> organization (Institution)."""
     education = of(parse(SPYNE_RESUME), "education")
     assert len(education) == 2
-    
+
     # First education entry
     edu1 = education[0]
-    assert value(edu1, "title") == "B.Tech in Computer Science Engineering (Data Science), Direct Entry"
-    assert value(edu1, "organization") == "Example Institute of Technology, Example City, Example State"
+    assert value(edu1, "title") == (
+        "B.Tech in Computer Science Engineering (Data Science), Direct Entry"
+    )
+    assert value(edu1, "organization") == (
+        "Example Institute of Technology, Example City, Example State"
+    )
     # Bare years shown as read, not month-precision
     assert value(edu1, "startDate") == "2024"
     assert value(edu1, "endDate") == "2028"
@@ -339,11 +361,13 @@ def test_spyne_education_maps_degree_to_title_institution_to_organization() -> N
     vals1 = initial_values(edu1)
     assert vals1.startDate == ""
     assert vals1.endDate == ""
-    
+
     # Second education entry
     edu2 = education[1]
     assert value(edu2, "title") == "Diploma in Computer Engineering"
-    assert value(edu2, "organization") == "Sample College of Engineering, Sample City, Sample State"
+    assert value(edu2, "organization") == (
+        "Sample College of Engineering, Sample City, Sample State"
+    )
     assert value(edu2, "startDate") == "2021"
     assert value(edu2, "endDate") == "2024"
     vals2 = initial_values(edu2)
@@ -355,7 +379,7 @@ def test_spyne_projects_keep_bullets_grouped_and_tags_parsed() -> None:
     """Projects: bullets stay grouped under correct project; tags parsed from Technologies line."""
     projects = of(parse(SPYNE_RESUME), "project")
     assert len(projects) == 3
-    
+
     # TaskFlow
     p1 = projects[0]
     assert value(p1, "title") == "TaskFlow"
@@ -367,7 +391,7 @@ def test_spyne_projects_keep_bullets_grouped_and_tags_parsed() -> None:
     assert "Debugged and iterated" in p1.bullets[3]
     # No organization for projects without explicit context
     assert value(p1, "organization") is None
-    
+
     # CodeLens AI
     p2 = projects[1]
     assert value(p2, "title") == "CodeLens AI"
@@ -377,7 +401,7 @@ def test_spyne_projects_keep_bullets_grouped_and_tags_parsed() -> None:
     assert "code-processing pipeline" in p2.bullets[1]
     assert "file/function-level citation tracking" in p2.bullets[2]
     assert value(p2, "organization") is None
-    
+
     # ApeX
     p3 = projects[2]
     assert value(p3, "title") == "ApeX - Freelance Web Development Project"
@@ -391,21 +415,21 @@ def test_spyne_projects_keep_bullets_grouped_and_tags_parsed() -> None:
 def test_spyne_skills_grouped_by_category_no_prefix() -> None:
     """Skills: category lines stripped, each skill becomes separate item without category prefix."""
     skills = of(parse(SPYNE_RESUME), "skill")
-    skill_titles = [value(s, "title") for s in skills]
-    
+    skill_titles = [t for s in skills if (t := value(s, "title")) is not None]
+
     # Languages category
     assert "JavaScript" in skill_titles
     assert "TypeScript" in skill_titles
     assert "Python" in skill_titles
     # No "Languages: JavaScript" prefix
     assert not any("Languages:" in t for t in skill_titles)
-    
+
     # Frontend category
     assert "React.js" in skill_titles
     assert "HTML" in skill_titles
     assert "CSS" in skill_titles
     assert not any("Frontend:" in t for t in skill_titles)
-    
+
     # Backend / Databases category
     assert "REST API Integration" in skill_titles
     assert "Firebase" in skill_titles
@@ -413,7 +437,7 @@ def test_spyne_skills_grouped_by_category_no_prefix() -> None:
     assert "Supabase" in skill_titles
     assert "FastAPI" in skill_titles
     assert not any("Backend" in t or "Databases:" in t for t in skill_titles)
-    
+
     # AI / GenAI category
     assert "RAG" in skill_titles
     assert "LLM Applications" in skill_titles
@@ -423,12 +447,12 @@ def test_spyne_skills_grouped_by_category_no_prefix() -> None:
     assert "Claude" in skill_titles
     assert "LLaMA" in skill_titles
     assert not any("AI / GenAI:" in t or "GenAI:" in t for t in skill_titles)
-    
+
     # Tools category
     assert "Git" in skill_titles
     assert "GitHub" in skill_titles
     assert not any("Tools:" in t for t in skill_titles)
-    
+
     # Total count
     assert len(skills) == 20
 
@@ -437,12 +461,12 @@ def test_spyne_certifications_extract_title_issuer_date() -> None:
     """Certifications: title, issuer (organization), and month-precision date."""
     certs = of(parse(SPYNE_RESUME), "certificate")
     assert len(certs) == 2
-    
+
     cert1 = certs[0]
     assert value(cert1, "title") == "Cloud AI Fundamentals"
     assert value(cert1, "organization") == "Google Cloud"
     assert value(cert1, "startDate") == "2024-06"  # June 2024 -> month precision
-    
+
     cert2 = certs[1]
     assert value(cert2, "title") == "Python Essentials 1"
     assert value(cert2, "organization") == "Cisco Networking Academy"

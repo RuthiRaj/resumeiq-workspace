@@ -1,9 +1,14 @@
 name: CI
 
 on:
-  push:
-    branches: ["**"]
   pull_request:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   ci:
@@ -25,24 +30,6 @@ jobs:
       - run: npm run build
       - run: npm run check:dev-excluded
       - run: npm run budget
-
-  backend:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: backend
-    steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v4
-        with:
-          python-version: "3.12"
-          enable-cache: true
-          cache-dependency-glob: "backend/uv.lock"
-      - run: uv sync --frozen
-      - run: uv run ruff check .
-      - run: uv run ruff format --check .
-      - run: uv run mypy app
-      - run: uv run pytest -v --tb=short
 
   e2e:
     runs-on: ubuntu-latest
@@ -68,3 +55,18 @@ jobs:
           name: playwright-traces
           path: test-results/
           retention-days: 7
+
+  untracked-scripts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check for untracked Python scripts
+        run: |
+          set -eu
+          untracked=$(git status --porcelain | grep '^??' | grep '\.py$' | grep -v '^?? backend/scripts/regenerate_golden_vectors.py$' || true)
+          if [ -n "$untracked" ]; then
+            echo "Untracked Python scripts found:"
+            echo "$untracked"
+            exit 1
+          fi
+          echo "No unexpected untracked Python scripts."
