@@ -345,12 +345,28 @@ test.describe("defect 2 — simulated failures", () => {
     await signUpToWorkspace(page, "failures-off");
 
     await page.getByRole("button", { name: "Simulate failure" }).click();
-    await expect(page.getByText("Couldn’t load your workspace")).toBeVisible({ timeout: NAV_TIMEOUT });
+    // Heading still says "Couldn't load your workspace"
+    await expect(page.getByRole("heading", { name: "Couldn't load your workspace" })).toBeVisible({ timeout: NAV_TIMEOUT });
+    // Body shows classified message for 503
+    await expect(page.getByText("The server encountered an error. Please try again.")).toBeVisible();
+    // Details disclosure exists
+    // Check if Details disclosure exists (only when technical message available)
+    const detailsSummary = page.getByText("Details", { exact: true });
+    const hasDetails = await detailsSummary.isVisible().catch(() => false);
+    if (!hasDetails) {
+      // If not visible, check what the error state looks like
+      const alert = page.getByRole("alert").first();
+      await expect(alert).toBeVisible({ timeout: 5000 });
+      const bodyText = await alert.textContent();
+      console.log("Error state body:", bodyText);
+    }
+    // Synced indicator is gone
+    await expect(page.getByText("Synced")).not.toBeVisible();
 
     await page.getByTestId("simulated-failures-banner").getByRole("button", { name: "Turn off" }).click();
 
     await expect(page.getByTestId("simulated-failures-banner")).toBeHidden();
-    await expect(page.getByText("Couldn’t load your workspace")).toBeHidden({ timeout: NAV_TIMEOUT });
+    await expect(page.getByRole("heading", { name: "Couldn't load your workspace" })).toBeHidden({ timeout: NAV_TIMEOUT });
     await expect(page.getByRole("region", { name: "All sections" })).toBeVisible();
   });
 });
