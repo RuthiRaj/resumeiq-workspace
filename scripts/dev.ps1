@@ -4,8 +4,19 @@
 
 .DESCRIPTION
   Checks the environment variable *names* this stack reads. Values are never
-  printed, and this script does not read .env files; the backend and Next.js
-  load their own .env files when they start.
+  printed, and this script does not read .env files for values; the backend and
+  Next.js load their own .env files when they start.
+
+  Reports three states per variable name:
+    - "set in shell"                 — the name has a non-empty value in this shell
+    - "not in shell (the app reads it from its .env file)" — not in shell, but
+      found in the app's .env file (backend/.env or frontend/.env.local)
+    - "defined in backend/.env" / "defined in frontend/.env.local" — the name
+      appears at a line start in the respective .env file (key=...), detected
+      without reading any values.
+
+  Stops with a clear error only when a REQUIRED name is defined nowhere (not in
+  shell, not in the app's .env file).
 
   Starts FastAPI and Next.js in two PowerShell windows, waits for the backend
   /health endpoint, then prints the localhost URLs to open. Both servers bind
@@ -23,30 +34,84 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-$repoRoot = Split-Path -Parent $PSScriptRoot
+$repoRoot   = Split-Path -Parent $PSScriptRoot
 $backendDir = Join-Path $repoRoot "backend"
 $frontendDir = Join-Path $repoRoot "frontend"
 
-function Test-EnvName {
+$backendEnvPath  = Join-Path $backendDir  ".env"
+$frontendEnvPath = Join-Path $frontendDir ".env.local"
+
+# --- Helper: check if a name has a non-empty value in the current shell ---
+function Test-NameInShell {
   param([Parameter(Mandatory = $true)][string]$Name)
-  $item = Get-Item -LiteralPath "Env:$Name" -ErrorAction SilentlyContinue
-  return $null -ne $item -and -not [string]::IsNullOrWhiteSpace([string]$item.Value)
+  $val = [Environment]::GetEnvironmentVariable($Name, "Process")
+  return $null -ne $val -and $val.Trim() -ne ""
 }
 
-function Write-EnvCheck {
+# --- Helper: check if a name appears as key=... at line start in a .env file ---
+function Test-NameInEnvFile {
   param(
     [Parameter(Mandatory = $true)][string]$Name,
+    [Parameter(Mandatory = $true)][string]$EnvFilePath
+  )
+  if (-not (Test-Path -LiteralPath $EnvFilePath)) { return $false }
+  try {
+    $lines = Get-Content -LiteralPath $EnvFilePath -Raw -ErrorAction Stop
+  } catch { return $false }
+  foreach ($raw in $lines -split "`r?`n") {
+    $line = $raw.Trim()
+    if (-not $line -or $line.StartsWith("#")) { continue }
+    if ($line -match "^$([regex]::Escape($Name))=") { return $true }
+  }
+  return $false
+}
+
+# --- Helper: produce the three-state status string for a variable ---
+function Get-VarStatus {
+  param(
+    [Parameter(Mandatory = $true)][string]$Name,
+    [Parameter(Mandatory = $true)][string]$App,         # "backend" or "frontend"
     [switch]$Required
   )
-  if (Test-EnvName $Name) {
-    Write-Host ("  [set]     {0}" -f $Name)
+
+  $envFile = if ($App -eq "backend") { $backendEnvPath } else { $frontendEnvPath }
+  $inShell = Test-NameInShell $Name
+  $inFile  = Test-NameInEnvFile $Name $envFile
+
+  if ($inShell) {
+    return @{ Status = "set in shell"; Source = "shell" }
+  } elseif ($inFile) {
+    return @{ Status = "not in shell (the app reads it from its .env file)"; Source = "file" }
   } elseif ($Required) {
-    Write-Host ("  [missing] {0}  (required in this shell)" -f $Name) -ForegroundColor Yellow
+    return @{ Status = "missing everywhere (required)"; Source = "none" }
   } else {
-    Write-Host ("  [missing] {0}  (optional here)" -f $Name) -ForegroundColor DarkYellow
+    return @{ Status = "not in shell (the app reads it from its .env file)"; Source = "none" }
   }
 }
 
+# --- Helper: print a single variable's status ---
+function Write-VarStatus {
+  param(
+    [Parameter(Mandatory = $true)][string]$Name,
+    [Parameter(Mandatory = $true)][string]$App,
+    [switch]$Required
+  )
+  $s = Get-VarStatus $Name $App -Required:$Required
+  $label = "  [{0}] {1}" -f $s.Status, $Name
+  if ($s.Source -eq "shell")       { Write-Host $label -ForegroundColor Green }
+  elseif ($s.Source -eq "file")    { Write-Host $label -ForegroundColor Cyan }
+  elseif ($s.Source -eq "none" -and $Required) { Write-Host $label -ForegroundColor Red }
+  else                             { Write-Host $label -ForegroundColor DarkYellow }
+}
+
+# --- Required variable lists per app ---
+$backendRequired  = @("SUPABASE_URL", "SUPABASE_PUBLISHABLE_KEY")
+$frontendRequired = @()
+
+# At least one AI key is required for the backend to do AI calls
+$backendAiKeys = @("GROQ_API_KEY", "NVIDIA_API_KEY")
+
+# --- Port check ---
 function Test-PortInUse {
   param([Parameter(Mandatory = $true)][int]$Port)
   $client = [System.Net.Sockets.TcpClient]::new()
@@ -63,30 +128,51 @@ function Test-PortInUse {
 Write-Host "ResumeIQ dev launcher"
 Write-Host "Repository: $repoRoot"
 Write-Host ""
-Write-Host "Environment variable names (values are not shown; .env files are not read here):"
-Write-EnvCheck "SUPABASE_URL" -Required
-Write-EnvCheck "SUPABASE_PUBLISHABLE_KEY" -Required
-Write-EnvCheck "GROQ_API_KEY"
-Write-EnvCheck "NVIDIA_API_KEY"
-Write-EnvCheck "NEXT_PUBLIC_API_MODE"
-Write-EnvCheck "NEXT_PUBLIC_API_BASE_URL"
-Write-EnvCheck "NEXT_PUBLIC_SUPABASE_URL"
-Write-EnvCheck "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"
 
-$missing = @()
-foreach ($name in @("SUPABASE_URL", "SUPABASE_PUBLISHABLE_KEY")) {
-  if (-not (Test-EnvName $name)) { $missing += $name }
+Write-Host "Backend environment variable names (values are never shown; .env files are not read for values):"
+Write-VarStatus "SUPABASE_URL" "backend" -Required
+Write-VarStatus "SUPABASE_PUBLISHABLE_KEY" "backend" -Required
+Write-VarStatus "GROQ_API_KEY" "backend"
+Write-VarStatus "NVIDIA_API_KEY" "backend"
+Write-VarStatus "NEXT_PUBLIC_API_MODE" "backend"
+Write-VarStatus "NEXT_PUBLIC_API_BASE_URL" "backend"
+Write-VarStatus "NEXT_PUBLIC_SUPABASE_URL" "backend"
+Write-VarStatus "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY" "backend"
+
+Write-Host ""
+Write-Host "Frontend environment variable names (values are never shown; .env files are not read for values):"
+Write-VarStatus "NEXT_PUBLIC_API_MODE" "frontend"
+Write-VarStatus "NEXT_PUBLIC_API_BASE_URL" "frontend"
+Write-VarStatus "NEXT_PUBLIC_SUPABASE_URL" "frontend"
+Write-VarStatus "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY" "frontend"
+
+# --- Required-variable validation (stop with error only when defined nowhere) ---
+$missingRequired = @()
+
+foreach ($name in $backendRequired) {
+  $s = Get-VarStatus $name "backend" -Required
+  if ($s.Source -eq "none") { $missingRequired += "backend/$name" }
 }
-if (-not (Test-EnvName "GROQ_API_KEY") -and -not (Test-EnvName "NVIDIA_API_KEY")) {
-  $missing += "GROQ_API_KEY or NVIDIA_API_KEY"
+# AI keys: at least one must be present somewhere
+$aiKeyFound = $false
+foreach ($name in $backendAiKeys) {
+  $s = Get-VarStatus $name "backend"
+  if ($s.Source -ne "none") { $aiKeyFound = $true; break }
 }
-if ($missing.Count -gt 0) {
+if (-not $aiKeyFound) {
+  $missingRequired += "backend/GROQ_API_KEY or NVIDIA_API_KEY (at least one required for AI calls)"
+}
+
+if ($missingRequired.Count -gt 0) {
   Write-Host ""
-  Write-Host ("Not set in this shell: {0}" -f ($missing -join ", ")) -ForegroundColor Yellow
-  Write-Host "The backend reads backend/.env and Next reads frontend/.env.local if present."
-  Write-Host "This script does not open those files; set the names in the shell to override them."
+  Write-Host "ERROR: Required variable(s) defined nowhere (not in shell, not in backend/.env, not in frontend/.env.local):" -ForegroundColor Red
+  foreach ($m in $missingRequired) { Write-Host "  $m" -ForegroundColor Red }
+  Write-Host ""
+  Write-Host "Fix: set the name in your shell, or add it to the appropriate .env file." -ForegroundColor Yellow
+  exit 1
 }
 
+# --- Tooling checks ---
 foreach ($tool in @("uv", "npm", "powershell.exe")) {
   if (-not (Get-Command $tool -ErrorAction SilentlyContinue)) {
     Write-Host ("Required tool not found on PATH: {0}" -f $tool) -ForegroundColor Red

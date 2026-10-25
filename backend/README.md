@@ -127,6 +127,23 @@ uv run python scripts/check_env.py
 uv run python scripts/check_env.py --strict   # exit 1 if an app variable is missing
 ```
 
+From the repo root, the cross-stack launcher `scripts/dev.ps1` also checks
+environment variable **names** (never values) and reports three states per name:
+
+- **set in shell** — the name has a non-empty value in the current shell
+- **not in shell (the app reads it from its .env file)** — not in shell, but the
+  name appears as `KEY=...` at a line start in `backend/.env`
+- **missing everywhere (required)** — the name is not in the shell and not found
+  in `backend/.env` (or `frontend/.env.local` for frontend variables). The
+  script exits with an error only in this case.
+
+```powershell
+# From repo root
+.\scripts\dev.ps1 -CheckOnly
+```
+
+This lets you verify the configuration before starting the servers.
+
 ## API (B1–B6)
 
 All workspace/resume endpoints require `Authorization: Bearer <Supabase JWT>` and
