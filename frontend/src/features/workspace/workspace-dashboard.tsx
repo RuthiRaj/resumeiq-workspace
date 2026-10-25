@@ -87,7 +87,7 @@ export function WorkspaceDashboard() {
             sync as you change it.
           </p>
           <div className="mt-2">
-            <SyncIndicator syncing={sync.syncing} syncedAt={sync.syncedAt} />
+            <SyncIndicator syncing={sync.syncing} syncedAt={sync.syncedAt} error={sync.error} />
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -125,14 +125,17 @@ export function WorkspaceDashboard() {
         <DashboardSkeleton />
       ) : workspace.isError ? (
         <ErrorState
-          title="Couldn’t load your workspace"
+          title="Couldn't load your workspace"
           description={
             isLiveMode()
-              ? "The workspace didn’t respond. Nothing was lost — check your connection and try again."
-              : "The workspace didn’t respond. Nothing was lost — try again, or check the mock failure toggle in the dev bar."
+              ? "The workspace didn't respond. Nothing was lost — check your connection and try again."
+              : "The workspace didn't respond. Nothing was lost — try again, or check the mock failure toggle in the dev bar."
           }
           onRetry={() => void workspace.refetch()}
           retrying={workspace.isFetching}
+          method="GET"
+          path="/api/v1/workspace"
+          error={workspace.error}
         />
       ) : (
         <>

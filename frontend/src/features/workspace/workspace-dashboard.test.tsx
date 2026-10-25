@@ -37,7 +37,7 @@ describe("workspace error copy", () => {
     vi.stubEnv("NEXT_PUBLIC_API_MODE", "live");
     render(<WorkspaceDashboard />);
 
-    expect(screen.getByText("Couldn’t load your workspace")).toBeInTheDocument();
+    expect(screen.getByText(/Couldn't load your workspace/i)).toBeInTheDocument();
     expect(screen.queryByText(/mock failure toggle/i)).not.toBeInTheDocument();
     expect(screen.getByText(/check your connection/i)).toBeInTheDocument();
   });

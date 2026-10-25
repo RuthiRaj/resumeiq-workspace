@@ -44,6 +44,7 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { IconTooltip, TooltipProvider } from "@/components/ui/tooltip";
+import { DevStatusChip } from "@/components/domain/dev-status-chip";
 
 const NAV = [
   { href: "/workspace", label: "Workspace", icon: Home },
@@ -475,6 +476,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </Sheet>
 
         <CommandPalette />
+        <DevStatusChip />
       </div>
     </TooltipProvider>
   );

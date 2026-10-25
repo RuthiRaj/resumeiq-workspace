@@ -53,7 +53,7 @@ async function signUp(page: Page) {
 async function setFailures(
   page: Page,
   enabled: boolean,
-  scope: "all" | "capabilities" | "export" = "all",
+  scope: "all" | "capabilities" = "all",
 ) {
   // The mock worker can still be booting on the first navigation after sign-up.
   // Retry a few times instead of treating that transient 404 as a real answer.

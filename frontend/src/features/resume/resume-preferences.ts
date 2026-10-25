@@ -4,7 +4,7 @@ import type {
   TargetLength,
   WorkspaceSection,
 } from "@/lib/schemas";
-import { TAILORED_SECTION_ORDER } from "@/lib/resume";
+import { DEFAULT_DOCUMENT_ORDER } from "./resume-document-model";
 
 /** Local presentation choices for the live standard-resume preview. */
 export interface ResumePreferences {
@@ -21,7 +21,7 @@ export const RESUME_PREFERENCES_KEY = "riq.resume-preferences.v1";
 export const DEFAULT_RESUME_PREFERENCES: ResumePreferences = {
   template: "precision",
   length: "one_page",
-  order: [...TAILORED_SECTION_ORDER],
+  order: [...DEFAULT_DOCUMENT_ORDER],
   hidden: [],
 };
 
@@ -95,15 +95,15 @@ export function sectionLabel(key: string): string {
     personal: "Personal details",
     education: "Education",
     experience: "Experience",
-    internship: "Internships",
+    internship: "Experience",
     project: "Projects",
     skill: "Skills",
-    achievement: "Achievements & awards",
-    extracurricular: "Extracurricular activities",
-    certificate: "Certificates",
-    course: "Courses",
+    achievement: "Achievements and awards",
+    extracurricular: "Achievements and awards",
+    certificate: "Certifications",
+    course: "Certifications",
     publication: "Publications",
-    training: "Training",
+    training: "Certifications",
   };
   return labels[key as WorkspaceSection] ?? key;
 }

@@ -93,6 +93,9 @@ export function TargetsList() {
           description={targetsQuery.error.message}
           onRetry={() => void targetsQuery.refetch()}
           retrying={targetsQuery.isFetching}
+          method="GET"
+          path="/api/v1/targets"
+          error={targetsQuery.error}
         />
       ) : targets.length === 0 ? (
         <EmptyState

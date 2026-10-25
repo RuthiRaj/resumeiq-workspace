@@ -33,12 +33,17 @@ import { apiErrorMessage } from "@/lib/api";
 import type { ResumeSummary, ResumeVersion } from "@/lib/schemas";
 import { cn } from "@/lib/utils";
 import { useTargets } from "@/features/targets/use-targets";
-import { useWorkspace } from "@/features/workspace/use-workspace";
+import {
+  useStandardResume,
+  useWorkspace,
+} from "@/features/workspace/use-workspace";
+import { ExportActions } from "./export-actions";
 import {
   useDeleteResume,
   useDeleteResumeVersion,
   usePurgeResume,
   usePurgeResumeVersion,
+  useResume,
   useResumeList,
   useResumeVersions,
   useRestoreResumeVersion,
@@ -224,6 +229,7 @@ export function ResumeHistoryPage() {
   const list = useResumeList();
   const targets = useTargets();
   const workspace = useWorkspace();
+  const standardResume = useStandardResume();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
 
@@ -234,6 +240,7 @@ export function ResumeHistoryPage() {
 
   const selected =
     tailored.find((resume) => resume.id === selectedId) ?? tailored[0] ?? null;
+  const selectedResume = useResume(selected?.id);
   const versions = useResumeVersions(selected?.id, Boolean(selected));
   const restore = useRestoreResumeVersion(selected?.id ?? "");
   const deleteResume = useDeleteResume();
@@ -383,6 +390,9 @@ export function ResumeHistoryPage() {
         description="Nothing was deleted. Retry to list the standard resume and every saved snapshot."
         onRetry={() => void list.refetch()}
         retrying={list.isFetching}
+        method="GET"
+        path="/api/v1/resumes"
+        error={list.error}
       />
     );
   }
@@ -435,13 +445,21 @@ export function ResumeHistoryPage() {
             </p>
           </div>
         </div>
-        <Link
-          href="/resume"
-          className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-sm border border-white/[0.12] px-3 text-xs font-medium text-text hover:bg-white/[0.06] focus-visible:outline-accent-cyan"
-        >
-          Open standard resume
-          <ArrowRight className="size-3.5" aria-hidden="true" />
-        </Link>
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:min-w-[17rem] sm:items-end">
+          <Link
+            href="/resume"
+            className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-sm border border-white/[0.12] px-3 text-xs font-medium text-text hover:bg-white/[0.06] focus-visible:outline-accent-cyan"
+          >
+            Open standard resume
+            <ArrowRight className="size-3.5" aria-hidden="true" />
+          </Link>
+          {standardResume.data ? (
+            <ExportActions
+              resume={standardResume.data}
+              className="sm:items-end"
+            />
+          ) : null}
+        </div>
       </section>
 
       {tailored.length === 0 ? (
@@ -514,6 +532,12 @@ export function ResumeHistoryPage() {
                   {selected.title || "Tailored resume"} · workspace v
                   {selected.workspaceVersion}
                 </p>
+                {selectedResume.data ? (
+                  <ExportActions
+                    resume={selectedResume.data}
+                    className="w-full"
+                  />
+                ) : null}
                 {selected.removedEvidenceIds.length > 0 ? (
                   <p
                     className="flex items-start gap-1.5 rounded-sm border-l-2 border-evidence-missing bg-evidence-missing/10 p-2.5 text-[11px] leading-relaxed text-text"

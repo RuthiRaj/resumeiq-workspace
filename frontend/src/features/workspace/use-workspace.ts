@@ -171,14 +171,17 @@ export function useReorderItems() {
  * Aggregated sync state for the "Synced" indicator: syncing while any
  * workspace mutation is in flight or a workspace/resume refetch is running,
  * otherwise the standard resume's last-updated timestamp (PRD §6.3 SYN-1).
+ * Error state reflects the last failed read request.
  */
 export function useSyncStatus() {
   const workspace = useWorkspace();
   const resume = useStandardResume();
   const mutating = useIsMutating({ mutationKey: WORKSPACE_MUTATION_KEY });
   const syncing = mutating > 0 || workspace.isFetching || resume.isFetching;
+  const error = workspace.isError || resume.isError;
   return {
     syncing,
+    error,
     version: workspace.data?.version,
     syncedAt: resume.data?.updatedAt ?? workspace.data?.updatedAt,
   };

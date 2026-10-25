@@ -135,7 +135,7 @@ test("standard resume: live synced preview and presentation controls", async ({
   await expect(paper).toBeVisible();
   await expect(page.getByText(/^Synced/).first()).toBeVisible();
   await expect(paper.getByRole("heading", { name: "Experience" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Print / Save as PDF" })).toBeVisible();
+  await expect(page.getByTestId("pdf-export-button")).toHaveText("Download PDF");
 
   // Length is a presentation choice, not a data change.
   await page.getByRole("button", { name: "Two pages" }).click();

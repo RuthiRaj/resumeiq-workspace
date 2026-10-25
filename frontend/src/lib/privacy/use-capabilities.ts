@@ -35,6 +35,7 @@ export function useCapabilities() {
     /** Null until a successful read; lets callers explain a failed check. */
     data: query.data ?? null,
     isLoading: query.isLoading,
+    isFetching: query.isFetching,
     isError: query.isError,
     error: query.error,
     refetch: query.refetch,

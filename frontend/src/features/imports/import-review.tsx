@@ -106,6 +106,9 @@ export function ImportReviewPage() {
           description={upload.error.message}
           onRetry={lastFile ? () => handleFile(lastFile) : undefined}
           retrying={uploading}
+          method="POST"
+          path="/api/v1/imports"
+          error={upload.error}
         />
       ) : sessionId ? (
         session.isLoading ? (
@@ -123,6 +126,9 @@ export function ImportReviewPage() {
             title="That import isn't available any more"
             description="The review session may have expired. Upload the document again to start a fresh review."
             onRetry={() => router.replace("/workspace/import")}
+            method="GET"
+            path={sessionId ? `/api/v1/imports/${sessionId}` : "/api/v1/imports"}
+            error={session.error}
           />
         ) : (
           <ReviewWorkspace session={session.data} />

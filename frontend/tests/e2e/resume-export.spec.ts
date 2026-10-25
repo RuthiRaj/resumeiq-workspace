@@ -1,16 +1,27 @@
-import { readFile } from "node:fs/promises";
 import { expect, test, type Page } from "@playwright/test";
+import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 
-// Sign-up + onboarding + a retried capabilities read + 500ms PDF latency.
+// Sign-up + onboarding + a fresh workspace read per navigation.
 test.setTimeout(180_000);
 
 const NAV_TIMEOUT = 30_000;
 
 /**
- * F6 E2E: server PDF export and its extraction-check refusal, against MSW.
- * The mocked route streams real PDF bytes and carries the `X-Export-*` headers,
- * so the download and the 502 path are both exercised end to end.
+ * F6 E2E: Download PDF uses the one shared `ResumeDocument`, not a plain-text
+ * generator. Download PDF opens the browser print path with the title
+ * `<Name> - Resume`, so the test (a) spies on `window.print()` to prove the
+ * candidate-named title, and (b) prints the page to a real PDF via Chromium to
+ * prove the ATS layout: bold name header, merged section labels, formatted
+ * dates and no raw workspace keys or ISO dates.
  */
+const FORBIDDEN = [
+  "PERSONAL",
+  "EXTRACURRICULAR",
+  "COURSES",
+  "CERTIFICATE",
+  "STANDARD RESUME",
+  "2022-09",
+];
 
 function uniqueEmail(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.floor(Math.random() * 1e6)}@example.com`;
@@ -51,34 +62,63 @@ async function signUp(page: Page) {
   await expect(page).toHaveURL(/\/workspace$/, { timeout: NAV_TIMEOUT });
 }
 
-async function setFailures(
+async function apiJson(
   page: Page,
-  enabled: boolean,
-  scope: "all" | "capabilities" | "export" = "all",
-) {
-  // The mock worker can still be booting on the first navigation after sign-up.
-  // Retry instead of treating that transient 404 as a real answer.
-  let lastStatus = 0;
-  for (let attempt = 0; attempt < 10; attempt += 1) {
-    lastStatus = await page.evaluate(
-      async ({ on, selected }) => {
-        const response = await fetch("/api/v1/dev/failures", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ enabled: on, scope: selected }),
-        });
-        return response.status;
-      },
-      { on: enabled, selected: scope },
-    );
-    if (lastStatus >= 200 && lastStatus < 300) return;
-    await page.waitForTimeout(300);
-  }
-  throw new Error(`failure toggle failed: ${lastStatus}`);
+  method: "POST",
+  path: string,
+  body?: unknown,
+): Promise<void> {
+  await page.evaluate(
+    async ({ url, verb, payload }) => {
+      const res = await fetch(url, {
+        method: verb,
+        headers: payload ? { "Content-Type": "application/json" } : undefined,
+        body: payload ? JSON.stringify(payload) : undefined,
+      });
+      if (!res.ok) throw new Error(`${url} failed: ${res.status}`);
+    },
+    { url: path, verb: method, payload: body },
+  );
 }
 
-test("downloads a PDF and shows the extraction-check result", async ({ page }) => {
+interface PrintSpy {
+  __printTitles: string[];
+}
+
+async function extractPdf(
+  buffer: Buffer,
+): Promise<{ text: string; pages: number }> {
+  const document = await getDocument({
+    data: new Uint8Array(buffer),
+    useSystemFonts: true,
+  }).promise;
+  const pages: string[] = [];
+  for (let index = 1; index <= document.numPages; index += 1) {
+    const page = await document.getPage(index);
+    const content = await page.getTextContent();
+    pages.push(
+      content.items.map((item) => ("str" in item ? item.str : "")).join(" "),
+    );
+  }
+  return {
+    text: pages.join("\n").replace(/\s+/g, " ").trim(),
+    pages: document.numPages,
+  };
+}
+
+test("Download PDF prints with the candidate-named title", async ({ page }) => {
+  await page.addInitScript(() => {
+    const spy = window as unknown as PrintSpy & { print: () => void };
+    spy.__printTitles = [];
+    spy.print = () => {
+      spy.__printTitles.push(document.title);
+    };
+  });
+
   await signUp(page);
+  await apiJson(page, "POST", "/api/v1/dev/workspace-persona", {
+    persona: "fresher",
+  });
   await gotoReady(page, "/resume");
   await expect(
     page.getByRole("heading", { name: "Standard resume", exact: true }),
@@ -88,50 +128,60 @@ test("downloads a PDF and shows the extraction-check result", async ({ page }) =
   await expect(exportButton).toBeEnabled({ timeout: NAV_TIMEOUT });
   await expect(exportButton).toHaveText("Download PDF");
 
-  const downloadPromise = page.waitForEvent("download");
   await exportButton.click();
-  const download = await downloadPromise;
-  expect(download.suggestedFilename()).toMatch(/\.pdf$/);
-
-  const path = await download.path();
-  expect(path).toBeTruthy();
-  const bytes = await readFile(path!);
-  expect(bytes.subarray(0, 5).toString("latin1")).toBe("%PDF-");
-
-  await expect(page.getByTestId("pdf-export-check")).toContainText(
-    "Text extraction passed",
+  await expect(page.getByTestId("pdf-export-status")).toContainText(
+    "Print dialog opened",
   );
-  await expect(page.getByText("PDF downloaded")).toBeVisible();
+
+  const titles = await page.evaluate(
+    () => (window as unknown as PrintSpy).__printTitles,
+  );
+  expect(titles).toContain("Ada Fern - Resume");
 });
 
-test("a refused export explains the failed check and leaves the resume in place", async ({
+test("the printed PDF is a one-page ATS document, not a text dump", async ({
   page,
 }) => {
   await signUp(page);
+  // Ada Fern (fresher) has the ISO dates and split workspace sections the bug
+  // report used; the document model must merge and format them.
+  await apiJson(page, "POST", "/api/v1/dev/workspace-persona", {
+    persona: "fresher",
+  });
   await gotoReady(page, "/resume");
-  const exportButton = page.getByTestId("pdf-export-button");
-  await expect(exportButton).toBeEnabled({ timeout: NAV_TIMEOUT });
+  await expect(page.getByTestId("resume-paper")).toBeVisible();
 
-  // Scope the failure to the PDF route so the page keeps its cached
-  // capabilities and the button stays clickable — the real 502 path.
-  await setFailures(page, true, "export");
-  try {
-    await exportButton.click();
-    const error = page.getByTestId("pdf-export-error");
-    await expect(error).toBeVisible({ timeout: NAV_TIMEOUT });
-    await expect(error).toContainText("unchanged");
-    await expect(error).toContainText("editable");
-    await expect(page.getByTestId("pdf-export-check")).toContainText(
-      "Text extraction failed",
-    );
-    await expect(page.getByText("PDF export refused")).toBeVisible();
-    // The resume page is still rendered and the control is usable again; no
-    // download was offered and nothing was removed.
-    await expect(
-      page.getByRole("heading", { name: "Standard resume", exact: true }),
-    ).toBeVisible();
-    await expect(exportButton).toBeEnabled();
-  } finally {
-    await setFailures(page, false).catch(() => {});
+  // Chromium's print engine is exactly what Download PDF uses; capture it.
+  const pdf = await page.pdf({
+    format: "A4",
+    printBackground: true,
+    margin: { top: "0", right: "0", bottom: "0", left: "0" },
+    preferCSSPageSize: true,
+  });
+  const { text, pages } = await extractPdf(Buffer.from(pdf));
+  const upper = text.toUpperCase();
+
+  expect(pages).toBe(1);
+  expect(upper).toContain("ADA FERN");
+  expect(text).toContain("Example City");
+  expect(text).toContain("Sep 2022 – Jun 2026");
+  expect(upper).toContain("EDUCATION");
+  expect(upper).toContain("CERTIFICATIONS");
+  expect(upper).toContain("ACHIEVEMENTS AND AWARDS");
+
+  for (const forbidden of FORBIDDEN) {
+    expect(upper, `PDF leaked: ${forbidden}`).not.toContain(forbidden);
   }
+});
+
+test("an empty resume keeps Download PDF disabled", async ({ page }) => {
+  await signUp(page);
+  await apiJson(page, "POST", "/api/v1/dev/workspace-persona", {
+    persona: "empty",
+  });
+  await gotoReady(page, "/resume");
+
+  const exportButton = page.getByTestId("pdf-export-button");
+  await expect(exportButton).toBeDisabled({ timeout: NAV_TIMEOUT });
+  await expect(page.getByTestId("pdf-export-error")).toHaveCount(0);
 });

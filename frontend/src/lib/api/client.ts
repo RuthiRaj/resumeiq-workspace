@@ -276,48 +276,6 @@ async function request<T>(
 /** Shared by the dev-only client in `./dev`; not part of the public API surface. */
 export { request as apiRequest };
 
-/**
- * Binary GET (PDF export). The error path keeps the response headers because
- * a refused export (502) still reports its extraction check in `X-Export-*`.
- */
-async function requestBinary(
-  path: string,
-  init?: RequestInit,
-): Promise<{ blob: Blob; headers: Headers }> {
-  const live = isLiveMode();
-  const base = live ? `${apiBaseUrl()}${MOCK_BASE}` : MOCK_BASE;
-  const headers = new Headers(init?.headers);
-  if (live) {
-    const token = await accessToken();
-    if (token) headers.set("Authorization", `Bearer ${token}`);
-  }
-
-  let res: Response;
-  try {
-    res = await fetch(`${base}${path}`, { ...init, headers });
-  } catch {
-    throw new ApiError(
-      "We couldn't reach the server. Check your connection and try again.",
-      0,
-      path,
-      "network",
-    );
-  }
-
-  if (!res.ok) {
-    if (res.status === 401) unauthorizedHandler?.();
-    const errorBody = await res.json().catch(() => null);
-    throw errorFromBody(
-      errorBody,
-      res.status,
-      path,
-      parseRetryAfter(res.headers.get("Retry-After")),
-      res.headers,
-    );
-  }
-  return { blob: await res.blob(), headers: res.headers };
-}
-
 function unavailable(path: string): never {
   throw new ApiError(
     "That feature isn't connected to the live backend yet. It stays available in mock mode.",
@@ -518,13 +476,6 @@ export const api = {
       { method: "POST" },
       ResumeVersionPurgeResultSchema,
     ),
-
-  /**
-   * Streamed PDF export (B6 §9.2). The caller reads the `X-Export-*` headers
-   * to show the extraction-check result before offering the download.
-   */
-  exportResumePdf: (resumeId: string) =>
-    requestBinary(`/resumes/${encodeURIComponent(resumeId)}/export.pdf`),
 
   // --- Capabilities + privacy (B6 contract §9) ---
   getCapabilities: () =>

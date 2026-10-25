@@ -98,7 +98,7 @@ const UpdateItemBody = WorkspaceItemSchema.omit({ id: true }).partial();
 const PersonaBody = z.object({ persona: WorkspacePersonaSchema });
 const FailuresBody = z.object({
   enabled: z.boolean(),
-  scope: z.enum(["all", "capabilities", "export"]).default("all"),
+  scope: z.enum(["all", "capabilities"]).default("all"),
 });
 
 function sessionResponse(user: StoredUser) {
