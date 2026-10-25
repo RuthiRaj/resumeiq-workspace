@@ -97,6 +97,26 @@ opt-in; mock mode and all existing tests are unchanged.
    it, `CORS_ORIGINS` must contain that exact origin (comma-separated, no
    wildcard).
 
+### Cross-stack environment check (repo root)
+
+From the repository root, run the launcher in check-only mode to verify all
+variable names across both apps. It reports three states per name (never values):
+
+- **set in shell** — the name has a non-empty value in the current shell
+- **not in shell (the app reads it from its .env file)** — not in shell, but the
+  name appears as `KEY=...` at a line start in `backend/.env` or
+  `frontend/.env.local`
+- **missing everywhere (required)** — the name is not in the shell and not found
+  in the corresponding `.env` file. The script exits with an error only in this
+  case.
+
+```powershell
+# From repo root
+.\scripts\dev.ps1 -CheckOnly
+```
+
+This lets you verify the configuration before starting the servers.
+
 What changes in live mode:
 
 - Sign up / sign in / sign out / password reset / session refresh use Supabase
