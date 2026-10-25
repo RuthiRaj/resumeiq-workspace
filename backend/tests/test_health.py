@@ -49,3 +49,61 @@ def test_rate_limit_returns_429(settings: Settings) -> None:
     assert response.status_code == 429
     assert response.json()["detail"]["code"] == "rate_limited"
     assert "Retry-After" in response.headers
+
+
+def test_root_endpoint_test_mode(client: TestClient) -> None:
+    """Test the root endpoint in test mode (no docs exposed)."""
+    response = client.get("/")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["service"] == "ResumeIQ API"
+    assert body["status"] == "ok"
+    assert body["health"] == "/health"
+    # In test environment, docs should NOT be exposed (only in development)
+    assert "docs" not in body
+    # Version and environment should not be exposed in test mode either
+    assert "version" not in body
+    assert "environment" not in body
+
+
+def test_root_endpoint_development_mode(settings: Settings) -> None:
+    """Test the root endpoint in development mode (docs exposed)."""
+    dev_settings = Settings(
+        environment="development",
+        supabase_url="https://test.supabase.co",
+        supabase_publishable_key="test-key",
+    )
+    client = TestClient(create_app(dev_settings))
+    response = client.get("/")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["service"] == "ResumeIQ API"
+    assert body["status"] == "ok"
+    assert body["health"] == "/health"
+    # In development, docs should be exposed
+    assert "docs" in body
+    assert body["docs"] == "/docs"
+    # Version and environment should not be exposed in any mode
+    assert "version" not in body
+    assert "environment" not in body
+
+
+def test_root_endpoint_production_mode(settings: Settings) -> None:
+    """Test the root endpoint in production mode (no docs)."""
+    prod_settings = Settings(
+        environment="production",
+        supabase_url="https://test.supabase.co",
+        supabase_publishable_key="test-key",
+    )
+    client = TestClient(create_app(prod_settings))
+    response = client.get("/")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["service"] == "ResumeIQ API"
+    assert body["status"] == "ok"
+    assert body["health"] == "/health"
+    # In production, docs should NOT be exposed
+    assert "docs" not in body
+    # Version and environment should not be exposed in production
+    assert "version" not in body
+    assert "environment" not in body

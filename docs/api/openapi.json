@@ -5,6 +5,29 @@
     "version": "0.1.0"
   },
   "paths": {
+    "/": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "API root",
+        "operationId": "get_root__get",
+        "responses": {
+          "200": {
+            "description": "Service information.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Get Root  Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "tags": [

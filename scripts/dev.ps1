@@ -3,32 +3,24 @@
   Start the ResumeIQ backend (port 8000) and frontend (port 3000) for local development.
 
 .DESCRIPTION
-  Checks the environment variable *names* this stack reads. Values are never
-  printed, and this script does not read .env files for values; the backend and
-  Next.js load their own .env files when they start.
-
-  Reports three states per variable name:
-    - "set in shell"                 — the name has a non-empty value in this shell
-    - "not in shell (the app reads it from its .env file)" — not in shell, but
-      found in the app's .env file (backend/.env or frontend/.env.local)
-    - "defined in backend/.env" / "defined in frontend/.env.local" — the name
-      appears at a line start in the respective .env file (key=...), detected
-      without reading any values.
-
-  Stops with a clear error only when a REQUIRED name is defined nowhere (not in
-  shell, not in the app's .env file).
-
-  Starts FastAPI and Next.js in two PowerShell windows, waits for the backend
-  /health endpoint, then prints the localhost URLs to open. Both servers bind
-  to 127.0.0.1; no LAN address is printed or bound.
+  This is a thin wrapper around scripts/dev.mjs (the Node.js launcher).
+  It performs the same environment and port checks, then delegates to dev.mjs.
+  Windows opened by this script use -NoExit so they stay open on error.
+  Automatically runs "uv sync --frozen" in backend and "npm ci" in frontend
+  when lock files are newer than the installed state.
+  If the frontend fails to start once, deletes frontend/.next and retries once.
 
 .PARAMETER CheckOnly
   Run the environment and port checks, print what would start, and exit without
   opening windows.
+
+.PARAMETER NoWrapper
+  Run the Node.js launcher directly without this wrapper's extra checks.
 #>
 [CmdletBinding()]
 param(
-  [switch]$CheckOnly
+  [switch]$CheckOnly,
+  [switch]$NoWrapper
 )
 
 Set-StrictMode -Version Latest
@@ -37,6 +29,7 @@ $ErrorActionPreference = "Stop"
 $repoRoot   = Split-Path -Parent $PSScriptRoot
 $backendDir = Join-Path $repoRoot "backend"
 $frontendDir = Join-Path $repoRoot "frontend"
+$devMjs     = Join-Path $repoRoot "scripts" "dev.mjs"
 
 $backendEnvPath  = Join-Path $backendDir  ".env"
 $frontendEnvPath = Join-Path $frontendDir ".env.local"
@@ -126,7 +119,7 @@ function Test-PortInUse {
   }
 }
 
-Write-Host "ResumeIQ dev launcher"
+Write-Host "ResumeIQ dev launcher (PowerShell wrapper)"
 Write-Host "Repository: $repoRoot"
 Write-Host ""
 
@@ -175,7 +168,7 @@ if ($missingRequired.Count -gt 0) {
 }
 
 # --- Tooling checks ---
-foreach ($tool in @("uv", "npm", "powershell.exe")) {
+foreach ($tool in @("uv", "npm", "node", "powershell.exe")) {
   if (-not (Get-Command $tool -ErrorAction SilentlyContinue)) {
     Write-Host ("Required tool not found on PATH: {0}" -f $tool) -ForegroundColor Red
     exit 1
@@ -200,23 +193,97 @@ foreach ($port in @(8000, 3000)) {
 Write-Host ""
 Write-Host "Ports 8000 and 3000 are free."
 
-$backendCommand = "`$host.UI.RawUI.WindowTitle = 'ResumeIQ backend (8000)'; Set-Location -LiteralPath '$backendDir'; uv run uvicorn app.main:app --host 127.0.0.1 --port 8000 --log-level info"
-$frontendCommand = "`$host.UI.RawUI.WindowTitle = 'ResumeIQ frontend (3000)'; Set-Location -LiteralPath '$frontendDir'; npm run dev -- --hostname localhost --port 3000"
-
-if ($CheckOnly) {
+if ($NoWrapper) {
   Write-Host ""
-  Write-Host "Check-only: would start these in two windows:"
-  Write-Host ("  backend:  {0}" -f $backendCommand)
-  Write-Host ("  frontend: {0}" -f $frontendCommand)
-  Write-Host "Check-only: no servers started."
-  exit 0
+  Write-Host "Running Node.js launcher directly..."
+  $args = @("dev.mjs")
+  if ($CheckOnly) { $args += "--check-only" }
+  Start-Process -FilePath "node" -ArgumentList $args -WorkingDirectory $repoRoot -NoNewWindow -Wait
+  exit $LASTEXITCODE
 }
 
-Write-Host ""
-Write-Host "Starting two windows..."
-Start-Process -FilePath "powershell.exe" -ArgumentList @("-NoExit", "-Command", $backendCommand) -WorkingDirectory $backendDir
-Start-Process -FilePath "powershell.exe" -ArgumentList @("-NoExit", "-Command", $frontendCommand) -WorkingDirectory $frontendDir
+# --- Auto-sync dependencies (compare timestamps) ---
+function Test-LockNewer {
+  param([string]$LockPath, [string]$InstallPath)
+  if (-not (Test-Path -LiteralPath $LockPath)) { return $false }
+  if (-not (Test-Path -LiteralPath $InstallPath)) { return $true }
+  $lockTime  = (Get-Item -LiteralPath $LockPath).LastWriteTimeUtc
+  $installTime = (Get-Item -LiteralPath $InstallPath).LastWriteTimeUtc
+  return $lockTime -gt $installTime
+}
 
+# Backend: uv sync --frozen if uv.lock newer than .venv
+$backendLock  = Join-Path $backendDir "uv.lock"
+$backendVenv  = Join-Path $backendDir ".venv"
+if (Test-LockNewer $backendLock $backendVenv) {
+  Write-Host ""
+  Write-Host "Backend dependencies outdated (uv.lock newer than .venv). Running: uv sync --frozen" -ForegroundColor Cyan
+  $result = Start-Process -FilePath "uv" -ArgumentList "sync", "--frozen" -WorkingDirectory $backendDir -Wait -PassThru -NoNewWindow
+  if ($result.ExitCode -ne 0) {
+    Write-Host "uv sync --frozen failed with exit code $($result.ExitCode)" -ForegroundColor Red
+    exit $result.ExitCode
+  }
+  Write-Host "Backend dependencies synced." -ForegroundColor Green
+}
+
+# Frontend: npm ci if package-lock.json newer than node_modules
+$frontendLock    = Join-Path $frontendDir "package-lock.json"
+$frontendModules = Join-Path $frontendDir "node_modules"
+if (Test-LockNewer $frontendLock $frontendModules) {
+  Write-Host ""
+  Write-Host "Frontend dependencies outdated (package-lock.json newer than node_modules). Running: npm ci" -ForegroundColor Cyan
+  $result = Start-Process -FilePath "npm" -ArgumentList "ci" -WorkingDirectory $frontendDir -Wait -PassThru -NoNewWindow
+  if ($result.ExitCode -ne 0) {
+    Write-Host "npm ci failed with exit code $($result.ExitCode)" -ForegroundColor Red
+    exit $result.ExitCode
+  }
+  Write-Host "Frontend dependencies installed." -ForegroundColor Green
+}
+
+# --- Launch the Node.js dev launcher in two separate windows with -NoExit ---
+Write-Host ""
+Write-Host "Starting backend and frontend in separate windows..." -ForegroundColor Green
+
+$nodeArgs = @("dev.mjs")
+if ($CheckOnly) { $nodeArgs += "--check-only" }
+
+# Backend window
+$backendTitle = "ResumeIQ backend (8000)"
+Start-Process -FilePath "powershell.exe" -ArgumentList @(
+  "-NoExit",
+  "-Command",
+  "Set-Location -LiteralPath '$repoRoot'; node dev.mjs --backend-only"
+) -WorkingDirectory $backendDir
+
+# Frontend window (with retry logic for .next deletion)
+$frontendTitle = "ResumeIQ frontend (3000)"
+$frontendScript = @"
+  `$repoRoot = '$repoRoot'
+  `$frontendDir = '$frontendDir'
+  `$maxRetries = 1
+  `$attempt = 0
+  while (`$attempt -le `$maxRetries) {
+    `$result = Start-Process -FilePath 'node' -ArgumentList 'dev.mjs', '--frontend-only' -WorkingDirectory `$repoRoot -Wait -PassThru -NoNewWindow
+    if (`$result.ExitCode -eq 0) { exit 0 }
+    Write-Host 'Frontend failed (exit code: ' + `$result.ExitCode + ').'
+    if (`$attempt -lt `$maxRetries) {
+      Write-Host 'Deleting frontend/.next and retrying...' -ForegroundColor Yellow
+      Remove-Item -LiteralPath (Join-Path `$frontendDir '.next') -Recurse -Force -ErrorAction SilentlyContinue
+      `$attempt++
+    } else {
+      Write-Host 'Frontend failed after retry. Window stays open for inspection.' -ForegroundColor Red
+      exit `$result.ExitCode
+    }
+  }
+"@
+Start-Process -FilePath "powershell.exe" -ArgumentList @(
+  "-NoExit",
+  "-Command",
+  $frontendScript
+) -WorkingDirectory $frontendDir
+
+# Wait for backend health (in this window)
+Write-Host ""
 Write-Host "Waiting for http://127.0.0.1:8000/health ..."
 $healthy = $false
 for ($attempt = 1; $attempt -le 60; $attempt++) {
