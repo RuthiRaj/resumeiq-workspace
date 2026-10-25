@@ -38,6 +38,19 @@ _ISO_MONTH = re.compile(r"^(\d{4})-(\d{2})$")
 _SENTENCE_END = re.compile(r"\.\s")
 _DETAIL_SECTIONS = ("experience", "internship", "project")
 
+# Contact patterns for ATS checks
+_PHONE_RE = re.compile(r"(\+?\d[\d\s().-]{6,}\d)")
+_EMAIL_RE = re.compile(r"([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})")
+_GITHUB_RE = re.compile(r"(?:https?://)?(?:www\.)?github\.com/[A-Za-z0-9_-]+", re.IGNORECASE)
+_LINKEDIN_RE = re.compile(r"(?:https?://)?(?:www\.)?linkedin\.com/in/[A-Za-z0-9_-]+", re.IGNORECASE)
+
+# BI/Analytics tools to extract as keywords
+_BI_TOOLS = (
+    "excel", "tableau", "power bi", "powerbi", "looker", "metabase", "superset",
+    "qlik", "microstrategy", "cognos", "sisense", "mode", "periscope", "chartio",
+    "redash", "google data studio", "data studio", "datastudio",
+)
+
 
 def month_label(value: str) -> str:
     """ "2025-03" -> "Mar 2025". Formatting only; the date itself is unchanged."""
@@ -119,9 +132,13 @@ def compute_ats_report(
     ]
     if missing_headings:
         labels = [label for _, label in missing_headings]
+        # Downgrade "Experience" to low if internship section exists (internships are experience)
+        severity = "med"
+        if ("experience", "Experience") in missing_headings and "internship" in sections_present:
+            severity = "low"
         issue = AtsIssue(
             id="ats-headings",
-            severity="med",
+            severity=severity,
             message=f"No {', '.join(labels)} content to place under a standard heading.",
             fix=(
                 f"Add {', '.join(label.lower() for label in labels)} items in your workspace "
@@ -307,6 +324,24 @@ def compute_ats_report(
         for requirement in requirements
         if not requirement.pattern
     ]
+    # Also extract BI/analytics tools from all requirements (including experience/education)
+    # and check if they appear in the resume
+    bi_tools_found = set()
+    for requirement in requirements:
+        req_lower = requirement.text.lower()
+        for tool in _BI_TOOLS:
+            if tool in req_lower:
+                bi_tools_found.add(tool)
+    for tool in bi_tools_found:
+        # Avoid duplicates with existing skill keywords
+        if not any(k.keyword.lower() == tool for k in keywords):
+            keywords.append(
+                AtsKeyword(
+                    keyword=tool.title(),
+                    present=_keyword_present(resume_text, tool),
+                    requirementId=None,
+                )
+            )
     present = sum(1 for keyword in keywords if keyword.present)
     coverage = 0 if not keywords else js_round((present / len(keywords)) * 100)
 
@@ -369,15 +404,57 @@ def compute_ats_report(
             )
         )
     else:
-        checks.append(
-            AtsCheck(
-                id="contact",
-                label="Contact block present",
-                status="pass",
-                detail="Personal details item found.",
-                issueIds=[],
+        # Check for contact details within personal item
+        personal_items = [item for item in items if item.section == "personal"]
+        contact_issues = []
+        for p in personal_items:
+            # Check for phone, email, LinkedIn, GitHub in links or bullets/text
+            all_text = " ".join([p.title, p.organization or "", *p.bullets, *p.links]).lower()
+            has_phone = _PHONE_RE.search(all_text) is not None
+            has_email = _EMAIL_RE.search(all_text) is not None
+            has_linkedin = _LINKEDIN_RE.search(all_text) is not None
+            has_github = _GITHUB_RE.search(all_text) is not None
+            has_summary = any(len(b) > 50 for b in p.bullets) or (p.organization and len(p.organization) > 50)
+            
+            if not has_phone:
+                contact_issues.append("phone")
+            if not has_email:
+                contact_issues.append("email")
+            if not has_linkedin:
+                contact_issues.append("LinkedIn")
+            if not has_github:
+                contact_issues.append("GitHub")
+            if not has_summary:
+                contact_issues.append("summary")
+        
+        if contact_issues:
+            issue = AtsIssue(
+                id="ats-contact",
+                severity="low",
+                message=f"Personal details missing: {', '.join(contact_issues)}.",
+                fix="Add phone, email, LinkedIn, GitHub, and a professional summary to your personal details.",
+                check="Contact details",
             )
-        )
+            issues.append(issue)
+            checks.append(
+                AtsCheck(
+                    id="contact",
+                    label="Contact details complete",
+                    status="issue",
+                    detail=f"Missing: {', '.join(contact_issues)}.",
+                    issueIds=[issue.id],
+                )
+            )
+        else:
+            checks.append(
+                AtsCheck(
+                    id="contact",
+                    label="Contact details complete",
+                    status="pass",
+                    detail="Phone, email, LinkedIn, GitHub, and summary all present.",
+                    issueIds=[],
+                )
+            )
 
     # 7. Layout -- honestly not checked yet ----------------------------------
     checks.append(

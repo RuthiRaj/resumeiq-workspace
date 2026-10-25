@@ -241,30 +241,30 @@
         "targetId": "tgt-sample-strong",
         "workspaceVersion": 9,
         "generatedAt": "2026-10-17T09:00:00.000Z",
-        "score": 91,
+        "score": 91.0,
         "factors": [
           {
             "name": "Required skills",
             "weight": 0.4706,
-            "value": 100,
+            "value": 100.0,
             "detail": "5 matched, 0 partially matched, 0 unsupported of 5 required skill requirement(s)."
           },
           {
             "name": "Relevant experience",
             "weight": 0.2353,
-            "value": 75,
+            "value": 75.0,
             "detail": "1 matched, 1 partially matched, 0 unsupported of 2 experience requirement(s)."
           },
           {
             "name": "Education",
             "weight": 0.1176,
-            "value": 100,
+            "value": 100.0,
             "detail": "1 matched, 0 partially matched, 0 unsupported of 1 education requirement(s)."
           },
           {
             "name": "Projects & achievements",
             "weight": 0.1765,
-            "value": 80,
+            "value": 80.0,
             "detail": "Your workspace has 2 project/achievement item(s); the value reflects how well they are evidenced."
           }
         ],
@@ -280,7 +280,6 @@
             "text": "TypeScript",
             "kind": "required",
             "status": "matched",
-            "gapType": null,
             "evidenceIds": [
               "mid-experience-northwind",
               "mid-project-pdf",
@@ -293,7 +292,6 @@
             "text": "React",
             "kind": "required",
             "status": "matched",
-            "gapType": null,
             "evidenceIds": [
               "mid-experience-acme",
               "mid-training"
@@ -305,7 +303,6 @@
             "text": "PostgreSQL",
             "kind": "required",
             "status": "matched",
-            "gapType": null,
             "evidenceIds": [
               "mid-experience-northwind",
               "mid-skill-postgres"
@@ -317,7 +314,6 @@
             "text": "Automated testing",
             "kind": "required",
             "status": "matched",
-            "gapType": null,
             "evidenceIds": [
               "mid-experience-northwind"
             ],
@@ -328,7 +324,6 @@
             "text": "SQL",
             "kind": "required",
             "status": "matched",
-            "gapType": null,
             "evidenceIds": [
               "mid-experience-northwind",
               "mid-skill-postgres"
@@ -341,7 +336,6 @@
             "kind": "required",
             "pattern": "experience",
             "status": "matched",
-            "gapType": null,
             "evidenceIds": [
               "mid-experience-northwind",
               "mid-experience-acme"
@@ -354,7 +348,6 @@
             "kind": "required",
             "pattern": "education",
             "status": "matched",
-            "gapType": null,
             "evidenceIds": [
               "mid-education"
             ],
@@ -366,7 +359,6 @@
             "kind": "required",
             "pattern": "seniority",
             "status": "partial",
-            "gapType": null,
             "evidenceIds": [
               "mid-experience-northwind",
               "mid-experience-acme"
@@ -545,8 +537,8 @@
           }
         ],
         "ats": {
-          "score": 100,
-          "keywordCoverage": 80,
+          "score": 97.0,
+          "keywordCoverage": 80.0,
           "keywords": [
             {
               "keyword": "TypeScript",
@@ -612,10 +604,12 @@
             },
             {
               "id": "contact",
-              "label": "Contact block present",
-              "status": "pass",
-              "detail": "Personal details item found.",
-              "issueIds": []
+              "label": "Contact details complete",
+              "status": "issue",
+              "detail": "Missing: phone, email, LinkedIn, GitHub, summary.",
+              "issueIds": [
+                "ats-contact"
+              ]
             },
             {
               "id": "layout",
@@ -625,7 +619,15 @@
               "issueIds": []
             }
           ],
-          "issues": [],
+          "issues": [
+            {
+              "id": "ats-contact",
+              "severity": "low",
+              "message": "Personal details missing: phone, email, LinkedIn, GitHub, summary.",
+              "fix": "Add phone, email, LinkedIn, GitHub, and a professional summary to your personal details.",
+              "check": "Contact details"
+            }
+          ],
           "examples": [
             {
               "id": "example-dates",
@@ -878,36 +880,36 @@
         "targetId": "tgt-sample-partial",
         "workspaceVersion": 9,
         "generatedAt": "2026-10-17T09:00:00.000Z",
-        "score": 60,
+        "score": 60.0,
         "factors": [
           {
             "name": "Required skills",
             "weight": 0.4,
-            "value": 55,
+            "value": 55.0,
             "detail": "5 matched, 1 partially matched, 4 unsupported of 10 required skill requirement(s)."
           },
           {
             "name": "Preferred skills",
             "weight": 0.15,
-            "value": 0,
+            "value": 0.0,
             "detail": "0 matched, 0 partially matched, 1 unsupported of 1 preferred skill requirement(s)."
           },
           {
             "name": "Relevant experience",
             "weight": 0.2,
-            "value": 100,
+            "value": 100.0,
             "detail": "1 matched, 0 partially matched, 0 unsupported of 1 experience requirement(s)."
           },
           {
             "name": "Education",
             "weight": 0.1,
-            "value": 60,
+            "value": 60.0,
             "detail": "This posting doesn't require a qualification, so this reflects your workspace: 1 education item(s)."
           },
           {
             "name": "Projects & achievements",
             "weight": 0.15,
-            "value": 80,
+            "value": 80.0,
             "detail": "Your workspace has 2 project/achievement item(s); the value reflects how well they are evidenced."
           }
         ],
@@ -923,7 +925,6 @@
             "text": "TypeScript",
             "kind": "required",
             "status": "matched",
-            "gapType": null,
             "evidenceIds": [
               "mid-experience-northwind",
               "mid-project-pdf",
@@ -936,7 +937,6 @@
             "text": "React",
             "kind": "required",
             "status": "matched",
-            "gapType": null,
             "evidenceIds": [
               "mid-experience-acme",
               "mid-training"
@@ -948,7 +948,6 @@
             "text": "PostgreSQL",
             "kind": "required",
             "status": "matched",
-            "gapType": null,
             "evidenceIds": [
               "mid-experience-northwind",
               "mid-skill-postgres"
@@ -991,7 +990,6 @@
             "text": "Kubernetes",
             "kind": "required",
             "status": "partial",
-            "gapType": null,
             "evidenceIds": [
               "mid-skill-k8s"
             ],
@@ -1002,7 +1000,6 @@
             "text": "Observability",
             "kind": "required",
             "status": "matched",
-            "gapType": null,
             "evidenceIds": [
               "mid-experience-northwind"
             ],
@@ -1013,7 +1010,6 @@
             "text": "AWS",
             "kind": "required",
             "status": "matched",
-            "gapType": null,
             "evidenceIds": [
               "mid-cert-aws"
             ],
@@ -1036,7 +1032,6 @@
             "kind": "required",
             "pattern": "experience",
             "status": "matched",
-            "gapType": null,
             "evidenceIds": [
               "mid-experience-northwind",
               "mid-experience-acme"
@@ -1293,8 +1288,8 @@
           }
         ],
         "ats": {
-          "score": 93,
-          "keywordCoverage": 55,
+          "score": 90.0,
+          "keywordCoverage": 55.0,
           "keywords": [
             {
               "keyword": "TypeScript",
@@ -1392,10 +1387,12 @@
             },
             {
               "id": "contact",
-              "label": "Contact block present",
-              "status": "pass",
-              "detail": "Personal details item found.",
-              "issueIds": []
+              "label": "Contact details complete",
+              "status": "issue",
+              "detail": "Missing: phone, email, LinkedIn, GitHub, summary.",
+              "issueIds": [
+                "ats-contact"
+              ]
             },
             {
               "id": "layout",
@@ -1412,6 +1409,13 @@
               "message": "Only 55% of this job's keywords appear in the text of your resume (6 of 11).",
               "fix": "Add the keywords you can honestly back with evidence; the gaps list below shows which ones need a new project or course first.",
               "check": "Keyword coverage"
+            },
+            {
+              "id": "ats-contact",
+              "severity": "low",
+              "message": "Personal details missing: phone, email, LinkedIn, GitHub, summary.",
+              "fix": "Add phone, email, LinkedIn, GitHub, and a professional summary to your personal details.",
+              "check": "Contact details"
             }
           ],
           "examples": [
@@ -1665,30 +1669,30 @@
         "targetId": "tgt-sample-poor",
         "workspaceVersion": 9,
         "generatedAt": "2026-10-17T09:00:00.000Z",
-        "score": 39,
+        "score": 39.0,
         "factors": [
           {
             "name": "Required skills",
             "weight": 0.4706,
-            "value": 15,
+            "value": 15.0,
             "detail": "1 matched, 1 partially matched, 8 unsupported of 10 required skill requirement(s)."
           },
           {
             "name": "Relevant experience",
             "weight": 0.2353,
-            "value": 50,
+            "value": 50.0,
             "detail": "0 matched, 1 partially matched, 0 unsupported of 1 experience requirement(s)."
           },
           {
             "name": "Education",
             "weight": 0.1176,
-            "value": 50,
+            "value": 50.0,
             "detail": "0 matched, 1 partially matched, 0 unsupported of 1 education requirement(s)."
           },
           {
             "name": "Projects & achievements",
             "weight": 0.1765,
-            "value": 80,
+            "value": 80.0,
             "detail": "Your workspace has 2 project/achievement item(s); the value reflects how well they are evidenced."
           }
         ],
@@ -1784,7 +1788,6 @@
             "text": "Kubernetes",
             "kind": "required",
             "status": "partial",
-            "gapType": null,
             "evidenceIds": [
               "mid-skill-k8s"
             ],
@@ -1795,7 +1798,6 @@
             "text": "NLP",
             "kind": "required",
             "status": "matched",
-            "gapType": null,
             "evidenceIds": [
               "mid-publication"
             ],
@@ -1807,7 +1809,6 @@
             "kind": "required",
             "pattern": "experience",
             "status": "partial",
-            "gapType": null,
             "evidenceIds": [
               "mid-experience-northwind",
               "mid-experience-acme"
@@ -1820,7 +1821,6 @@
             "kind": "required",
             "pattern": "education",
             "status": "partial",
-            "gapType": null,
             "evidenceIds": [
               "mid-education"
             ],
@@ -2081,8 +2081,8 @@
           }
         ],
         "ats": {
-          "score": 88,
-          "keywordCoverage": 20,
+          "score": 85.0,
+          "keywordCoverage": 20.0,
           "keywords": [
             {
               "keyword": "Python",
@@ -2175,10 +2175,12 @@
             },
             {
               "id": "contact",
-              "label": "Contact block present",
-              "status": "pass",
-              "detail": "Personal details item found.",
-              "issueIds": []
+              "label": "Contact details complete",
+              "status": "issue",
+              "detail": "Missing: phone, email, LinkedIn, GitHub, summary.",
+              "issueIds": [
+                "ats-contact"
+              ]
             },
             {
               "id": "layout",
@@ -2195,6 +2197,13 @@
               "message": "Only 20% of this job's keywords appear in the text of your resume (2 of 10).",
               "fix": "Add the keywords you can honestly back with evidence; the gaps list below shows which ones need a new project or course first.",
               "check": "Keyword coverage"
+            },
+            {
+              "id": "ats-contact",
+              "severity": "low",
+              "message": "Personal details missing: phone, email, LinkedIn, GitHub, summary.",
+              "fix": "Add phone, email, LinkedIn, GitHub, and a professional summary to your personal details.",
+              "check": "Contact details"
             }
           ],
           "examples": [
@@ -2246,24 +2255,24 @@
         "targetId": "tgt-edge-1",
         "workspaceVersion": 1,
         "generatedAt": "2026-10-16T09:12:00.000Z",
-        "score": 57,
+        "score": 57.0,
         "factors": [
           {
             "name": "Required skills",
             "weight": 0.5714,
-            "value": 100,
+            "value": 100.0,
             "detail": "1 matched, 0 partially matched, 0 unsupported of 1 required skill requirement(s)."
           },
           {
             "name": "Relevant experience",
             "weight": 0.2857,
-            "value": 0,
+            "value": 0.0,
             "detail": "This posting doesn't set an experience bar, and your workspace has no experience or internship items yet."
           },
           {
             "name": "Education",
             "weight": 0.1429,
-            "value": 0,
+            "value": 0.0,
             "detail": "This posting doesn't require a qualification, and your workspace has no education items yet."
           }
         ],
@@ -2279,7 +2288,6 @@
             "text": "TypeScript",
             "kind": "required",
             "status": "matched",
-            "gapType": null,
             "evidenceIds": [
               "s1"
             ],
@@ -2315,8 +2323,8 @@
         },
         "roadmap": [],
         "ats": {
-          "score": 90,
-          "keywordCoverage": 100,
+          "score": 90.0,
+          "keywordCoverage": 100.0,
           "keywords": [
             {
               "keyword": "TypeScript",
@@ -2422,24 +2430,24 @@
         "targetId": "tgt-edge-2",
         "workspaceVersion": 1,
         "generatedAt": "2026-10-16T09:12:00.000Z",
-        "score": 0,
+        "score": 0.0,
         "factors": [
           {
             "name": "Required skills",
             "weight": 0.5714,
-            "value": 0,
+            "value": 0.0,
             "detail": "0 matched, 0 partially matched, 1 unsupported of 1 required skill requirement(s)."
           },
           {
             "name": "Relevant experience",
             "weight": 0.2857,
-            "value": 0,
+            "value": 0.0,
             "detail": "This posting doesn't set an experience bar, and your workspace has no experience or internship items yet."
           },
           {
             "name": "Education",
             "weight": 0.1429,
-            "value": 0,
+            "value": 0.0,
             "detail": "This posting doesn't require a qualification, and your workspace has no education items yet."
           }
         ],
@@ -2512,8 +2520,8 @@
           }
         ],
         "ats": {
-          "score": 78,
-          "keywordCoverage": 0,
+          "score": 78.0,
+          "keywordCoverage": 0.0,
           "keywords": [
             {
               "keyword": "Docker",
@@ -2628,24 +2636,24 @@
         "targetId": "tgt-edge-3",
         "workspaceVersion": 1,
         "generatedAt": "2026-10-16T09:12:00.000Z",
-        "score": 29,
+        "score": 29.0,
         "factors": [
           {
             "name": "Required skills",
             "weight": 0.5714,
-            "value": 50,
+            "value": 50.0,
             "detail": "0 matched, 1 partially matched, 0 unsupported of 1 required skill requirement(s)."
           },
           {
             "name": "Relevant experience",
             "weight": 0.2857,
-            "value": 0,
+            "value": 0.0,
             "detail": "This posting doesn't set an experience bar, and your workspace has no experience or internship items yet."
           },
           {
             "name": "Education",
             "weight": 0.1429,
-            "value": 0,
+            "value": 0.0,
             "detail": "This posting doesn't require a qualification, and your workspace has no education items yet."
           }
         ],
@@ -2661,7 +2669,6 @@
             "text": "Kubernetes",
             "kind": "required",
             "status": "partial",
-            "gapType": null,
             "evidenceIds": [
               "s1"
             ],
@@ -2717,8 +2724,8 @@
           }
         ],
         "ats": {
-          "score": 90,
-          "keywordCoverage": 100,
+          "score": 90.0,
+          "keywordCoverage": 100.0,
           "keywords": [
             {
               "keyword": "Kubernetes",
@@ -2826,24 +2833,24 @@
         "targetId": "tgt-edge-4",
         "workspaceVersion": 1,
         "generatedAt": "2026-10-16T09:12:00.000Z",
-        "score": 9,
+        "score": 9.0,
         "factors": [
           {
             "name": "Required skills",
             "weight": 0.5714,
-            "value": 0,
+            "value": 0.0,
             "detail": "0 matched, 0 partially matched, 2 unsupported of 2 required skill requirement(s)."
           },
           {
             "name": "Relevant experience",
             "weight": 0.2857,
-            "value": 30,
+            "value": 30.0,
             "detail": "This posting doesn't set an experience bar, so this reflects your workspace: 1 experience/internship item(s)."
           },
           {
             "name": "Education",
             "weight": 0.1429,
-            "value": 0,
+            "value": 0.0,
             "detail": "This posting doesn't require a qualification, and your workspace has no education items yet."
           }
         ],
@@ -2944,8 +2951,8 @@
           }
         ],
         "ats": {
-          "score": 64,
-          "keywordCoverage": 0,
+          "score": 64.0,
+          "keywordCoverage": 0.0,
           "keywords": [
             {
               "keyword": "Node.js",
@@ -3097,30 +3104,30 @@
         "targetId": "tgt-edge-5",
         "workspaceVersion": 1,
         "generatedAt": "2026-10-16T09:12:00.000Z",
-        "score": 47,
+        "score": 47.0,
         "factors": [
           {
             "name": "Required skills",
             "weight": 0.4706,
-            "value": 100,
+            "value": 100.0,
             "detail": "1 matched, 0 partially matched, 0 unsupported of 1 required skill requirement(s)."
           },
           {
             "name": "Preferred skills",
             "weight": 0.1765,
-            "value": 0,
+            "value": 0.0,
             "detail": "0 matched, 0 partially matched, 1 unsupported of 1 preferred skill requirement(s)."
           },
           {
             "name": "Relevant experience",
             "weight": 0.2353,
-            "value": 0,
+            "value": 0.0,
             "detail": "This posting doesn't set an experience bar, and your workspace has no experience or internship items yet."
           },
           {
             "name": "Education",
             "weight": 0.1176,
-            "value": 0,
+            "value": 0.0,
             "detail": "This posting doesn't require a qualification, and your workspace has no education items yet."
           }
         ],
@@ -3136,7 +3143,6 @@
             "text": "TypeScript",
             "kind": "required",
             "status": "matched",
-            "gapType": null,
             "evidenceIds": [
               "s1"
             ],
@@ -3199,8 +3205,8 @@
           }
         ],
         "ats": {
-          "score": 83,
-          "keywordCoverage": 50,
+          "score": 83.0,
+          "keywordCoverage": 50.0,
           "keywords": [
             {
               "keyword": "TypeScript",
@@ -3321,18 +3327,18 @@
         "targetId": "tgt-edge-6",
         "workspaceVersion": 1,
         "generatedAt": "2026-10-16T09:12:00.000Z",
-        "score": 33,
+        "score": 33.0,
         "factors": [
           {
             "name": "Relevant experience",
             "weight": 0.6667,
-            "value": 50,
+            "value": 50.0,
             "detail": "0 matched, 1 partially matched, 0 unsupported of 1 experience requirement(s)."
           },
           {
             "name": "Education",
             "weight": 0.3333,
-            "value": 0,
+            "value": 0.0,
             "detail": "This posting doesn't require a qualification, and your workspace has no education items yet."
           }
         ],
@@ -3349,7 +3355,6 @@
             "kind": "required",
             "pattern": "experience",
             "status": "partial",
-            "gapType": null,
             "evidenceIds": [
               "e1"
             ],
@@ -3399,8 +3404,8 @@
           }
         ],
         "ats": {
-          "score": 83,
-          "keywordCoverage": 0,
+          "score": 83.0,
+          "keywordCoverage": 0.0,
           "keywords": [],
           "checks": [
             {
@@ -3516,24 +3521,24 @@
         "targetId": "tgt-edge-7",
         "workspaceVersion": 1,
         "generatedAt": "2026-10-16T09:12:00.000Z",
-        "score": 57,
+        "score": 57.0,
         "factors": [
           {
             "name": "Required skills",
             "weight": 0.5714,
-            "value": 100,
+            "value": 100.0,
             "detail": "2 matched, 0 partially matched, 0 unsupported of 2 required skill requirement(s)."
           },
           {
             "name": "Relevant experience",
             "weight": 0.2857,
-            "value": 0,
+            "value": 0.0,
             "detail": "This posting doesn't set an experience bar, and your workspace has no experience or internship items yet."
           },
           {
             "name": "Education",
             "weight": 0.1429,
-            "value": 0,
+            "value": 0.0,
             "detail": "This posting doesn't require a qualification, and your workspace has no education items yet."
           }
         ],
@@ -3549,7 +3554,6 @@
             "text": "SQL",
             "kind": "required",
             "status": "matched",
-            "gapType": null,
             "evidenceIds": [
               "s1"
             ],
@@ -3560,7 +3564,6 @@
             "text": "PostgreSQL",
             "kind": "required",
             "status": "matched",
-            "gapType": null,
             "evidenceIds": [
               "s1"
             ],
@@ -3597,8 +3600,8 @@
         },
         "roadmap": [],
         "ats": {
-          "score": 83,
-          "keywordCoverage": 50,
+          "score": 83.0,
+          "keywordCoverage": 50.0,
           "keywords": [
             {
               "keyword": "SQL",
@@ -3718,24 +3721,24 @@
         "targetId": "tgt-edge-8",
         "workspaceVersion": 1,
         "generatedAt": "2026-10-16T09:12:00.000Z",
-        "score": 0,
+        "score": 0.0,
         "factors": [
           {
             "name": "Required skills",
             "weight": 0.5714,
-            "value": 0,
+            "value": 0.0,
             "detail": "0 matched, 0 partially matched, 1 unsupported of 1 required skill requirement(s)."
           },
           {
             "name": "Relevant experience",
             "weight": 0.2857,
-            "value": 0,
+            "value": 0.0,
             "detail": "This posting doesn't set an experience bar, and your workspace has no experience or internship items yet."
           },
           {
             "name": "Education",
             "weight": 0.1429,
-            "value": 0,
+            "value": 0.0,
             "detail": "This posting doesn't require a qualification, and your workspace has no education items yet."
           }
         ],
@@ -3808,8 +3811,8 @@
           }
         ],
         "ats": {
-          "score": 78,
-          "keywordCoverage": 0,
+          "score": 78.0,
+          "keywordCoverage": 0.0,
           "keywords": [
             {
               "keyword": "MySQL",
@@ -3927,24 +3930,24 @@
         "targetId": "tgt-edge-9",
         "workspaceVersion": 1,
         "generatedAt": "2026-10-16T09:12:00.000Z",
-        "score": 14,
+        "score": 14.0,
         "factors": [
           {
             "name": "Required skills",
             "weight": 0.5714,
-            "value": 0,
+            "value": 0.0,
             "detail": "0 matched, 0 partially matched, 2 unsupported of 2 required skill requirement(s)."
           },
           {
             "name": "Relevant experience",
             "weight": 0.2857,
-            "value": 50,
+            "value": 50.0,
             "detail": "0 matched, 1 partially matched, 0 unsupported of 1 experience requirement(s)."
           },
           {
             "name": "Education",
             "weight": 0.1429,
-            "value": 0,
+            "value": 0.0,
             "detail": "This posting doesn't require a qualification, and your workspace has no education items yet."
           }
         ],
@@ -3979,7 +3982,6 @@
             "kind": "required",
             "pattern": "experience",
             "status": "partial",
-            "gapType": null,
             "evidenceIds": [
               "e1"
             ],
@@ -4061,8 +4063,8 @@
           }
         ],
         "ats": {
-          "score": 71,
-          "keywordCoverage": 0,
+          "score": 71.0,
+          "keywordCoverage": 0.0,
           "keywords": [
             {
               "keyword": "Python",
@@ -4205,18 +4207,18 @@
         "targetId": "tgt-edge-10",
         "workspaceVersion": 1,
         "generatedAt": "2026-10-16T09:12:00.000Z",
-        "score": 17,
+        "score": 17.0,
         "factors": [
           {
             "name": "Relevant experience",
             "weight": 0.6667,
-            "value": 0,
+            "value": 0.0,
             "detail": "This posting doesn't set an experience bar, and your workspace has no experience or internship items yet."
           },
           {
             "name": "Education",
             "weight": 0.3333,
-            "value": 50,
+            "value": 50.0,
             "detail": "0 matched, 1 partially matched, 0 unsupported of 1 education requirement(s)."
           }
         ],
@@ -4233,7 +4235,6 @@
             "kind": "required",
             "pattern": "education",
             "status": "partial",
-            "gapType": null,
             "evidenceIds": [
               "ed1"
             ],
@@ -4278,8 +4279,8 @@
           }
         ],
         "ats": {
-          "score": 83,
-          "keywordCoverage": 0,
+          "score": 83.0,
+          "keywordCoverage": 0.0,
           "keywords": [],
           "checks": [
             {
@@ -4381,18 +4382,18 @@
         "targetId": "tgt-edge-11",
         "workspaceVersion": 1,
         "generatedAt": "2026-10-16T09:12:00.000Z",
-        "score": 33,
+        "score": 33.0,
         "factors": [
           {
             "name": "Relevant experience",
             "weight": 0.6667,
-            "value": 0,
+            "value": 0.0,
             "detail": "This posting doesn't set an experience bar, and your workspace has no experience or internship items yet."
           },
           {
             "name": "Education",
             "weight": 0.3333,
-            "value": 100,
+            "value": 100.0,
             "detail": "1 matched, 0 partially matched, 0 unsupported of 1 education requirement(s)."
           }
         ],
@@ -4409,7 +4410,6 @@
             "kind": "required",
             "pattern": "education",
             "status": "matched",
-            "gapType": null,
             "evidenceIds": [
               "ed1"
             ],
@@ -4438,8 +4438,8 @@
         },
         "roadmap": [],
         "ats": {
-          "score": 83,
-          "keywordCoverage": 0,
+          "score": 83.0,
+          "keywordCoverage": 0.0,
           "keywords": [],
           "checks": [
             {
@@ -4541,18 +4541,18 @@
         "targetId": "tgt-edge-12",
         "workspaceVersion": 1,
         "generatedAt": "2026-10-16T09:12:00.000Z",
-        "score": 33,
+        "score": 33.0,
         "factors": [
           {
             "name": "Relevant experience",
             "weight": 0.6667,
-            "value": 50,
+            "value": 50.0,
             "detail": "0 matched, 1 partially matched, 0 unsupported of 1 experience requirement(s)."
           },
           {
             "name": "Education",
             "weight": 0.3333,
-            "value": 0,
+            "value": 0.0,
             "detail": "This posting doesn't require a qualification, and your workspace has no education items yet."
           }
         ],
@@ -4569,7 +4569,6 @@
             "kind": "required",
             "pattern": "seniority",
             "status": "partial",
-            "gapType": null,
             "evidenceIds": [
               "e1"
             ],
@@ -4619,8 +4618,8 @@
           }
         ],
         "ats": {
-          "score": 76,
-          "keywordCoverage": 0,
+          "score": 76.0,
+          "keywordCoverage": 0.0,
           "keywords": [],
           "checks": [
             {
@@ -4750,24 +4749,24 @@
         "targetId": "tgt-edge-13",
         "workspaceVersion": 1,
         "generatedAt": "2026-10-16T09:12:00.000Z",
-        "score": 9,
+        "score": 9.0,
         "factors": [
           {
             "name": "Required skills",
             "weight": 0.5714,
-            "value": 0,
+            "value": 0.0,
             "detail": "0 matched, 0 partially matched, 1 unsupported of 1 required skill requirement(s)."
           },
           {
             "name": "Relevant experience",
             "weight": 0.2857,
-            "value": 30,
+            "value": 30.0,
             "detail": "This posting doesn't set an experience bar, so this reflects your workspace: 1 experience/internship item(s)."
           },
           {
             "name": "Education",
             "weight": 0.1429,
-            "value": 0,
+            "value": 0.0,
             "detail": "This posting doesn't require a qualification, and your workspace has no education items yet."
           }
         ],
@@ -4826,8 +4825,8 @@
           }
         ],
         "ats": {
-          "score": 75,
-          "keywordCoverage": 0,
+          "score": 75.0,
+          "keywordCoverage": 0.0,
           "keywords": [
             {
               "keyword": "TypeScript",
@@ -5008,30 +5007,30 @@
         "targetId": "tgt-edge-14",
         "workspaceVersion": 4,
         "generatedAt": "2026-10-16T09:12:00.000Z",
-        "score": 56,
+        "score": 56.0,
         "factors": [
           {
             "name": "Required skills",
             "weight": 0.4706,
-            "value": 100,
+            "value": 100.0,
             "detail": "1 matched, 0 partially matched, 0 unsupported of 1 required skill requirement(s)."
           },
           {
             "name": "Relevant experience",
             "weight": 0.2353,
-            "value": 0,
+            "value": 0.0,
             "detail": "This posting doesn't set an experience bar, and your workspace has no experience or internship items yet."
           },
           {
             "name": "Education",
             "weight": 0.1176,
-            "value": 0,
+            "value": 0.0,
             "detail": "This posting doesn't require a qualification, and your workspace has no education items yet."
           },
           {
             "name": "Projects & achievements",
             "weight": 0.1765,
-            "value": 50,
+            "value": 50.0,
             "detail": "Your workspace has 2 project/achievement item(s); the value reflects how well they are evidenced."
           }
         ],
@@ -5047,7 +5046,6 @@
             "text": "TypeScript",
             "kind": "required",
             "status": "matched",
-            "gapType": null,
             "evidenceIds": [
               "s1",
               "p1"
@@ -5116,8 +5114,8 @@
           }
         ],
         "ats": {
-          "score": 83,
-          "keywordCoverage": 100,
+          "score": 83.0,
+          "keywordCoverage": 100.0,
           "keywords": [
             {
               "keyword": "TypeScript",
@@ -5249,18 +5247,18 @@
         "targetId": "tgt-edge-15",
         "workspaceVersion": 1,
         "generatedAt": "2026-10-16T09:12:00.000Z",
-        "score": 33,
+        "score": 33.0,
         "factors": [
           {
             "name": "Relevant experience",
             "weight": 0.6667,
-            "value": 50,
+            "value": 50.0,
             "detail": "0 matched, 2 partially matched, 0 unsupported of 2 experience requirement(s)."
           },
           {
             "name": "Education",
             "weight": 0.3333,
-            "value": 0,
+            "value": 0.0,
             "detail": "This posting doesn't require a qualification, and your workspace has no education items yet."
           }
         ],
@@ -5277,7 +5275,6 @@
             "kind": "required",
             "pattern": "experience",
             "status": "partial",
-            "gapType": null,
             "evidenceIds": [
               "e1"
             ],
@@ -5289,7 +5286,6 @@
             "kind": "required",
             "pattern": "seniority",
             "status": "partial",
-            "gapType": null,
             "evidenceIds": [
               "e1"
             ],
@@ -5356,8 +5352,8 @@
           }
         ],
         "ats": {
-          "score": 83,
-          "keywordCoverage": 0,
+          "score": 83.0,
+          "keywordCoverage": 0.0,
           "keywords": [],
           "checks": [
             {

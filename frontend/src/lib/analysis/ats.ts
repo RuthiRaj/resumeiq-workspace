@@ -2,6 +2,7 @@ import type {
   AtsCheck,
   AtsExample,
   AtsIssue,
+  AtsKeyword,
   AtsReport,
   Requirement,
   WorkspaceItem,
@@ -51,12 +52,45 @@ const MONTHS = [
   "Dec",
 ];
 
+// Contact patterns for ATS checks
+const PHONE_RE = /(\+?\d[\d\s().-]{6,}\d)/;
+const EMAIL_RE = /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/;
+const GITHUB_RE = /(?:https?:\/\/)?(?:www\.)?github\.com\/[A-Za-z0-9_-]+/i;
+const LINKEDIN_RE = /(?:https?:\/\/)?(?:www\.)?linkedin\.com\/in\/[A-Za-z0-9_-]+/i;
+
+// BI/Analytics tools to extract as keywords
+const BI_TOOLS = [
+  "excel",
+  "tableau",
+  "power bi",
+  "powerbi",
+  "looker",
+  "metabase",
+  "superset",
+  "qlik",
+  "microstrategy",
+  "cognos",
+  "sisense",
+  "mode",
+  "periscope",
+  "chartio",
+  "redash",
+  "google data studio",
+  "data studio",
+  "datastudio",
+];
+
 /** "2025-03" → "Mar 2025". Formatting only; the date itself is unchanged. */
 export function monthLabel(value: string): string {
   const match = /^(\d{4})-(\d{2})$/.exec(value.trim());
   if (!match) return value;
   const month = MONTHS[Number(match[2]) - 1] ?? match[2];
   return `${month} ${match[1]}`;
+}
+
+// Type for keyword objects (matches AtsKeyword from schema but with explicit requirementId)
+interface KeywordWithId extends AtsKeyword {
+  requirementId: string | null | undefined;
 }
 
 function dateRange(item: WorkspaceItem, format: "iso" | "label"): string {
@@ -125,11 +159,20 @@ export function computeAtsReport(input: AtsInput): AtsReport {
     (heading) => !sectionsPresent.has(heading.section),
   );
   if (missingHeadings.length > 0) {
+    const labels = missingHeadings.map((h) => h.label);
+    // Downgrade "Experience" to low if internship section exists
+    let severity: "high" | "med" | "low" = "med";
+    if (
+      missingHeadings.some((h) => h.section === "experience") &&
+      sectionsPresent.has("internship")
+    ) {
+      severity = "low";
+    }
     const issue: AtsIssue = {
       id: "ats-headings",
-      severity: "med",
-      message: `No ${missingHeadings.map((h) => h.label).join(", ")} content to place under a standard heading.`,
-      fix: `Add ${missingHeadings.map((h) => h.label.toLowerCase()).join(", ")} items in your workspace — parsers look for those headings.`,
+      severity,
+      message: `No ${labels.join(", ")} content to place under a standard heading.`,
+      fix: `Add ${labels.map((l) => l.toLowerCase()).join(", ")} items in your workspace — parsers look for those headings.`,
       check: "Standard headings",
     };
     issues.push(issue);
@@ -137,7 +180,7 @@ export function computeAtsReport(input: AtsInput): AtsReport {
       id: "headings",
       label: "Standard section headings",
       status: "issue",
-      detail: `Missing: ${missingHeadings.map((h) => h.label).join(", ")}.`,
+      detail: `Missing: ${labels.join(", ")}.`,
       issueIds: [issue.id],
     });
   } else {
@@ -273,7 +316,7 @@ export function computeAtsReport(input: AtsInput): AtsReport {
   // keywords: experience, education and seniority lines are prose, and counting
   // them would report "50% coverage" for a posting that is fully evidenced.
   const resumeText = resumeTextOf(items);
-  const keywords = input.requirements
+  const keywords: KeywordWithId[] = input.requirements
     .filter((requirement) => !requirement.pattern)
     .map((requirement) => ({
       keyword: requirement.text,
@@ -284,6 +327,25 @@ export function computeAtsReport(input: AtsInput): AtsReport {
       present: keywordPresent(resumeText, requirement.text),
       requirementId: requirement.id,
     }));
+  // Also extract BI/analytics tools from all requirements and check resume
+  const biToolsFound = new Set<string>();
+  for (const requirement of input.requirements) {
+    const reqLower = requirement.text.toLowerCase();
+    for (const tool of BI_TOOLS) {
+      if (reqLower.includes(tool)) {
+        biToolsFound.add(tool);
+      }
+    }
+  }
+  for (const tool of biToolsFound) {
+    if (!keywords.some((k) => k.keyword.toLowerCase() === tool)) {
+      keywords.push({
+        keyword: tool.charAt(0).toUpperCase() + tool.slice(1),
+        present: keywordPresent(resumeText, tool),
+        requirementId: undefined,
+      });
+    }
+  }
   const present = keywords.filter((keyword) => keyword.present).length;
   const coverage =
     keywords.length === 0 ? 0 : Math.round((present / keywords.length) * 100);
@@ -337,13 +399,46 @@ export function computeAtsReport(input: AtsInput): AtsReport {
       issueIds: [issue.id],
     });
   } else {
-    checks.push({
-      id: "contact",
-      label: "Contact block present",
-      status: "pass",
-      detail: "Personal details item found.",
-      issueIds: [],
-    });
+    const personalItems = items.filter((item) => item.section === "personal");
+    const contactIssues: string[] = [];
+    for (const p of personalItems) {
+      const allText = [p.title, p.organization ?? "", ...p.bullets, ...p.links].join(" ").toLowerCase();
+      const hasPhone = PHONE_RE.test(allText);
+      const hasEmail = EMAIL_RE.test(allText);
+      const hasLinkedIn = LINKEDIN_RE.test(allText);
+      const hasGitHub = GITHUB_RE.test(allText);
+      const hasSummary = p.bullets.some((b) => b.length > 50) || (p.organization && p.organization.length > 50);
+      if (!hasPhone) contactIssues.push("phone");
+      if (!hasEmail) contactIssues.push("email");
+      if (!hasLinkedIn) contactIssues.push("LinkedIn");
+      if (!hasGitHub) contactIssues.push("GitHub");
+      if (!hasSummary) contactIssues.push("summary");
+    }
+    if (contactIssues.length > 0) {
+      const issue: AtsIssue = {
+        id: "ats-contact",
+        severity: "low",
+        message: `Personal details missing: ${contactIssues.join(", ")}.`,
+        fix: "Add phone, email, LinkedIn, GitHub, and a professional summary to your personal details.",
+        check: "Contact details",
+      };
+      issues.push(issue);
+      checks.push({
+        id: "contact",
+        label: "Contact details complete",
+        status: "issue",
+        detail: `Missing: ${contactIssues.join(", ")}.`,
+        issueIds: [issue.id],
+      });
+    } else {
+      checks.push({
+        id: "contact",
+        label: "Contact details complete",
+        status: "pass",
+        detail: "Phone, email, LinkedIn, GitHub, and summary all present.",
+        issueIds: [],
+      });
+    }
   }
 
   /* 7. Layout — honestly not checked yet -------------------------------- */

@@ -150,6 +150,13 @@ export const AtsReportSchema = z.object({
 });
 export type AtsReport = z.infer<typeof AtsReportSchema>;
 
+/** Individual keyword with presence flag (extracted from AtsReportSchema). */
+export type AtsKeyword = z.infer<typeof AtsReportSchema> extends { keywords: infer K }
+  ? K extends Array<infer E>
+    ? E
+    : never
+  : never;
+
 export const RoadmapStepSchema = z.object({
   priority: z.number().int().positive(),
   action: z.string(),
