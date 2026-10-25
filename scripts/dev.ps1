@@ -108,7 +108,8 @@ function Write-VarStatus {
 $backendRequired  = @("SUPABASE_URL", "SUPABASE_PUBLISHABLE_KEY")
 $frontendRequired = @()
 
-# At least one AI key is required for the backend to do AI calls
+# AI provider keys (optional): if none is defined anywhere, AI features are off
+# but deterministic features still work. This does NOT stop the script.
 $backendAiKeys = @("GROQ_API_KEY", "NVIDIA_API_KEY")
 
 # --- Port check ---
@@ -153,14 +154,15 @@ foreach ($name in $backendRequired) {
   $s = Get-VarStatus $name "backend" -Required
   if ($s.Source -eq "none") { $missingRequired += "backend/$name" }
 }
-# AI keys: at least one must be present somewhere
+# AI keys: optional — if none found, print a note but do NOT exit with error
 $aiKeyFound = $false
 foreach ($name in $backendAiKeys) {
   $s = Get-VarStatus $name "backend"
   if ($s.Source -ne "none") { $aiKeyFound = $true; break }
 }
 if (-not $aiKeyFound) {
-  $missingRequired += "backend/GROQ_API_KEY or NVIDIA_API_KEY (at least one required for AI calls)"
+  Write-Host ""
+  Write-Host "Note: AI features are off: no provider key found; deterministic features still work." -ForegroundColor Yellow
 }
 
 if ($missingRequired.Count -gt 0) {
