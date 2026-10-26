@@ -20,8 +20,13 @@ RUN useradd --create-home --shell /usr/sbin/nologin appuser \
     && chown -R appuser:appuser /app
 USER appuser
 
+# Put the virtual environment on PATH so uvicorn is directly available.
+# The venv lives at /app/.venv because uv sync creates it in the working directory.
+ENV PATH="/app/.venv/bin:$PATH"
+
 EXPOSE 8000
 
 # Render sets $PORT; default to 8000 locally. `--no-server-header` keeps
 # `Server: uvicorn` (framework/version hint) out of every response.
+# Use shell form so ${PORT:-8000} expands at runtime.
 CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --no-server-header"]
