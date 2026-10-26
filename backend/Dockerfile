@@ -7,7 +7,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     UV_SYSTEM_PYTHON=1
 
 WORKDIR /app
-
+ENV PATH="/app/.venv/bin:$PATH"
 # Install uv, then locked dependencies first for layer caching.
 COPY pyproject.toml uv.lock ./
 RUN pip install --no-cache-dir "uv>=0.5" && uv sync --frozen --no-dev --no-install-project
