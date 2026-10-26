@@ -5,9 +5,14 @@ name: Backend
 # trigger therefore always fires (same as ci.yml) and the `detect` job decides
 # whether the heavy `backend` job has anything to do.
 on:
-  push:
-    branches: ["**"]
   pull_request:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   # Cheap gate. Runs on every push and every pull request and reports whether
@@ -88,12 +93,12 @@ jobs:
 
       - uses: actions/checkout@v4
         if: needs.detect.outputs.backend != 'false'
-      - uses: actions/setup-python@v5
+      - uses: astral-sh/setup-uv@v5
         if: needs.detect.outputs.backend != 'false'
         with:
           python-version: "3.12"
-      - uses: astral-sh/setup-uv@v5
-        if: needs.detect.outputs.backend != 'false'
+          enable-cache: true
+          cache-dependency-glob: "backend/uv.lock"
       - run: uv sync --frozen
         if: needs.detect.outputs.backend != 'false'
       - run: uv run ruff check .

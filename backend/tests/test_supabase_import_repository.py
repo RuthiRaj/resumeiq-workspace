@@ -171,7 +171,7 @@ def test_values_to_workspace_create_marks_evidence() -> None:
         values=values,
         support=ImportSupportFile(kind="file", name="cert.pdf"),
     )
-    assert filed.evidence == "verified"
+    assert filed.evidence == "attested"
     assert filed.attachments[0].name == "cert.pdf"
     assert filed.attachments[0].url == "import://imp-1/ext-1"
 

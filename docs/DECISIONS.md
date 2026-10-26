@@ -759,7 +759,21 @@ them still runs `uv sync --frozen`, `ruff check`, `ruff format --check`, `mypy` 
 Numbering note: ADRs 021–024 are claimed by the F4 branch (now merged), so this
 one is 025 rather than 021 to avoid duplicate headings.
 
-## ADR-026 — 2026-10-18 — Environment hygiene: runtime vs test env, fail-fast startup, secret guard
+## ADR-027 — 2026-10-25 — Landing JS budget: 204.5 KB gzip against 215 KB budget, +7.1 KB from custom global-error and not-found
+
+Context: PRD §7.7 sets a landing budget enforced by `scripts/check-landing-budget.mjs`. After merging `chore/dev-experience` (PR #36) which added root-level `not-found.tsx` and `global-error.tsx`, the budget check on `origin/master` shows **204.5 KB gzip** (12 chunks) versus **197.4 KB gzip** (11 chunks) on the first parent of #35 (6844ea7). The +7.1 KB delta comes from two new chunks in the landing page's initial JS graph:
+- `00dq8qo-ns3ep.js` (4.2 KB gzip) — `global-error.tsx` custom client chunk (replaces Next.js built-in `node_modules/next/dist/client/components/builtin/global-error.js`)
+- `21poqdgvjdll4.js` (3.2 KB gzip) — `not-found.tsx` client entry (server component but still emits an entry chunk)
+
+Build manifest evidence (`.next/server/app/(marketing)/page_client-reference-manifest.js`): on 6844ea7, `clientModules` references the built-in `global-error.js`; on master, `[project]/src/app/global-error.tsx` appears with custom chunks. The `not-found` server component still generates a client entry chunk because Next.js App Router mandates root-level error boundaries be hydratable.
+
+Decision:
+1. Accept the +7.1 KB regression. Headroom remaining: **10.5 KB** (215 − 204.5).
+2. Mitigation applied: `not-found.tsx` converted to server component; `global-error.tsx` uses plain elements + inline SVGs (no `Button`, no `lucide-react`).
+3. Cannot avoid: Next.js 16 App Router includes root-level `global-error` and `not-found` in every page's initial JS for error boundary hydration. This is a framework design decision, not a code structure choice.
+4. Budget stays at 215 KB gzip. The 10.5 KB headroom accommodates routine additions (icons, copy tweaks) before the F7 polish pass.
+
+Consequence: CI will fail if the landing bundle exceeds 215 KB gzip. The regression is documented and accepted; future PRs must account for the reduced headroom.
 
 Context: the runtime `backend/.env` held integration-test credentials, `.env.example`
 mixed runtime and test variables with no grouping, the backend started happily with

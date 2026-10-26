@@ -24,15 +24,16 @@ from app.schemas.workspace import WorkspaceSection
 MAX_ITEMS: Final[int] = 200
 
 _BULLET_RE: Final[re.Pattern[str]] = re.compile(r"^\s*(?:[-*•·‣▪◦]|\d{1,2}[.)])\s+")
+_BULLET_GLYPH_RE: Final[re.Pattern[str]] = re.compile(r"^[\s]*[•·‣▪◦\-*]+\s*")
 _TAGS_RE: Final[re.Pattern[str]] = re.compile(
     r"^\s*(?:technologies|tech stack|stack|tools|tags|built with|technologies used)"
     r"\s*[:\-–—]\s*(.+)$",
     re.IGNORECASE,
 )
 _ORG_HINT_RE: Final[re.Pattern[str]] = re.compile(
-    r"(university|college|institute|school|academy|polytechnic|ltd|limited|inc\b|llc|"
+    r"\b(university|college|institute|school|academy|polytechnic|ltd|limited|inc\b|llc|"
     r"llp|gmbh|corp|corporation|company|group|technologies|technology|labs?|laboratory|"
-    r"systems|solutions|partners|consulting|bank|foundation|hospital|press)",
+    r"systems|solutions|partners|consulting|bank|foundation|hospital|press)\b",
     re.IGNORECASE,
 )
 _NAME_RE: Final[re.Pattern[str]] = re.compile(
@@ -40,6 +41,17 @@ _NAME_RE: Final[re.Pattern[str]] = re.compile(
 )
 _LOCATION_RE: Final[re.Pattern[str]] = re.compile(
     r"\b([A-Z][A-Za-z.'\-]+(?:\s+[A-Z][A-Za-z.'\-]+){0,2},\s*(?:[A-Z]{2}|[A-Z][A-Za-z.'\-]+))\b"
+)
+# Contact patterns for personal section
+_PHONE_RE: Final[re.Pattern[str]] = re.compile(r"(\+?\d[\d\s().-]{6,}\d)")
+_EMAIL_RE: Final[re.Pattern[str]] = re.compile(r"([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})")
+_GITHUB_RE: Final[re.Pattern[str]] = re.compile(
+    r"(?:https?://)?(?:www\.)?github\.com/[A-Za-z0-9_-]+",
+    re.IGNORECASE,
+)
+_LINKEDIN_RE: Final[re.Pattern[str]] = re.compile(
+    r"(?:https?://)?(?:www\.)?linkedin\.com/in/[A-Za-z0-9_-]+",
+    re.IGNORECASE,
 )
 _BLOCKED_NAME_WORDS: Final[tuple[str, ...]] = (
     "resume",
@@ -212,6 +224,11 @@ def _bullet_text(line: str) -> str | None:
     return line[match.end() :].strip()
 
 
+def _strip_bullet_glyphs(text: str) -> str:
+    """Remove leading bullet glyphs (•, ·, ‣, ▪, ◦, -, *) and surrounding whitespace."""
+    return _BULLET_GLYPH_RE.sub("", text).strip()
+
+
 def _strip_dates(text: str) -> str:
     tokens = find_date_tokens(text)
     if not tokens:
@@ -222,7 +239,7 @@ def _strip_dates(text: str) -> str:
     kept = re.sub(r"\s+", " ", kept).strip()
     kept = re.sub(r"^[\s|•·,;–—-]+", "", kept)
     kept = re.sub(r"[\s|•·,;–—-]+$", "", kept)
-    return kept.strip()
+    return _strip_bullet_glyphs(kept.strip())
 
 
 def _blocks(lines: list[str], start: int, end: int) -> list[tuple[int, list[str]]]:
@@ -251,7 +268,9 @@ def _date_follows_within(block: list[str], index: int, window: int = 2) -> bool:
     )
 
 
-def _split_entries(block: list[str]) -> list[tuple[int, list[str]]]:
+def _split_entries(
+    block: list[str], section: WorkspaceSection | None = None
+) -> list[tuple[int, list[str]]]:
     """Split one block into entries, with each entry's offset in the block.
 
     PDF text extraction drops blank lines, so consecutive entries arrive glued
@@ -259,6 +278,10 @@ def _split_entries(block: list[str]) -> list[tuple[int, list[str]]]:
     a bullet (the usual "title / employer / dates / bullets" shape), or when the
     current entry already has its dates and another date line is close behind
     (the bullet-less shape).
+
+    For project sections, bullets belong to the preceding project entry, so we
+    don't split on bullet-to-non-bullet transitions unless the non-bullet line
+    looks like a new project title (has dates or | separator).
     """
     segments: list[tuple[int, list[str]]] = []
     current: list[str] = []
@@ -276,6 +299,19 @@ def _split_entries(block: list[str]) -> list[tuple[int, list[str]]]:
         starts_new = previous_was_bullet or (
             saw_date and ("|" in line or _date_follows_within(block, index))
         )
+        # For project sections, don't split on bullet-to-non-bullet if the
+        # non-bullet line is a context/link line (GitHub, URL, etc.)
+        if section == "project" and previous_was_bullet and not is_bullet and not has_date:
+            line_lower = line.lower()
+            if (
+                "github" in line_lower
+                or "http" in line_lower
+                or "www." in line_lower
+                or line_lower.startswith("git@")
+                or line_lower.startswith("link:")
+                or line_lower.startswith("url:")
+            ):
+                starts_new = False
         if current and not is_bullet and starts_new:
             segments.append((start, current))
             current = []
@@ -311,26 +347,116 @@ def _plain_candidates(block_start: int, block: list[str]) -> list[tuple[int, str
     return candidates
 
 
+_DEGREE_KEYWORDS: Final[tuple[str, ...]] = (
+    "b.tech",
+    "btech",
+    "b.e.",
+    "be",
+    "b.sc",
+    "bsc",
+    "b.a.",
+    "ba",
+    "b.com",
+    "bcom",
+    "m.tech",
+    "mtech",
+    "m.e.",
+    "me",
+    "m.sc",
+    "msc",
+    "m.a.",
+    "ma",
+    "m.com",
+    "mcom",
+    "bachelor",
+    "master",
+    "diploma",
+    "phd",
+    "ph.d",
+    "doctorate",
+    "associate",
+    "lateral",
+    "entry",
+    "honours",
+    "honors",
+    "major",
+    "minor",
+    "specialization",
+)
+
+
+def _looks_like_degree(text: str) -> bool:
+    """Check if text looks like a degree/qualification."""
+    lowered = text.lower()
+    return any(keyword in lowered for keyword in _DEGREE_KEYWORDS)
+
+
 def _entry(
     section: WorkspaceSection, index: int, block_start: int, block: list[str]
 ) -> ExtractionItem | None:
     """One experience/education/project/... entry from a non-blank block."""
+    # Extract explicit bullet points
     bullets: list[str] = [
-        bullet for line in block if (bullet := _bullet_text(line)) is not None and bullet
+        _strip_bullet_glyphs(bullet)
+        for line in block
+        if (bullet := _bullet_text(line)) is not None and bullet
     ]
     plain = _plain_candidates(block_start, block)
 
     if not plain:
         return None
 
+    # Special handling for education: handle both patterns
+    # Pattern A: Institution first, then degree
+    # (e.g., "Example Institute..." then "B.Tech...")
+    # Pattern B: Degree first, then institution
+    # (e.g., "BSc Computer Science" then "Example University")
     title_index, title_raw = plain[0]
     title = _strip_dates(title_raw)
+    org_index = None
+    org_raw = None
+
+    if section == "education" and len(plain) > 1:
+        first_candidate = plain[0][1]
+        second_candidate = plain[1][1]
+        first_has_dates = bool(find_date_tokens(first_candidate))
+        second_has_dates = bool(find_date_tokens(second_candidate))
+
+        first_is_institution = _ORG_HINT_RE.search(first_candidate) is not None
+        first_is_degree = _looks_like_degree(first_candidate)
+        second_is_institution = _ORG_HINT_RE.search(second_candidate) is not None
+        second_is_degree = _looks_like_degree(second_candidate)
+
+        # Pattern A: First is institution, second is degree (no dates in second)
+        if first_is_institution and second_is_degree and not second_has_dates:
+            title_index, title_raw = plain[1]
+            title = _strip_dates(title_raw)
+            org_index, org_raw = plain[0]
+        # Pattern B: First is degree, second is institution (no dates in first)
+        elif first_is_degree and second_is_institution and not first_has_dates:
+            # Keep first as title (degree), use second as organization (institution)
+            org_index, org_raw = plain[1]
     if not title:
         return None
 
     fields: list[ExtractedField] = [
         _field("title", _TITLE_LABELS.get(section, "Title"), title, 0.9, title_index)
     ]
+
+    # If we found an organization from the education swap, add it
+    if org_index is not None and org_raw is not None:
+        org_candidate = _strip_dates(org_raw)
+        org_candidate = _strip_bullet_glyphs(org_candidate)
+        if org_candidate and len(org_candidate) <= 140:
+            fields.append(
+                _field(
+                    "organization",
+                    _ORG_LABELS.get(section, "Organisation"),
+                    org_candidate,
+                    0.75,
+                    org_index,
+                )
+            )
 
     # Dates: the richest line in the block wins; token 1 is the start, token 2
     # the end. An ongoing entry ("Present") has nothing to read for the end.
@@ -360,23 +486,57 @@ def _entry(
                 )
             )
 
-    for line_index, raw in plain[1:]:
-        if find_date_tokens(raw) or has_present_marker(raw) or _TAGS_RE.match(raw):
-            continue
-        candidate = raw.strip()
-        if not candidate or len(candidate) > 140:
-            continue
-        confidence = 0.75 if _ORG_HINT_RE.search(candidate) else 0.6
-        fields.append(
-            _field(
-                "organization",
-                _ORG_LABELS.get(section, "Organisation"),
-                candidate,
-                confidence,
-                line_index,
+    # For projects, also extract descriptive paragraphs as bullets
+    # (lines that are not bullets, dates, tags, or the organization)
+    project_bullets: list[str] = []
+    if section == "project":
+        for offset, line in enumerate(block):
+            line_text = line.strip()
+            if not line_text:
+                continue
+            # Skip bullet lines (already captured)
+            if _bullet_text(line) is not None:
+                continue
+            # Skip date lines
+            if find_date_tokens(line_text):
+                continue
+            # Skip tags lines
+            if _TAGS_RE.match(line_text):
+                continue
+            # Skip the title line (first plain candidate)
+            if offset == 0 and plain and plain[0][0] == block_start + offset:
+                continue
+            # Skip the organization line (first non-date/non-tags plain candidate after title)
+            # We'll detect this by checking if it matches org hint pattern
+            if _ORG_HINT_RE.search(line_text):
+                continue
+            # This is a descriptive paragraph - add as bullet
+            if len(line_text) > 20:  # reasonable minimum length for a bullet
+                project_bullets.append(_strip_bullet_glyphs(line_text))
+
+    # Organization: for projects, only accept explicit context lines (org hint match)
+    # For other sections (except education, handled above), accept first non-date/non-tags line
+    if section != "education":
+        for line_index, raw in plain[1:]:
+            if find_date_tokens(raw) or has_present_marker(raw) or _TAGS_RE.match(raw):
+                continue
+            candidate = _strip_bullet_glyphs(raw.strip())
+            if not candidate or len(candidate) > 140:
+                continue
+            if section == "project" and not _ORG_HINT_RE.search(candidate):
+                # For projects, only accept explicit context (org hint match)
+                continue
+            confidence = 0.75 if _ORG_HINT_RE.search(candidate) else 0.6
+            fields.append(
+                _field(
+                    "organization",
+                    _ORG_LABELS.get(section, "Organisation"),
+                    candidate,
+                    confidence,
+                    line_index,
+                )
             )
-        )
-        break
+            break
 
     tags: list[str] = []
     for _line_index, raw in plain[1:]:
@@ -385,18 +545,26 @@ def _entry(
             tags = [tag.strip() for tag in re.split(r"[,;|/·]", match.group(1)) if tag.strip()][:20]
             break
 
+    # Combine explicit bullets with project paragraphs
+    all_bullets = bullets + project_bullets
+
     return ExtractionItem(
         id=f"ext-{section}-{index}",
         section=section,
         fields=fields,
-        bullets=bullets[:30],
+        bullets=all_bullets[:30],
         tags=tags,
         confidence=round(min(field.confidence for field in fields), 2),
     )
 
 
 def _skill_items(start: int, end: int, lines: list[str]) -> list[ExtractionItem]:
-    """One item per skill token — the workspace models each skill separately."""
+    """One item per skill token — the workspace models each skill separately.
+
+    Handles both simple lists ("JavaScript, TypeScript, Python") and categorized
+    lists ("Languages: JavaScript, TypeScript, Python"). The category prefix is
+    stripped; it is not stored as part of the skill name.
+    """
     items: list[ExtractionItem] = []
     for line_index in range(start, end):
         raw = lines[line_index]
@@ -406,12 +574,20 @@ def _skill_items(start: int, end: int, lines: list[str]) -> list[ExtractionItem]
         text = bullet if bullet is not None else raw
         if bullet is None and (find_date_tokens(text) or len(text) > 160):
             continue
+        # Strip category prefix like "Languages:" or "Frontend:"
+        text = re.sub(r"^[A-Za-z][A-Za-z\s/]*:\s*", "", text).strip()
         for token in re.split(r"[,;|·•/]|\s+and\s+", text):
-            name = token.strip(" .-–—")
+            # Strip trailing punctuation and whitespace
+            name = token.strip(" .,;|·•/-–—")
             if not name or len(name) > 40 or len(name.split()) > 4:
                 continue
             if re.search(r"\d{4}", name) or "@" in name:
                 continue
+            # Fix common capitalization issues
+            if name.lower() == "github":
+                name = "GitHub"
+            elif name.lower() == "groq api" or name.lower() == "groqapi":
+                name = "Groq API"
             items.append(
                 ExtractionItem(
                     id=f"ext-skill-{len(items) + 1}",
@@ -443,11 +619,70 @@ def _personal_item(block: list[tuple[int, str]]) -> ExtractionItem | None:
     if not _looks_like_name(name):
         return None
     fields = [_field("title", "Name", name, 0.6, first_index)]
+
+    # Collect all text for headline/summary/contact extraction
+    all_text = " ".join(raw for _, raw in block[1:])
+
+    # Location
     for index, raw in block[1:]:
         match = _LOCATION_RE.search(raw)
         if match:
             fields.append(_field("location", "Location", match.group(1), 0.5, index))
             break
+
+    # Headline - the line after name that looks like a title/role
+    if len(block) > 1:
+        second_line = block[1][1].strip()
+        # Headline is a line without @, phone, or URL, and not a location
+        if (
+            second_line
+            and "@" not in second_line
+            and not _PHONE_RE.search(second_line)
+            and not _EMAIL_RE.search(second_line)
+            and not _GITHUB_RE.search(second_line)
+            and not _LINKEDIN_RE.search(second_line)
+            and not _LOCATION_RE.search(second_line)
+            and len(second_line) < 120
+        ):
+            fields.append(_field("organization", "Headline", second_line, 0.6, block[1][0]))
+
+    # Phone
+    phone_match = _PHONE_RE.search(all_text)
+    if phone_match:
+        fields.append(_field("organization", "Phone", phone_match.group(1), 0.7, first_index))
+
+    # Email
+    email_match = _EMAIL_RE.search(all_text)
+    if email_match:
+        fields.append(_field("organization", "Email", email_match.group(1), 0.9, first_index))
+
+    # GitHub
+    github_match = _GITHUB_RE.search(all_text)
+    if github_match:
+        fields.append(_field("organization", "GitHub", github_match.group(0), 0.9, first_index))
+
+    # LinkedIn
+    linkedin_match = _LINKEDIN_RE.search(all_text)
+    if linkedin_match:
+        fields.append(_field("organization", "LinkedIn", linkedin_match.group(0), 0.9, first_index))
+
+    # Summary - longest paragraph-like text that's not a contact
+    summary_candidate = ""
+    for _index, raw in block[1:]:
+        text = raw.strip()
+        if (
+            len(text) > 50
+            and "@" not in text
+            and not _PHONE_RE.search(text)
+            and not _GITHUB_RE.search(text)
+            and not _LINKEDIN_RE.search(text)
+            and not _LOCATION_RE.search(text)
+            and len(text) > len(summary_candidate)
+        ):
+            summary_candidate = text
+    if summary_candidate:
+        fields.append(_field("organization", "Summary", summary_candidate, 0.5, first_index))
+
     return ExtractionItem(
         id="ext-personal-1",
         section="personal",
@@ -512,7 +747,7 @@ def parse_sections(lines: list[str]) -> list[ExtractionItem]:
         for block_start, block_lines in _blocks(lines, body_start, end):
             if len(items) >= MAX_ITEMS:
                 break
-            for offset, segment in _split_entries(block_lines):
+            for offset, segment in _split_entries(block_lines, section):
                 if len(items) >= MAX_ITEMS:
                     break
                 counters[section] = counters.get(section, 0) + 1

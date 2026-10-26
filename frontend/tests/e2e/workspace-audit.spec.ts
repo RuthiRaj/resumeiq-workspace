@@ -217,14 +217,28 @@ test("surfaces a designed error state when the mock API fails, then recovers", a
 
   await page.getByRole("button", { name: "Simulate failure" }).click();
   await expect(page.getByRole("button", { name: "Failures on" })).toBeVisible();
-  await expect(page.getByText("Couldn’t load your workspace")).toBeVisible({ timeout: NAV_TIMEOUT });
+  // Heading still says "Couldn't load your workspace"
+  await expect(page.getByRole("heading", { name: "Couldn't load your workspace" })).toBeVisible({ timeout: NAV_TIMEOUT });
+  // Body shows classified message for 503
+  await expect(page.getByText("The server encountered an error. Please try again.")).toBeVisible();
+  // Details disclosure exists (only when technical message available)
+  const detailsSummary = page.getByText("Details", { exact: true });
+  const hasDetails = await detailsSummary.isVisible().catch(() => false);
+  if (!hasDetails) {
+    const alert = page.getByRole("alert").first();
+    await expect(alert).toBeVisible({ timeout: 5000 });
+    const bodyText = await alert.textContent();
+    console.log("Error state body:", bodyText);
+  }
+  // Synced indicator is gone
+  await expect(page.getByText("Synced")).not.toBeVisible();
 
   // Retry while failing keeps the error state honest.
   await page.getByRole("button", { name: /Try again/i }).click();
-  await expect(page.getByText("Couldn’t load your workspace")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Couldn't load your workspace" })).toBeVisible();
 
   await page.getByRole("button", { name: "Failures on" }).click();
-  await expect(page.getByText("Couldn’t load your workspace")).toBeHidden({ timeout: NAV_TIMEOUT });
+  await expect(page.getByRole("heading", { name: "Couldn't load your workspace" })).toBeHidden({ timeout: NAV_TIMEOUT });
   await expect(page.getByRole("region", { name: "All sections" })).toBeVisible();
 });
 

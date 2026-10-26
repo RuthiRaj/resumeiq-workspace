@@ -145,8 +145,9 @@ async def update_item(
     description=(
         "Creates the workspace item from the user's verified values and marks the "
         "review item confirmed, in one transaction. Confirmed items are "
-        "User-attested unless a certificate file or link is attached (then "
-        "Verified). Idempotent: confirming twice returns the same workspace item."
+        "User-attested unless an external verification link is attached (then "
+        "Verified). User-uploaded files do not count as verification. Idempotent: "
+        "confirming twice returns the same workspace item."
     ),
 )
 async def confirm_item(
