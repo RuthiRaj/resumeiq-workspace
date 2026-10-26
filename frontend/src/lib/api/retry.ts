@@ -5,8 +5,14 @@
 
 import { apiBaseUrl, isLiveMode } from "@/lib/config/mode";
 
+/** Shape of the ApiError used by the client (duck-typed). */
+interface ApiErrorLike {
+  code?: string;
+  status?: number;
+}
+
 /** Error codes that should trigger a retry. */
-export const RETRYABLE_CODES = new Set<ApiError["code"]>([
+export const RETRYABLE_CODES = new Set<string>([
   "network",
   "invalid_response",
 ]);
@@ -44,18 +50,15 @@ export function nextRetryDelay(attempt: number): number {
 }
 
 /**
- * Checks if an ApiError is retryable under cold-start policy.
+ * Checks if an error is retryable under cold-start policy.
  */
 export function isRetryableError(error: unknown): boolean {
   if (!(error instanceof Error)) return false;
-  // Check for ApiError with retryable code
-  if ("code" in error && typeof error.code === "string") {
-    if (RETRYABLE_CODES.has(error.code as ApiError["code"])) return true;
-  }
-  // Check for status code
-  if ("status" in error && typeof error.status === "number") {
-    if (RETRYABLE_STATUS.has(error.status)) return true;
-  }
+  const e = error as ApiErrorLike;
+  // Check for retryable code
+  if (typeof e.code === "string" && RETRYABLE_CODES.has(e.code)) return true;
+  // Check for retryable status
+  if (typeof e.status === "number" && RETRYABLE_STATUS.has(e.status)) return true;
   return false;
 }
 

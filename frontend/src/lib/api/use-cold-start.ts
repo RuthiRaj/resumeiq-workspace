@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { shouldRetryOnColdStart, MAX_RETRY_DURATION_MS } from "./retry";
 import { onColdStart } from "./cold-start-events";
 
@@ -11,6 +11,14 @@ import { onColdStart } from "./cold-start-events";
 export function useColdStartState() {
   const [isWakingUp, setIsWakingUp] = useState(false);
   const [wakeUpStartTime, setWakeUpStartTime] = useState<number | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+
+  // Update `now` every second while waking up so derived values stay fresh
+  useEffect(() => {
+    if (!isWakingUp) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [isWakingUp]);
 
   useEffect(() => {
     if (!shouldRetryOnColdStart()) return;
@@ -35,9 +43,15 @@ export function useColdStartState() {
     };
   }, [wakeUpStartTime]);
 
-  // Compute elapsed time for UI
-  const elapsedMs = wakeUpStartTime ? Date.now() - wakeUpStartTime : 0;
-  const remainingMs = Math.max(0, MAX_RETRY_DURATION_MS - elapsedMs);
+  // Compute elapsed time for UI (now is reactive, so this is pure during render)
+  const elapsedMs = useMemo(
+    () => (wakeUpStartTime ? now - wakeUpStartTime : 0),
+    [now, wakeUpStartTime]
+  );
+  const remainingMs = useMemo(
+    () => Math.max(0, MAX_RETRY_DURATION_MS - elapsedMs),
+    [elapsedMs]
+  );
   const isExhausted = isWakingUp && remainingMs <= 0;
 
   return {

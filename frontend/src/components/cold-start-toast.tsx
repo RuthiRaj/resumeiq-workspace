@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "@/features/ui/toast-store";
 import { useColdStartState } from "@/lib/api/use-cold-start";
 
@@ -12,14 +12,20 @@ export function ColdStartToast() {
   const { isWakingUp, isExhausted, remainingMs } = useColdStartState();
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const remainingRef = useRef(remainingMs);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Keep remainingMs ref updated
   useEffect(() => {
+    if (!mounted) return;
     remainingRef.current = remainingMs;
-  }, [remainingMs]);
+  }, [remainingMs, mounted]);
 
   useEffect(() => {
-    if (!isWakingUp) {
+    if (!mounted || !isWakingUp) {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
@@ -27,11 +33,8 @@ export function ColdStartToast() {
       return;
     }
 
-    const id = "cold-start-wakeup";
-
     // Show initial toast
     toast({
-      id,
       title: "Server is waking up…",
       description:
         "The free-tier API spins down after inactivity. This usually takes 30–60 seconds.",
@@ -48,7 +51,6 @@ export function ColdStartToast() {
       }
       const seconds = Math.ceil(remaining / 1000);
       toast({
-        id,
         title: "Server is waking up…",
         description: `Retrying in ~${seconds}s… (free tier cold start)`,
         tone: "info",
@@ -59,19 +61,17 @@ export function ColdStartToast() {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [isWakingUp]);
+  }, [isWakingUp, mounted]);
 
   useEffect(() => {
-    if (isExhausted) {
-      toast({
-        id: "cold-start-exhausted",
-        title: "Couldn't reach the server",
-        description:
-          "The API didn't wake up in time. Please try again in a moment.",
-        tone: "error",
-      });
-    }
-  }, [isExhausted]);
+    if (!mounted || !isExhausted) return;
+    toast({
+      title: "Couldn't reach the server",
+      description:
+        "The API didn't wake up in time. Please try again in a moment.",
+      tone: "error",
+    });
+  }, [isExhausted, mounted]);
 
   return null;
 }
