@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { toast } from "@/features/ui/toast-store";
 import { useColdStartState } from "@/lib/api/use-cold-start";
 
@@ -12,20 +12,21 @@ export function ColdStartToast() {
   const { isWakingUp, isExhausted, remainingMs } = useColdStartState();
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const remainingRef = useRef(remainingMs);
-  const [mounted, setMounted] = useState(false);
+  const mountedRef = useRef(false);
 
+  // Mark as mounted after first render
   useEffect(() => {
-    setMounted(true);
+    mountedRef.current = true;
   }, []);
 
   // Keep remainingMs ref updated
   useEffect(() => {
-    if (!mounted) return;
+    if (!mountedRef.current) return;
     remainingRef.current = remainingMs;
-  }, [remainingMs, mounted]);
+  }, [remainingMs]);
 
   useEffect(() => {
-    if (!mounted || !isWakingUp) {
+    if (!mountedRef.current || !isWakingUp) {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
@@ -61,17 +62,17 @@ export function ColdStartToast() {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [isWakingUp, mounted]);
+  }, [isWakingUp]);
 
   useEffect(() => {
-    if (!mounted || !isExhausted) return;
+    if (!mountedRef.current || !isExhausted) return;
     toast({
       title: "Couldn't reach the server",
       description:
         "The API didn't wake up in time. Please try again in a moment.",
       tone: "error",
     });
-  }, [isExhausted, mounted]);
+  }, [isExhausted]);
 
   return null;
 }
