@@ -56,8 +56,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         # Determine CSP based on environment and path
         settings: Settings | None = getattr(request.app.state, "settings", None)
         is_development = (
-            settings is not None
-            and settings.environment.strip().lower() == "development"
+            settings is not None and settings.environment.strip().lower() == "development"
         )
         path = request.url.path
 
