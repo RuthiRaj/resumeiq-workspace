@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { AppShell } from "@/components/app-shell";
 import { QueryProvider } from "@/components/query-provider";
 import { Toaster } from "@/components/toaster";
+import { ColdStartToastWrapper } from "@/components/cold-start-toast-wrapper";
 import { SimulatedFailuresBanner } from "@/features/dev/simulated-failures-banner";
 import { AuthProvider } from "@/lib/auth/context";
 import { AuthGuard } from "@/features/auth/auth-guard";
@@ -40,6 +41,7 @@ export default function AuthenticatedLayout({
         {/* Lives here rather than in AppShell: the banner reads the QueryClient,
             and AppShell is also rendered standalone by /design-system. */}
         <SimulatedFailuresBanner />
+        <ColdStartToastWrapper />
       </AuthProvider>
     </QueryProvider>
   );
