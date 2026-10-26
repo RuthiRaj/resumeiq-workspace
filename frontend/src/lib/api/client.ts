@@ -1,6 +1,14 @@
 import { z } from "zod";
 import { apiBaseUrl, isLiveMode } from "@/lib/config/mode";
 import {
+  shouldRetryOnColdStart,
+  isRetryableError,
+  nextRetryDelay,
+  sleep,
+  MAX_RETRY_DURATION_MS,
+} from "./retry";
+import { emitColdStart } from "./cold-start-events";
+import {
   AnalysisReportSchema,
   AnalysisRunResponseSchema,
   AccountDeletionResultSchema,
@@ -222,55 +230,116 @@ async function request<T>(
     if (token) headers.set("Authorization", `Bearer ${token}`);
   }
 
-  let res: Response;
-  try {
-    res = await fetch(`${base}${path}`, { ...init, headers });
-  } catch {
-    throw new ApiError(
-      "We couldn't reach the server. Check your connection and try again.",
-      0,
-      path,
-      "network",
-    );
-  }
+  const enableRetry = shouldRetryOnColdStart();
+  const startTime = Date.now();
+  let attempt = 0;
+  let hasRetried = false;
 
-  if (!res.ok) {
-    if (res.status === 401) unauthorizedHandler?.();
-    const errorBody = await res.json().catch(() => null);
-    throw errorFromBody(
-      errorBody,
-      res.status,
-      path,
-      parseRetryAfter(res.headers.get("Retry-After")),
-      res.headers,
-    );
-  }
-  if (res.status === 204) return undefined as T;
-  const text = await res.text();
-  if (!text) return undefined as T;
+  while (true) {
+    let res: Response;
+    try {
+      res = await fetch(`${base}${path}`, { ...init, headers });
+    } catch {
+      const error = new ApiError(
+        "We couldn't reach the server. Check your connection and try again.",
+        0,
+        path,
+        "network",
+      );
+      if (enableRetry && isRetryableError(error) && Date.now() - startTime < MAX_RETRY_DURATION_MS) {
+        if (!hasRetried) {
+          emitColdStart("retry");
+          hasRetried = true;
+        }
+        await sleep(nextRetryDelay(attempt));
+        attempt++;
+        continue;
+      }
+      if (hasRetried) emitColdStart("exhausted");
+      throw error;
+    }
 
-  let parsedBody: unknown;
-  try {
-    parsedBody = JSON.parse(text);
-  } catch {
-    throw new ApiError(
-      "The server returned an unreadable response. Try again.",
-      502,
-      path,
-      "invalid_response",
-    );
+    if (!res.ok) {
+      if (res.status === 401) unauthorizedHandler?.();
+      const errorBody = await res.json().catch(() => null);
+      const error = errorFromBody(
+        errorBody,
+        res.status,
+        path,
+        parseRetryAfter(res.headers.get("Retry-After")),
+        res.headers,
+      );
+      if (enableRetry && isRetryableError(error) && Date.now() - startTime < MAX_RETRY_DURATION_MS) {
+        if (!hasRetried) {
+          emitColdStart("retry");
+          hasRetried = true;
+        }
+        await sleep(nextRetryDelay(attempt));
+        attempt++;
+        continue;
+      }
+      if (hasRetried) emitColdStart("exhausted");
+      throw error;
+    }
+    if (res.status === 204) {
+      if (hasRetried) emitColdStart("success");
+      return undefined as T;
+    }
+    const text = await res.text();
+    if (!text) {
+      if (hasRetried) emitColdStart("success");
+      return undefined as T;
+    }
+
+    let parsedBody: unknown;
+    try {
+      parsedBody = JSON.parse(text);
+    } catch {
+      const error = new ApiError(
+        "The server returned an unreadable response. Try again.",
+        502,
+        path,
+        "invalid_response",
+      );
+      if (enableRetry && isRetryableError(error) && Date.now() - startTime < MAX_RETRY_DURATION_MS) {
+        if (!hasRetried) {
+          emitColdStart("retry");
+          hasRetried = true;
+        }
+        await sleep(nextRetryDelay(attempt));
+        attempt++;
+        continue;
+      }
+      if (hasRetried) emitColdStart("exhausted");
+      throw error;
+    }
+    if (!schema) {
+      if (hasRetried) emitColdStart("success");
+      return parsedBody as T;
+    }
+    const parsed = schema.safeParse(parsedBody);
+    if (!parsed.success) {
+      const error = new ApiError(
+        "The server returned a response this app doesn't understand. Refresh and try again.",
+        502,
+        path,
+        "invalid_response",
+      );
+      if (enableRetry && isRetryableError(error) && Date.now() - startTime < MAX_RETRY_DURATION_MS) {
+        if (!hasRetried) {
+          emitColdStart("retry");
+          hasRetried = true;
+        }
+        await sleep(nextRetryDelay(attempt));
+        attempt++;
+        continue;
+      }
+      if (hasRetried) emitColdStart("exhausted");
+      throw error;
+    }
+    if (hasRetried) emitColdStart("success");
+    return parsed.data;
   }
-  if (!schema) return parsedBody as T;
-  const parsed = schema.safeParse(parsedBody);
-  if (!parsed.success) {
-    throw new ApiError(
-      "The server returned a response this app doesn't understand. Refresh and try again.",
-      502,
-      path,
-      "invalid_response",
-    );
-  }
-  return parsed.data;
 }
 
 /** Shared by the dev-only client in `./dev`; not part of the public API surface. */
